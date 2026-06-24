@@ -1,0 +1,700 @@
+Dưới đây là mã HTML đã được cập nhật theo đúng yêu cầu của bạn:
+ * **Xóa bỏ hoàn toàn** phần Kỹ năng (#skills).
+ * **Đổi màu sắc:** Thay thế các tông màu tím/xanh cũ bằng tông màu vàng neon điện tử kết hợp hiệu ứng đậm chất tối giản, hiện đại và gai góc hơn (cyber-industrial).
+ * **Tên hiển thị:** Viết in đậm hơn (font-black) và tối ưu lại hiệu ứng glitch chữ.
+ * **Hiệu ứng khối hộp 4 chiều động (Tesseract / 4D Hypercube background):** Thêm một canvas dựng hình khối 4 chiều xoay động bằng thuật toán toán học chiếu từ không gian 4D xuống 2D, chạy mượt mà theo thao tác cuộn chuột (scroll) của người dùng ở khu vực dự án.
+```html
+<!DOCTYPE html>
+<html lang="vi" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nguyễn Đức Duy — Personal</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Space Grotesk', 'sans-serif'],
+            body: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            void:    '#050508',
+            surface: '#0B0B11',
+            card:    '#11111A',
+            neon:    '#CCFF00', /* Màu vàng neon chói làm điểm nhấn thay cho màu cũ */
+            'neon-dim':  '#1F2400',
+            ghost:   '#F8F8FF',
+            muted:   '#808090',
+          },
+          animation: {
+            'float':       'float 6s ease-in-out infinite',
+            'pulse-slow':  'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite',
+            'slide-up':    'slideUp 0.7s ease forwards',
+            'fade-in':     'fadeIn 0.8s ease forwards',
+            'glitch':      'glitch 2s infinite',
+          },
+          keyframes: {
+            float:    { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } },
+            slideUp:  { from: { opacity: 0, transform: 'translateY(40px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+            fadeIn:   { from: { opacity: 0 }, to: { opacity: 1 } },
+            glitch: {
+              '0%,100%':     { textShadow: 'none', transform: 'none' },
+              '20%':         { textShadow: '-3px 0 #CCFF00', transform: 'skewX(-2deg)' },
+              '21%':         { textShadow: '3px 0 #ffffff', transform: 'skewX(2deg)' },
+              '22%':         { textShadow: 'none', transform: 'none' },
+              '60%':         { textShadow: '-2px 0 #CCFF00', transform: 'skewX(-1deg)' },
+              '61%':         { textShadow: 'none', transform: 'none' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ── Base ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-family: 'Inter', sans-serif; }
+
+    /* ── Custom cursor ── */
+    body { cursor: none; }
+    #cursor {
+      position: fixed; z-index: 9999; pointer-events: none;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #CCFF00; transform: translate(-50%,-50%);
+      transition: width .2s, height .2s;
+    }
+    #cursor-ring {
+      position: fixed; z-index: 9998; pointer-events: none;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid rgba(204,255,0,0.4);
+      transform: translate(-50%,-50%);
+      transition: all .1s ease-out;
+    }
+    body:has(a:hover,button:hover) #cursor { width: 14px; height: 14px; background: #FFF; }
+    body:has(a:hover,button:hover) #cursor-ring { width: 44px; height: 44px; border-color: #CCFF00; background: rgba(204,255,0,0.05); }
+
+    /* ── Theme Overrides ── */
+    .dark body  { background: #050508; color: #F8F8FF; }
+    body        { background: #F4F4F6; color: #09090C; transition: background .4s, color .4s; }
+
+    html:not(.dark) .card-bg      { background: #FFFFFF; border-color: #E2E2E8; }
+    html:not(.dark) .surface-bg   { background: #F4F4F6; }
+    html:not(.dark) .nav-bg       { background: rgba(244,244,246,.85); border-color: #E2E2E8; }
+    html:not(.dark) .hero-bg      { background: #EBEBEF; }
+    html:not(.dark) .text-ghost   { color: #09090C; }
+    html:not(.dark) .text-muted   { color: #6D6D75; }
+    html:not(.dark) #cursor       { background: #09090C; }
+    html:not(.dark) #cursor-ring  { border-color: rgba(9,9,12,0.3); }
+
+    .dark .card-bg    { background: #11111A; border-color: rgba(255,255,255,0.05); }
+    .dark .surface-bg { background: #0B0B11; }
+    .dark .nav-bg     { background: rgba(5,5,8,.85); border-color: rgba(255,255,255,0.03); }
+    .dark .hero-bg    { background: #050508; }
+
+    /* ── Canvas Nền ── */
+    #particle-canvas, #hypercube-canvas { position:absolute; inset:0; pointer-events:none; }
+
+    /* ── Avatar Ring ── */
+    .avatar-ring {
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px #CCFF00, 0 0 30px rgba(204,255,0,0.2);
+    }
+
+    /* ── Scroll-animate ── */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-left  { opacity:0; transform: translateX(-30px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal-right { opacity:0; transform: translateX(30px);  transition: opacity .6s ease, transform .6s ease; }
+    .reveal-left.visible,.reveal-right.visible { opacity:1; transform: translateX(0); }
+
+    /* ── Project Card & Glow ── */
+    .project-card { position:relative; overflow:hidden; border-radius:12px; }
+    .project-card .overlay {
+      position:absolute; inset:0; background: linear-gradient(180deg, transparent 20%, rgba(5,5,8,0.95));
+      opacity:0; transition: opacity .3s ease;
+      display:flex; flex-direction:column; justify-content:flex-end; padding:1.5rem;
+    }
+    .project-card:hover .overlay { opacity:1; }
+
+    .btn-glow {
+      background: #CCFF00; color: #000;
+      box-shadow: 0 4px 20px rgba(204,255,0,0.2);
+      transition: all .2s;
+    }
+    .btn-glow:hover { box-shadow: 0 0 30px rgba(204,255,0,0.5); transform: translateY(-1px); }
+
+    .nav-link { position:relative; }
+    .nav-link::after {
+      content:''; position:absolute; left:0; bottom:-2px; height:1px; width:0;
+      background:#CCFF00; transition: width .2s ease;
+    }
+    .nav-link:hover::after { width:100%; }
+
+    .grad-text {
+      background: linear-gradient(135deg, #FFF 30%, #CCFF00 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    html:not(.dark) .grad-text {
+      background: linear-gradient(135deg, #000 40%, #88AA00 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:#CCFF00; }
+
+    .chip {
+      font-family:'JetBrains Mono',monospace; font-size:.65rem;
+      padding:.2rem .6rem; border-radius:4px;
+      background: rgba(204,255,0,0.08); color:#CCFF00; border:1px solid rgba(204,255,0,0.15);
+    }
+    html:not(.dark) .chip {
+      background: rgba(0,0,0,0.04); color:#557700; border:1px solid rgba(0,0,0,0.08);
+    }
+
+    @media (pointer:coarse) { body { cursor:auto; } #cursor,#cursor-ring { display:none; } }
+  </style>
+</head>
+
+<body class="dark:bg-void bg-[#F4F4F6] dark:text-ghost text-[#09090C] font-body antialiased overflow-x-hidden">
+
+  <div id="cursor"></div>
+  <div id="cursor-ring"></div>
+
+  <nav id="navbar" class="nav-bg fixed top-0 inset-x-0 z-50 backdrop-blur-xl border-b transition-all duration-300">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#hero" class="font-display font-bold text-lg tracking-tight">
+        <span class="font-black dark:text-neon text-black">NĐD</span>
+        <span class="dark:text-ghost/40 text-black/40 text-sm font-mono ml-1">.dev</span>
+      </a>
+
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium dark:text-muted text-gray-500">
+        <a href="#about"    class="nav-link hover:dark:text-ghost hover:text-[#09090C] transition-colors">Về tôi</a>
+        <a href="#projects" class="nav-link hover:dark:text-ghost hover:text-[#09090C] transition-colors">Dự án</a>
+        <a href="#contact"  class="nav-link hover:dark:text-ghost hover:text-[#09090C] transition-colors">Liên hệ</a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="theme-toggle" aria-label="Toggle theme"
+          class="w-9 h-9 rounded-full flex items-center justify-center
+                 dark:bg-card bg-white dark:border-white/10 border border-gray-200 transition-all">
+          <svg id="icon-sun" class="w-4 h-4 text-neon hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="icon-moon" class="w-4 h-4 text-black block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <button id="menu-btn" class="md:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5">
+          <span class="hamburger-line w-5 h-[1px] dark:bg-ghost bg-black transition-all"></span>
+          <span class="hamburger-line w-5 h-[1px] dark:bg-ghost bg-black transition-all"></span>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="md:hidden hidden dark:bg-surface bg-white border-t border-gray-100 dark:border-white/5 px-6 py-4">
+      <div class="flex flex-col gap-4 text-sm font-medium">
+        <a href="#about"    class="mobile-link dark:text-muted text-gray-500 hover:text-neon transition-colors">Về tôi</a>
+        <a href="#projects" class="mobile-link dark:text-muted text-gray-500 hover:text-neon transition-colors">Dự án</a>
+        <a href="#contact"  class="mobile-link dark:text-muted text-gray-500 hover:text-neon transition-colors">Liên hệ</a>
+      </div>
+    </div>
+  </nav>
+
+  <section id="hero" class="hero-bg relative min-h-screen flex items-center justify-center overflow-hidden">
+    <canvas id="particle-canvas"></canvas>
+
+    <div class="relative z-10 text-center px-6 max-w-3xl mx-auto pt-16">
+      <div class="flex justify-center mb-8 animate-float">
+        <div class="avatar-ring w-32 h-32 md:w-40 md:h-40 overflow-hidden">
+          <div class="w-full h-full dark:bg-card bg-[#E2E2E8] flex items-center justify-center">
+            <svg class="w-16 h-16 dark:text-neon text-black opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <p class="font-mono text-xs tracking-[0.4em] dark:text-neon text-neutral-600 uppercase mb-3 animate-fade-in" style="animation-delay:.2s;opacity:0;animation-fill-mode:forwards">
+        ── Nghĩa vụ quân sự ──
+      </p>
+
+      <h1 class="font-display font-black text-5xl md:text-8xl tracking-tight mb-4 dark:text-white text-black" style="animation: glitch 2.5s infinite;">
+        NGUYỄN ĐỨC DUY
+      </h1>
+
+      <p class="text-base md:text-lg dark:text-muted text-gray-500 font-light mb-2 animate-fade-in" style="animation-delay:.5s;opacity:0;animation-fill-mode:forwards">
+        Làm những điều cần làm.<span class="dark:text-neon font-medium"> Đơn giản vậy thôi.</span>
+      </p>
+      <p class="text-xs dark:text-muted/60 text-gray-400 font-mono mb-10 animate-fade-in" style="animation-delay:.7s;opacity:0;animation-fill-mode:forwards">
+        thích làm mình • làm mẩy • làm những điều cần làm
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style="animation-delay:.9s;opacity:0;animation-fill-mode:forwards">
+        <a href="#about" class="btn-glow font-display font-bold px-8 py-3 rounded-full text-xs tracking-wider inline-block">
+          Khám phá →
+        </a>
+        <a href="#contact" class="px-8 py-3 rounded-full text-xs font-display font-bold tracking-wider
+                                  border dark:border-white/20 border-black dark:text-white text-black
+                                  hover:bg-neutral-500/10 transition-all inline-block">
+          Liên hệ
+        </a>
+      </div>
+
+      <div class="mt-16 flex flex-col items-center gap-2 animate-pulse-slow">
+        <span class="text-[10px] font-mono dark:text-muted/50 text-gray-400 tracking-widest uppercase">scroll</span>
+        <div class="w-[1px] h-10 bg-gradient-to-b dark:from-neon from-black to-transparent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="dark:bg-surface bg-white py-24 px-6 border-b dark:border-white/5 border-gray-100">
+    <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+      <div class="reveal">
+        <p class="font-mono text-xs tracking-[0.3em] dark:text-neon text-gray-400 uppercase mb-4">01 / về tôi</p>
+        <h2 class="font-display font-black text-4xl md:text-5xl mb-6 dark:text-ghost text-black">
+          Chào, tôi là<br/><span class="dark:text-neon text-black">Đức Duy.</span>
+        </h2>
+        <div class="space-y-4 dark:text-muted text-gray-500 leading-relaxed text-sm">
+          <p>
+            Hiện đang hoàn thành <span class="dark:text-ghost text-black font-semibold">nghĩa vụ quân sự</span> — thời gian rèn luyện kỷ luật, ý chí và bản lĩnh. Quân ngũ dạy tôi rằng không có việc gì là không làm được nếu đặt đúng quyết tâm.
+          </p>
+          <p>
+            Ngoài nhiệm vụ, tôi là người thích <span class="dark:text-neon font-semibold">tự mày mò, tự học, tự làm</span> — từ lập trình đến những thứ lạ lẫm khác. Tôi tin vào triết lý đơn giản: <em>"làm những điều cần làm"</em>.
+          </p>
+        </div>
+
+        <div class="mt-10 grid grid-cols-3 gap-6 border-t dark:border-white/5 border-gray-100 pt-6">
+          <div>
+            <p class="font-display font-bold text-2xl dark:text-neon text-black">∞</p>
+            <p class="text-[10px] dark:text-muted text-gray-400 font-mono uppercase tracking-wider">Ý chí</p>
+          </div>
+          <div>
+            <p class="font-display font-bold text-2xl dark:text-neon text-black">100%</p>
+            <p class="text-[10px] dark:text-muted text-gray-400 font-mono uppercase tracking-wider">Kỷ luật</p>
+          </div>
+          <div>
+            <p class="font-display font-bold text-2xl dark:text-neon text-black">DIY</p>
+            <p class="text-[10px] dark:text-muted text-gray-400 font-mono uppercase tracking-wider">Tinh thần</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <div class="card-bg rounded-xl border p-6 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-neutral-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 dark:text-neon text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+            </div>
+            <div>
+              <p class="font-display font-semibold text-xs dark:text-ghost text-black">Đang phục vụ</p>
+              <p class="text-[10px] dark:text-muted text-gray-400">Nghĩa vụ quân sự nhân dân</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-neutral-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 dark:text-neon text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <p class="font-display font-semibold text-xs dark:text-ghost text-black">Self-taught</p>
+              <p class="text-[10px] dark:text-muted text-gray-400">Tự học, tự làm, tự mày mò</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-neutral-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 dark:text-neon text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            </div>
+            <div>
+              <p class="font-display font-semibold text-xs dark:text-ghost text-black">Đam mê thực tế</p>
+              <p class="text-[10px] dark:text-muted text-gray-400">Làm những điều có giá trị thật</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1.5 pt-2">
+            <span class="chip">Kỷ luật</span>
+            <span class="chip">Self-made</span>
+            <span class="chip">Kiên nhẫn</span>
+            <span class="chip">Thực dụng</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="projects" class="dark:bg-void bg-neutral-100 py-24 px-6 relative overflow-hidden">
+    
+    <canvas id="hypercube-canvas"></canvas>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+      <div class="text-center mb-16 reveal">
+        <p class="font-mono text-xs tracking-[0.3em] dark:text-neon text-gray-500 uppercase mb-4">02 / dự án</p>
+        <h2 class="font-display font-black text-4xl md:text-5xl dark:text-ghost text-black">
+          Những gì tôi <span class="dark:text-neon text-black font-black">đã làm</span>
+        </h2>
+        <p class="dark:text-muted text-gray-400 text-xs mt-2">Dự án mẫu — khối 4D phản hồi theo tốc độ cuộn chuột</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="project-card reveal card-bg border group cursor-pointer dark:bg-card/90 bg-white/90 backdrop-blur-sm transition-all duration-300">
+          <div class="h-48 dark:bg-neutral-900 bg-neutral-200 flex items-center justify-center">
+            <svg class="w-12 h-12 dark:text-neon text-black opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          </div>
+          <div class="overlay">
+            <div class="flex flex-wrap gap-1 mb-2">
+              <span class="chip text-[10px]">HTML</span><span class="chip text-[10px]">CSS</span>
+            </div>
+            <h3 class="font-display font-bold text-white text-base">Project Alpha</h3>
+            <p class="text-white/60 text-[11px] mt-1">Dự án xây dựng từ nền tảng đầu tiên.</p>
+          </div>
+          <div class="p-4">
+            <h3 class="font-display font-bold dark:text-ghost text-black text-sm mb-0.5">Project Alpha</h3>
+            <p class="dark:text-muted text-gray-400 text-[11px]">Hover để xem chi tiết · Web App</p>
+          </div>
+        </div>
+
+        <div class="project-card reveal card-bg border group cursor-pointer dark:bg-card/90 bg-white/90 backdrop-blur-sm transition-all duration-300">
+          <div class="h-48 dark:bg-neutral-900 bg-neutral-200 flex items-center justify-center">
+            <svg class="w-12 h-12 dark:text-neon text-black opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          </div>
+          <div class="overlay">
+            <div class="flex flex-wrap gap-1 mb-2">
+              <span class="chip text-[10px]">Mobile</span>
+            </div>
+            <h3 class="font-display font-bold text-white text-base">Project Beta</h3>
+            <p class="text-white/60 text-[11px] mt-1">Ứng dụng di động tối giản.</p>
+          </div>
+          <div class="p-4">
+            <h3 class="font-display font-bold dark:text-ghost text-black text-sm mb-0.5">Project Beta</h3>
+            <p class="dark:text-muted text-gray-400 text-[11px]">Hover để xem chi tiết · Mobile App</p>
+          </div>
+        </div>
+
+        <div class="project-card reveal card-bg border group cursor-pointer dark:bg-card/90 bg-white/90 backdrop-blur-sm transition-all duration-300 md:col-span-2 lg:col-span-1">
+          <div class="h-48 dark:bg-neutral-900 bg-neutral-200 flex items-center justify-center">
+            <svg class="w-12 h-12 dark:text-neon text-black opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
+          </div>
+          <div class="overlay">
+            <div class="flex flex-wrap gap-1 mb-2">
+              <span class="chip text-[10px]">Dashboard</span>
+            </div>
+            <h3 class="font-display font-bold text-white text-base">Project Gamma</h3>
+            <p class="text-white/60 text-[11px] mt-1">Hệ thống phân tích dữ liệu trực quan.</p>
+          </div>
+          <div class="p-4">
+            <h3 class="font-display font-bold dark:text-ghost text-black text-sm mb-0.5">Project Gamma</h3>
+            <p class="dark:text-muted text-gray-400 text-[11px]">Hover để xem chi tiết · Dashboard</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center mt-12 reveal">
+        <p class="dark:text-muted text-gray-400 text-xs">
+          Các dự án mới đang được lên ý tưởng và phát triển liên tục trong quân ngũ. <span class="dark:text-neon text-black font-semibold">Stay tuned.</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="dark:bg-surface bg-white py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-16 reveal">
+        <p class="font-mono text-xs tracking-[0.3em] dark:text-neon text-gray-400 uppercase mb-4">03 / liên hệ</p>
+        <h2 class="font-display font-black text-4xl md:text-5xl dark:text-ghost text-black">
+          Kết nối với <span class="dark:text-neon text-black font-black">tôi</span>
+        </h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 items-start">
+        <div class="reveal-left space-y-3">
+          <a href="tel:+84xxxxxxxxx" class="contact-link card-bg border block">
+            <div class="w-9 h-9 rounded bg-neutral-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 dark:text-neon text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            </div>
+            <div>
+              <p class="text-[9px] dark:text-muted text-gray-400 font-mono uppercase tracking-wider mb-0.5">Điện thoại</p>
+              <p class="font-display font-semibold dark:text-ghost text-black text-xs">+84 xxx xxx xxx</p>
+            </div>
+          </a>
+
+          <a href="https://zalo.me/0xxxxxxxxx" target="_blank" rel="noopener" class="contact-link card-bg border block">
+            <div class="w-9 h-9 rounded bg-neutral-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 dark:text-neon text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            </div>
+            <div>
+              <p class="text-[9px] dark:text-muted text-gray-400 font-mono uppercase tracking-wider mb-0.5">Zalo</p>
+              <p class="font-display font-semibold dark:text-ghost text-black text-xs">Nhắn tin qua Zalo</p>
+            </div>
+          </a>
+
+          <a href="mailto:your@email.com" class="contact-link card-bg border block">
+            <div class="w-9 h-9 rounded bg-neutral-500/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 dark:text-neon text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <p class="text-[9px] dark:text-muted text-gray-400 font-mono uppercase tracking-wider mb-0.5">Email</p>
+              <p class="font-display font-semibold dark:text-ghost text-black text-xs">your@email.com</p>
+            </div>
+          </a>
+        </div>
+
+        <div class="reveal-right card-bg rounded-xl border p-6">
+          <h3 class="font-display font-bold dark:text-ghost text-black mb-4 text-sm">Gửi tin nhắn</h3>
+          <div class="space-y-3">
+            <div>
+              <input type="text" placeholder="Họ tên" class="w-full dark:bg-void bg-[#F4F4F6] border dark:border-white/10 border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-neon transition-colors" />
+            </div>
+            <div>
+              <textarea rows="3" placeholder="Tin nhắn..." class="w-full dark:bg-void bg-[#F4F4F6] border dark:border-white/10 border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-neon transition-colors resize-none"></textarea>
+            </div>
+            <button class="btn-glow w-full font-display font-bold py-2.5 rounded-lg text-xs tracking-wider">
+              GỬI TIN NHẮN ✦
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="dark:bg-surface bg-white border-t dark:border-white/5 border-gray-100 py-8 px-6">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="font-display font-black text-base dark:text-neon text-black">NĐD .personal</p>
+      <p class="text-[10px] dark:text-muted text-gray-400 font-mono text-center">
+        © 2026 Nguyễn Đức Duy · Làm những điều cần làm.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // ── Custom cursor ──
+    const cursor     = document.getElementById('cursor');
+    const cursorRing = document.getElementById('cursor-ring');
+    let mx = -100, my = -100, rx = -100, ry = -100;
+
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+    function animateCursor() {
+      cursor.style.left = mx + 'px';
+      cursor.style.top  = my + 'px';
+      rx += (mx - rx) * 0.15;
+      ry += (my - ry) * 0.15;
+      cursorRing.style.left = rx + 'px';
+      cursorRing.style.top  = ry + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+
+    // ── Dark / Light toggle ──
+    const html          = document.documentElement;
+    const themeToggle   = document.getElementById('theme-toggle');
+    const savedTheme    = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') html.classList.remove('dark');
+
+    themeToggle.addEventListener('click', () => {
+      html.classList.toggle('dark');
+      localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    // ── Mobile menu ──
+    const menuBtn    = document.getElementById('menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    menuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+    document.querySelectorAll('.mobile-link').forEach(link => {
+      link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+    });
+
+    // ── Intersection Observer (Scroll reveal) ──
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
+
+    // ── Particle System (Hero background) ──
+    const canvas = document.getElementById('particle-canvas');
+    const ctx    = canvas.getContext('2d');
+    let particles = [];
+    let W, H;
+
+    function resize() {
+      W = canvas.width  = canvas.parentElement.offsetWidth;
+      H = canvas.height = canvas.parentElement.offsetHeight;
+    }
+    resize();
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+
+    function initParticles() {
+      particles = [];
+      const count = Math.floor((W * H) / 25000);
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * W, y: Math.random() * H,
+          r: Math.random() * 1 + 0.5,
+          vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2,
+          o: Math.random() * 0.4 + 0.1
+        });
+      }
+    }
+    initParticles();
+
+    function drawParticles() {
+      ctx.clearRect(0, 0, W, H);
+      const isDark = document.documentElement.classList.contains('dark');
+      const color = isDark ? '204,255,0' : '0,0,0';
+
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1;
+        if (p.y < 0 || p.y > H) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${color},${p.o})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(drawParticles);
+    }
+    drawParticles();
+
+
+    // ════════════════════════════════════════════════════════════
+    // ── THUẬT TOÁN ĐỰNG KHỐI HỘP 4 CHIỀU ĐỘNG (4D TESSERACT HYPERCUBE) ──
+    // ════════════════════════════════════════════════════════════
+    const hcCanvas = document.getElementById('hypercube-canvas');
+    const hcCtx    = hcCanvas.getContext('2d');
+    let hcW, hcH;
+    let scrollVelocity = 0;
+    let lastScrollY = window.scrollY;
+
+    // Theo dõi tốc độ cuộn chuột để tăng tốc độ xoay cấu trúc khối 4 chiều
+    window.addEventListener('scroll', () => {
+      const currentScroll = window.scrollY;
+      scrollVelocity += Math.abs(currentScroll - lastScrollY) * 0.005;
+      lastScrollY = currentScroll;
+    });
+
+    function resizeHypercube() {
+      hcW = hcCanvas.width  = hcCanvas.parentElement.offsetWidth;
+      hcH = hcCanvas.height = hcCanvas.parentElement.offsetHeight;
+    }
+    resizeHypercube();
+    window.addEventListener('resize', resizeHypercube);
+
+    // Khởi tạo 16 đỉnh của một khối lập phương 4 chiều (Hypercube)
+    const vertices4D = [];
+    for (let x = -1; x <= 1; x += 2) {
+      for (let y = -1; y <= 1; y += 2) {
+        for (let z = -1; z <= 1; z += 2) {
+          for (let w = -1; w <= 1; w += 2) {
+            vertices4D.push([x, y, z, w]);
+          }
+        }
+      }
+    }
+
+    // Góc xoay hiện tại của các mặt phẳng không gian 4 chiều
+    let angleXY = 0, angleZW = 0, angleXW = 0;
+
+    function projectAndDraw4D() {
+      hcCtx.clearRect(0, 0, hcW, hcH);
+
+      // Giảm dần vận tốc cuộn theo thời gian (ma sát mượt)
+      scrollVelocity *= 0.95;
+      const baseSpeed = 0.005;
+      
+      // Áp dụng vận tốc cuộn vào tốc độ xoay khối hộp 4D
+      angleXY += baseSpeed + scrollVelocity * 0.05;
+      angleZW += baseSpeed * 0.5 + scrollVelocity * 0.02;
+      angleXW += baseSpeed * 0.3;
+
+      const projected2D = [];
+      const isDark = document.documentElement.classList.contains('dark');
+      const strokeColor = isDark ? 'rgba(204,255,0,0.12)' : 'rgba(0,0,0,0.06)';
+      const nodeColor = isDark ? 'rgba(204,255,0,0.3)' : 'rgba(0,0,0,0.15)';
+
+      // Xử lý biến đổi ma trận xoay trong không gian 4 chiều nâng cao
+      vertices4D.forEach(v => {
+        let [x, y, z, w] = v;
+
+        // Xoay quanh mặt phẳng XY
+        let cos = Math.cos(angleXY), sin = Math.sin(angleXY);
+        let x1 = x * cos - y * sin;
+        let y1 = x * sin + y * cos;
+
+        // Xoay quanh mặt phẳng ZW
+        cos = Math.cos(angleZW); sin = Math.sin(angleZW);
+        let z1 = z * cos - w * sin;
+        let w1 = z * sin + w * cos;
+
+        // Xoay quanh mặt phẳng XW
+        cos = Math.cos(angleXW); sin = Math.sin(angleXW);
+        let x2 = x1 * cos - w1 * sin;
+        let w2 = x1 * sin + w1 * cos;
+
+        // Chiếu phối cảnh từ 4D xuống không gian 3D
+        const distance4D = 2.5;
+        const factor4D = 1 / (distance4D - w2);
+        let x3D = x2 * factor4D;
+        let y3D = y1 * factor4D;
+        let z3D = z1 * factor4D;
+
+        // Chiếu phối cảnh từ 3D xuống màn hình hiển thị 2D
+        const distance3D = 2.0;
+        const factor2D = 1 / (distance3D - z3D);
+        let finalX = x3D * factor2D * Math.min(hcW, hcH) * 0.4 + hcW / 2;
+        let finalY = y3D * factor2D * Math.min(hcW, hcH) * 0.4 + hcH / 2;
+
+        projected2D.push([finalX, finalY]);
+
+        // Vẽ các điểm mút kết nối (Node đỉnh)
+        hcCtx.beginPath();
+        hcCtx.arc(finalX, finalY, 2, 0, Math.PI * 2);
+        hcCtx.fillStyle = nodeColor;
+        hcCtx.fill();
+      });
+
+      // Tạo lưới liên kết các cạnh của khối Tesseract (Mỗi đỉnh kết nối tới 4 đỉnh kế cận gần nhất)
+      hcCtx.strokeStyle = strokeColor;
+      hcCtx.lineWidth = 1;
+      for (let i = 0; i < 16; i++) {
+        for (let j = i + 1; j < 16; j++) {
+          let numEdges = 0;
+          for (let k = 0; k < 4; k++) {
+            if (vertices4D[i][k] !== vertices4D[j][k]) numEdges++;
+          }
+          if (numEdges === 1) { // Nếu khoảng cách đỉnh trong không gian gốc bằng 1 đơn vị cạnh
+            hcCtx.beginPath();
+            hcCtx.moveTo(projected2D[i][0], projected2D[i][1]);
+            hcCtx.lineTo(projected2D[j][0], projected2D[j][1]);
+            hcCtx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(projectAndDraw4D);
+    }
+    projectAndDraw4D();
+
+    // Smooth scroll link
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
+</body>
+</html>
+
+```
