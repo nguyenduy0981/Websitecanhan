@@ -49,6 +49,10 @@ npm run build
   `src/app/api/auth/*`.
 - `src/modules/gifts/` — gift + block CRUD, ownership/IDOR checks, publish
   (DRAFT → ACTIVE), block reordering. Routes under `src/app/api/gifts/*`.
+- `src/app/{login,register,forgot-password,reset-password}/` — auth pages.
+  `src/app/dashboard/` — gift list. `src/app/gifts/[giftId]/` — the gift
+  editor (title/message autosave, block add/reorder/delete, preview,
+  publish).
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.

@@ -7,14 +7,14 @@ import { updateGiftSchema, getGiftForOwner, updateGift, deleteGift } from "@/mod
 type Ctx = { params: Promise<{ giftId: string }> };
 
 export const GET = withApiHandler<Ctx>(async (req: NextRequest, { params }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
   const gift = await getGiftForOwner(giftId, user.id);
   return NextResponse.json({ gift });
 });
 
 export const PATCH = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
   const body = parseOrThrow(updateGiftSchema, await req.json());
 
@@ -25,7 +25,7 @@ export const PATCH = withApiHandler<Ctx>(async (req: NextRequest, { params, log 
 });
 
 export const DELETE = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
 
   await deleteGift(giftId, user.id);

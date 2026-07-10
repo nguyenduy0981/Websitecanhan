@@ -6,7 +6,7 @@ import { publishGift } from "@/modules/gifts";
 type Ctx = { params: Promise<{ giftId: string }> };
 
 export const POST = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
 
   const gift = await publishGift(giftId, user.id);

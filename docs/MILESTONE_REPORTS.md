@@ -366,3 +366,105 @@ None. This milestone only adds application code on top of the existing
 ### Ready for Milestone 4: Editor
 Yes, once this deploy is live (no migration pending this time, so the
 usual `/api/health` check is optional, but still fine to confirm).
+
+## Milestone 4: Editor — 2026-07-11
+
+Confirmed before starting: owner verified `/api/health` returned
+`db: "up"` after Milestone 3's deploy, and asked why the deployed site
+still only showed a placeholder — expected, since Milestones 0-3 only
+built the API layer with no pages to visit yet. This milestone adds the
+first real UI.
+
+### Completed
+- **Session refactor** (`src/modules/auth/session.ts`, `service.ts`):
+  `getSessionUser`/`requireAuth` now take a generic `CookieReader`
+  interface instead of `NextRequest`, satisfied structurally by both
+  `NextRequest.cookies` (Route Handlers) and `next/headers` `cookies()`
+  (Server Components) — updated all 8 existing route call sites
+  (`req` → `req.cookies`) accordingly. Lets Server Components check "is
+  someone logged in" without an internal HTTP round-trip to their own
+  `/api/auth/me`.
+- **Auth pages**: `/login`, `/register`, `/forgot-password`,
+  `/reset-password` (reads `?token=`) — Server Component wrappers (redirect
+  to `/dashboard` if already logged in where relevant) + Client Component
+  forms calling the existing Milestone 2 API routes. Accessible labels,
+  `role="alert"`/`role="status"` messaging, visible focus rings.
+- **Dashboard** (`/dashboard`, Server Component): redirects to `/login` if
+  no session; loads the owner's gifts by calling `listGiftsForOwner()`
+  directly (no network hop) rather than fetching its own API; "create
+  gift" form and logout button as Client Components.
+- **Gift editor** (`/gifts/[giftId]`, Server Component): redirects to
+  `/login` if unauthenticated; loads the gift via `getGiftForOwner()`,
+  calling Next's `notFound()` on `NotFoundError` (same IDOR-safe 404 for
+  "missing" vs. "not yours" the API already enforces); renders
+  `<GiftEditor>` (Client Component) with:
+  - Debounced (800ms) autosave of title/message via `PATCH`.
+  - Add/delete/reorder for `TEXT` blocks (up/down buttons, not
+    drag-and-drop — free, and keyboard-operable for the a11y requirement
+    in SPEC.md); calls the existing block + reorder API routes.
+  - A read-only preview panel rendering title/message/blocks as a
+    recipient roughly would.
+  - Publish button (only while `DRAFT`) and draft-delete button, wired to
+    the existing `publish`/`DELETE` routes.
+  - Share link (`APP_URL/g/:slug`) shown once published, with a note that
+    the page behind it doesn't exist until Milestone 5.
+- **Homepage**: now session-aware — shows "Vào Dashboard" when logged in,
+  "Đăng nhập"/"Đăng ký" when not.
+- **`src/lib/gift-status-label.ts`** — small shared Vietnamese label map
+  for `GiftStatus`, used by both the dashboard and editor.
+- Recorded the above UI/architecture decisions in `CLAUDE.md`.
+
+### Files
+`src/modules/auth/{session,service,index}.ts` (refactor),
+`src/app/api/auth/{logout,me}/route.ts` +
+`src/app/api/gifts/**/route.ts` (call-site update only, `req` →
+`req.cookies`), `src/app/page.tsx` (updated),
+`src/app/{login,register,forgot-password,reset-password}/{page,*Form}.tsx`,
+`src/app/dashboard/{page,LogoutButton,CreateGiftForm}.tsx`,
+`src/app/gifts/[giftId]/{page,GiftEditor}.tsx`,
+`src/lib/gift-status-label.ts`, `CLAUDE.md`.
+
+### Migrations
+None.
+
+### Verification (actually executed)
+- `npm run lint` — pass, 0 errors/warnings.
+- `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **77/77** (unchanged test count — this milestone
+  is UI/pages, not new service logic; the session-refactor didn't change
+  any behavior the existing 77 tests cover, confirmed by re-running the
+  full suite after the refactor).
+- `npm run build` — pass; all new pages compiled (`/`, `/login`,
+  `/register`, `/forgot-password`, `/reset-password`, `/dashboard`,
+  `/gifts/[giftId]`) alongside all prior API routes.
+- **Actually ran the app**: started `next start` against this
+  environment's placeholder `DATABASE_URL` (no live Postgres available
+  here — see prior milestones) and verified with curl + a headless
+  Chromium (Playwright, screenshots taken): `/`, `/login`, `/register`,
+  `/forgot-password` all return 200 and render the expected Vietnamese
+  form content; `/dashboard` and `/gifts/[anything]` both correctly
+  `307`-redirect to `/login` when there's no session cookie — this is a
+  real, DB-independent code path (the session check short-circuits before
+  any database call when there's no cookie at all) and it worked exactly
+  as designed.
+
+### Known issues / honestly-scoped gaps
+- **Could not verify the DB-backed flows end-to-end** (register → login →
+  create gift → add block → reorder → publish) because this environment
+  has no live Postgres to actually run them against — same limitation as
+  every prior milestone. The owner can and should click through the real
+  flow once this is deployed against the real Neon database; please report
+  back anything that looks wrong.
+- Only `TEXT` blocks can be created from the UI; `IMAGE`/`GALLERY` wait for
+  Milestone 6 media upload (the API already accepts their shape, per
+  Milestone 3's known gap).
+- Reordering is up/down buttons, not drag-and-drop, by design (see
+  CLAUDE.md) — revisit only if the owner wants drag-and-drop specifically.
+- The share link shown after publishing points at `/g/:slug`, which 404s
+  until Milestone 5: Public Viewer exists.
+- No image/theme/effect/music pickers yet (Milestone 6).
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged.
+
+### Ready for Milestone 5: Public Viewer
+Yes, pending the owner confirming the real DB-backed flows work as
+expected on the live deploy.

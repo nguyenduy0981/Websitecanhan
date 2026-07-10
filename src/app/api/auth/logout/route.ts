@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { withApiHandler } from "@/lib/api-handler";
-import { getSessionTokenFromRequest, clearSessionCookie, logoutUser } from "@/modules/auth";
+import { getSessionToken, clearSessionCookie, logoutUser } from "@/modules/auth";
 
 export const POST = withApiHandler(async (req: NextRequest) => {
-  const token = getSessionTokenFromRequest(req);
+  const token = getSessionToken(req.cookies);
   if (token) {
     await logoutUser(token);
   }

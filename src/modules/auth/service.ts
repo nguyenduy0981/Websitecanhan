@@ -2,16 +2,11 @@ import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ConflictError, ForbiddenError, UnauthorizedError, ValidationError } from "@/lib/errors";
 import { hashPassword, verifyPassword } from "./password";
-import {
-  SESSION_DURATION_MS,
-  generateToken,
-  hashToken,
-  getSessionTokenFromRequest,
-} from "./session";
+import { SESSION_DURATION_MS, generateToken, hashToken, getSessionToken } from "./session";
+import type { CookieReader } from "./session";
 import { checkRateLimit, RATE_LIMITS } from "./rate-limit";
 import { sendPasswordResetEmail } from "./email";
 import { env } from "@/env";
-import type { NextRequest } from "next/server";
 import type { RegisterInput, LoginInput, ResetPasswordInput } from "./schemas";
 
 // Not a CLAUDE.md non-negotiable business rule — a recorded assumption
@@ -166,8 +161,8 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
   ]);
 }
 
-export async function getSessionUser(req: NextRequest): Promise<PublicUser | null> {
-  const token = getSessionTokenFromRequest(req);
+export async function getSessionUser(cookies: CookieReader): Promise<PublicUser | null> {
+  const token = getSessionToken(cookies);
   if (!token) {
     return null;
   }
@@ -184,8 +179,8 @@ export async function getSessionUser(req: NextRequest): Promise<PublicUser | nul
   return toPublicUser(session.user);
 }
 
-export async function requireAuth(req: NextRequest): Promise<PublicUser> {
-  const user = await getSessionUser(req);
+export async function requireAuth(cookies: CookieReader): Promise<PublicUser> {
+  const user = await getSessionUser(cookies);
   if (!user) {
     throw new UnauthorizedError("Authentication required");
   }

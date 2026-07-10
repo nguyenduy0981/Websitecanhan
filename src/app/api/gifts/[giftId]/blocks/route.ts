@@ -7,14 +7,14 @@ import { createBlockSchema, listBlocks, addBlock } from "@/modules/gifts";
 type Ctx = { params: Promise<{ giftId: string }> };
 
 export const GET = withApiHandler<Ctx>(async (req: NextRequest, { params }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
   const blocks = await listBlocks(giftId, user.id);
   return NextResponse.json({ blocks });
 });
 
 export const POST = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
   const body = parseOrThrow(createBlockSchema, await req.json());
 

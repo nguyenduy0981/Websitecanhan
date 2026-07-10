@@ -7,7 +7,7 @@ import { updateBlockSchema, updateBlock, deleteBlock } from "@/modules/gifts";
 type Ctx = { params: Promise<{ giftId: string; blockId: string }> };
 
 export const PATCH = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId, blockId } = await params;
   const body = parseOrThrow(updateBlockSchema, await req.json());
 
@@ -18,7 +18,7 @@ export const PATCH = withApiHandler<Ctx>(async (req: NextRequest, { params, log 
 });
 
 export const DELETE = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId, blockId } = await params;
 
   await deleteBlock(giftId, blockId, user.id);
