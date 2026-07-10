@@ -67,3 +67,10 @@ passed without running them.
   root (personal portfolio pages, unrelated to LoveBox) were moved to archive/
   rather than deleted, to keep the Next.js app root clean without destroying
   prior work.
+- Milestone 1 foundation: structured logging via pino (JSON in prod, pretty in
+  dev), redacting password/token/secret/email fields anywhere in the log
+  payload. Standard API error shape: `{ error: { code, message } }` via an
+  `AppError` hierarchy (src/lib/errors.ts) + `withApiHandler` route wrapper
+  (src/lib/api-handler.ts) — unexpected errors always collapse to a generic
+  500 message server-side-logged in full, never leaking internals to the
+  client. Prisma client is a cached singleton (src/lib/prisma.ts).
