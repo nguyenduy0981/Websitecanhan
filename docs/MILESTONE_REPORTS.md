@@ -173,3 +173,102 @@ Vercel deploy via `prisma migrate deploy`.
 Yes, once the pending redeploy has applied `20260710164422_init` to Neon —
 recommend confirming `/api/health` returns `db: "up"` in production after
 that deploy before starting Milestone 2.
+
+## Milestone 2: Authentication — 2026-07-10
+
+Confirmed before starting: owner verified `/api/health` returned
+`db: "up"` after merging Milestone 1 into `main` and redeploying, so
+`20260710164422_init` is applied to the real Neon database.
+
+### Completed
+- **Schema**: added `RateLimitHit` model (DB-backed rate limiting, no new
+  paid infra) and migration `20260710202645_add_rate_limit_hits`, generated
+  via schema-to-schema diff (still no live DB in this environment) and
+  re-validated with `prisma validate`.
+- **`src/modules/auth/password.ts`** — argon2id hash/verify (never throws on
+  a malformed hash; returns `false`).
+- **`src/modules/auth/session.ts`** — random 256-bit session tokens; only an
+  HMAC-SHA256(SESSION_SECRET) hash of the token is ever persisted (DB leak
+  alone can't be replayed as a cookie); HTTP-only, `secure` (in production),
+  `sameSite=lax` cookie helpers.
+- **`src/modules/auth/rate-limit.ts`** — sliding-window limiter backed by
+  `RateLimitHit` (Neon): login 10/15min (IP and email independently),
+  register 5/hour (IP), password-reset 3/hour (IP and email); opportunistic
+  cleanup of expired hit rows on every check.
+- **`src/modules/auth/email.ts`** — Resend wrapper for the password-reset
+  email; no-ops with a logged warning when `RESEND_API_KEY`/`EMAIL_FROM`
+  aren't configured yet ("awaiting credentials" per CLAUDE.md Honesty),
+  rather than failing the whole reset flow.
+- **`src/modules/auth/service.ts`** — `registerUser`, `loginUser`,
+  `logoutUser`, `requestPasswordReset`, `resetPassword`, `getSessionUser`,
+  `requireAuth`. Login and password-reset never reveal whether an
+  email/account exists (generic messages); password reset is single-use and
+  invalidates all of the user's other sessions in one DB transaction;
+  suspended accounts are rejected before password verification even runs.
+- **`src/lib/validation.ts`** (`parseOrThrow`) and **`src/lib/request.ts`**
+  (`getClientIp`) — small generic helpers, reusable by later modules.
+- **Routes** (all via `withApiHandler`): `POST /api/auth/register`,
+  `/login`, `/logout`, `/request-password-reset`, `/reset-password`,
+  `GET /api/auth/me`.
+- **`src/modules/auth/index.ts`** — public API only (service functions,
+  zod schemas, cookie helpers); nothing else in the module is imported
+  elsewhere, per the "no reaching into module internals" rule.
+- Added `tests/setup.ts` (+ `vitest.config.ts` `setupFiles`) so `npm run
+  test` no longer depends on the caller's shell exporting fake env vars.
+- Recorded Milestone 2 decisions (session/token lifetimes, password policy,
+  rate-limit thresholds, enumeration-avoidance choices) in `CLAUDE.md`.
+
+### Files
+`prisma/schema.prisma` (+`RateLimitHit`),
+`prisma/migrations/20260710202645_add_rate_limit_hits/`,
+`src/modules/auth/{password,session,rate-limit,email,service,schemas,index}.ts`,
+`src/lib/{validation,request}.ts`,
+`src/app/api/auth/{register,login,logout,request-password-reset,reset-password,me}/route.ts`,
+`tests/unit/{password,session,rate-limit,auth-schemas,auth-service}.test.ts`,
+`tests/setup.ts`, `vitest.config.ts`, `CLAUDE.md`, `README.md`.
+
+### Migrations
+`20260710202645_add_rate_limit_hits` added — **not yet applied to the real
+Neon database**; requires the next deploy of `main`, same as any migration.
+
+### Verification (actually executed)
+- `npm run lint` — pass, 0 errors/warnings.
+- `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **41/41 tests**, including:
+  - Real argon2id hash/verify round-trips (not mocked).
+  - Real HMAC session-token hashing (determinism, uniqueness, never equals
+    the raw token).
+  - Rate-limit threshold boundary logic.
+  - Zod schema edge cases (email normalization, password length, etc).
+  - Auth **service-layer logic against a mocked Prisma client** (`vi.mock`)
+    covering: password never stored in plaintext, duplicate-email
+    rejection, rate-limiter short-circuiting before any DB lookup, correct
+    vs. wrong-password login, generic "no such user" vs "wrong password"
+    messaging, suspended-account rejection, logout deleting the right
+    session row, password-reset token creation/no-op-for-unknown-email,
+    and reset rejecting unknown/expired/already-used tokens while
+    correctly invalidating sessions on success.
+- `npm run build` — pass, production build succeeded; all 6 new auth
+  routes + `/api/auth/me` registered as dynamic routes.
+
+### Known issues / honestly-scoped gaps
+- **No live Postgres was available in this environment**, so the tests
+  above exercise real business logic against a *mocked* Prisma client, not
+  a real database. This is not a substitute for an integration test against
+  actual Neon — recommend adding one (e.g. via a CI Postgres service
+  container) in Milestone 11: Testing & Hardening, or sooner if you'd like
+  it prioritized.
+- Email verification (`User.emailVerified`) is not sent/enforced yet —
+  intentionally out of scope per SPEC.md's V1 auth list (register, login,
+  logout, reset); can be added as a follow-up if wanted.
+- Rate-limit state (`RateLimitHit` rows) is pruned opportunistically on each
+  check rather than by a dedicated cleanup job; a proper retention job
+  belongs in Milestone 7: Lifecycle background jobs.
+- No frontend UI yet for register/login/reset — this milestone is the API
+  layer only, consistent with the roadmap (editor/pages come in later
+  milestones).
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged.
+
+### Ready for Milestone 3: Gift Core
+Yes, once the pending deploy applies `20260710202645_add_rate_limit_hits`
+to Neon.

@@ -74,3 +74,16 @@ passed without running them.
   (src/lib/api-handler.ts) — unexpected errors always collapse to a generic
   500 message server-side-logged in full, never leaking internals to the
   client. Prisma client is a cached singleton (src/lib/prisma.ts).
+- Milestone 2 authentication: session duration 30 days from login/register;
+  password reset links valid 1 hour, single-use, invalidate ALL of the
+  user's sessions on successful reset. Password policy: min 8 / max 200
+  chars (upper bound guards against pathological argon2 hashing cost).
+  Rate limits (DB-backed via a `RateLimitHit` table on Neon, no new paid
+  infra): login 10/15min (by IP and by email independently), register
+  5/hour (by IP), password-reset 3/hour (by IP and by email). Login and
+  password-reset never reveal whether an email/account exists (generic
+  "Invalid email or password", and "if an account exists..." wording) to
+  avoid user enumeration; registration does say "email already registered"
+  (standard, expected UX for sign-up). Email verification (`emailVerified`)
+  is not yet enforced/sent in V1 — deferred past this milestone since the
+  spec only requires register/login/logout/reset.
