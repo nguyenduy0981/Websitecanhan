@@ -29,5 +29,6 @@ export {
   SESSION_COOKIE_NAME,
   setSessionCookie,
   clearSessionCookie,
-  getSessionTokenFromRequest,
+  getSessionToken,
+  type CookieReader,
 } from "./session";

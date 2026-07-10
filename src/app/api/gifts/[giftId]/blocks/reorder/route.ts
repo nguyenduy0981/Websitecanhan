@@ -7,7 +7,7 @@ import { reorderBlocksSchema, reorderBlocks } from "@/modules/gifts";
 type Ctx = { params: Promise<{ giftId: string }> };
 
 export const PUT = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const { giftId } = await params;
   const body = parseOrThrow(reorderBlocksSchema, await req.json());
 

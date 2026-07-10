@@ -1,6 +1,16 @@
 import { randomBytes, createHmac } from "node:crypto";
-import type { NextRequest, NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { env } from "@/env";
+
+/**
+ * Minimal shape satisfied by both `NextRequest.cookies` (Route Handlers) and
+ * the `cookies()` store from "next/headers" (Server Components) — lets
+ * session lookups work in either context without an HTTP round-trip from a
+ * Server Component just to read its own request's cookies.
+ */
+export interface CookieReader {
+  get(name: string): { value: string } | undefined;
+}
 
 export const SESSION_COOKIE_NAME = "lovebox_session";
 // Not a CLAUDE.md non-negotiable business rule — a recorded assumption
@@ -42,6 +52,6 @@ export function clearSessionCookie(res: NextResponse): void {
   });
 }
 
-export function getSessionTokenFromRequest(req: NextRequest): string | undefined {
-  return req.cookies.get(SESSION_COOKIE_NAME)?.value;
+export function getSessionToken(cookies: CookieReader): string | undefined {
+  return cookies.get(SESSION_COOKIE_NAME)?.value;
 }

@@ -5,13 +5,13 @@ import { requireAuth } from "@/modules/auth";
 import { createGiftSchema, createGift, listGiftsForOwner } from "@/modules/gifts";
 
 export const GET = withApiHandler(async (req: NextRequest) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const gifts = await listGiftsForOwner(user.id);
   return NextResponse.json({ gifts });
 });
 
 export const POST = withApiHandler(async (req: NextRequest, { log }) => {
-  const user = await requireAuth(req);
+  const user = await requireAuth(req.cookies);
   const body = parseOrThrow(createGiftSchema, await req.json());
 
   const gift = await createGift(user.id, body);

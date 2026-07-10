@@ -99,3 +99,18 @@ passed without running them.
   block content only shape-validates `mediaAssetId` for now — it is not yet
   checked against a real `MediaAsset` row or counted against the per-tier
   image quota, since media upload doesn't exist until Milestone 6.
+- Milestone 4 editor: session reads (`getSessionUser`/`requireAuth`) now
+  take a generic `CookieReader` (satisfied by both `NextRequest.cookies`
+  and `next/headers` `cookies()`), so Server Components read their own
+  session directly instead of an internal HTTP round-trip. Page data on
+  first load (dashboard list, gift + blocks) is fetched by Server
+  Components calling the `gifts`/`auth` module service functions directly;
+  all mutations (create/update/delete/publish/reorder) go through the
+  existing API routes from the browser. Only `TEXT` blocks are creatable
+  from the editor UI in V1 — `IMAGE`/`GALLERY` block creation waits for
+  Milestone 6 media upload even though the API already accepts their
+  shape. Autosave debounces title/message edits 800ms after the last
+  keystroke. Block reordering UI uses up/down buttons, not drag-and-drop
+  (simpler, free, and keyboard-operable for accessibility). The public
+  share link (`/g/:slug`) is displayed after publish but does not resolve
+  to a real page until Milestone 5.
