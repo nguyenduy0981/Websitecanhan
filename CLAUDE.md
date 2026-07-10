@@ -87,3 +87,15 @@ passed without running them.
   (standard, expected UX for sign-up). Email verification (`emailVerified`)
   is not yet enforced/sent in V1 — deferred past this milestone since the
   spec only requires register/login/logout/reset.
+- Milestone 3 gift core: gift `id` (not `slug`) is used for all owner-facing
+  API routes; `slug` is reserved for the public viewer route in Milestone 5.
+  A gift is editable (fields, blocks, reorder) only while `DRAFT` or
+  `ACTIVE`; every other status is read-only via this API. Draft gifts can be
+  hard-deleted directly; once published, deletion must go through the
+  expire/recovery/purge lifecycle (Milestone 7) instead. Publishing requires
+  at least one block and is blocked outside `DRAFT`. Block reordering uses a
+  two-phase position update (temp offset, then final) to avoid tripping the
+  `@@unique([giftId, position])` constraint on swaps. `IMAGE`/`GALLERY`
+  block content only shape-validates `mediaAssetId` for now — it is not yet
+  checked against a real `MediaAsset` row or counted against the per-tier
+  image quota, since media upload doesn't exist until Milestone 6.

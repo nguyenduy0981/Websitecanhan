@@ -272,3 +272,97 @@ Neon database**; requires the next deploy of `main`, same as any migration.
 ### Ready for Milestone 3: Gift Core
 Yes, once the pending deploy applies `20260710202645_add_rate_limit_hits`
 to Neon.
+
+## Milestone 3: Gift Core — 2026-07-10
+
+Confirmed before starting: owner verified `/api/health` returned `db: "up"`
+after merging Milestone 2 into `main` and redeploying.
+
+### Completed
+- **`src/modules/gifts/slug.ts`** — 72-bit random URL-safe slugs
+  (`crypto.randomBytes(9).toString("base64url")`); uniqueness is enforced by
+  retrying on the DB's own unique-constraint error at insert time rather
+  than a separate existence check first (which would be a check-then-act
+  race under concurrent requests).
+- **`src/modules/gifts/authorization.ts`** — `getGiftForOwner()` returns the
+  identical `NotFoundError` whether a gift doesn't exist or belongs to
+  someone else, so an attacker can't distinguish the two cases (IDOR
+  protection per CLAUDE.md); `assertEditable()` gates all mutations to
+  `DRAFT`/`ACTIVE` gifts only.
+- **`src/modules/gifts/service.ts`** — `createGift`, `listGiftsForOwner`,
+  `updateGift`, `deleteGift` (DRAFT-only hard delete), `publishGift`
+  (DRAFT → ACTIVE; requires ≥1 block; sets `activeExpiresAt` from
+  `activeDurationDays(tier)` in `src/config/business-rules.ts` — reused,
+  not reimplemented, so the 3-day/15-day rule stays in one place).
+- **`src/modules/gifts/blocks.ts`** — `listBlocks`, `addBlock` (auto-appends
+  at the end), `updateBlock` (content re-validated against the block's own
+  type schema, since a block's `type` is immutable after creation),
+  `deleteBlock`, `reorderBlocks` (validates the payload is exactly the
+  gift's existing block ids, then does a **two-phase position update** —
+  temp offset, then final index — inside one `$transaction`, since a
+  single-phase swap could momentarily collide with the
+  `@@unique([giftId, position])` constraint).
+- **`src/modules/gifts/schemas.ts`** — `createGiftSchema`/`updateGiftSchema`;
+  a zod discriminated union over `GiftBlockType` (`TEXT`/`IMAGE`/`GALLERY`)
+  so each block type validates its own content shape;
+  `reorderBlocksSchema`.
+- **Routes** (all via `withApiHandler` + `requireAuth`): `GET/POST
+  /api/gifts`, `GET/PATCH/DELETE /api/gifts/[giftId]`, `POST
+  /api/gifts/[giftId]/publish`, `GET/POST /api/gifts/[giftId]/blocks`,
+  `PATCH/DELETE /api/gifts/[giftId]/blocks/[blockId]`, `PUT
+  /api/gifts/[giftId]/blocks/reorder`.
+- **`src/modules/gifts/index.ts`** — public API only, per the "no reaching
+  into module internals" rule.
+
+### Files
+`src/modules/gifts/{slug,authorization,service,blocks,schemas,index}.ts`,
+`src/app/api/gifts/route.ts`,
+`src/app/api/gifts/[giftId]/{route,publish/route}.ts`,
+`src/app/api/gifts/[giftId]/blocks/{route,reorder/route}.ts`,
+`src/app/api/gifts/[giftId]/blocks/[blockId]/route.ts`,
+`tests/unit/{gift-slug,gift-schemas,gift-service,gift-blocks}.test.ts`,
+`CLAUDE.md`, `README.md`.
+
+### Migrations
+None. This milestone only adds application code on top of the existing
+`Gift`/`GiftBlock` tables from Milestone 0's initial migration.
+
+### Verification (actually executed)
+- `npm run lint` — pass, 0 errors/warnings.
+- `npm run typecheck` — pass, 0 errors (dynamic route params typed as
+  `{ params: Promise<{ giftId: string }> }>`, matching the pattern
+  established in Milestone 1 for Next.js 15's route type-checker).
+- `npm run test` — pass, **77/77 tests** (36 new: slug format/uniqueness,
+  gift/block schema edge cases, and gift/block service-layer logic against
+  a mocked Prisma client — same rationale as Milestone 2: no live Postgres
+  in this environment). New coverage includes: slug retried on a simulated
+  unique-constraint collision then succeeding; `getGiftForOwner` returning
+  the same error for "missing" and "not yours"; edits/deletes/publish
+  rejected outside their allowed status; publish rejected with zero blocks;
+  **publish expiry verified to be exactly 3 days for FREE and 15 days for
+  VIP** (cross-checks Milestone 0's business-rules constants end-to-end);
+  block position assignment on add; content-schema mismatch rejected on
+  update; reorder rejecting a mismatched id set and exercising the
+  two-phase `$transaction` (asserted 4 ops for a 2-block reorder).
+- `npm run build` — pass; all 6 new gift/block routes registered as dynamic
+  routes.
+
+### Known issues / honestly-scoped gaps
+- **No live Postgres in this environment** — same caveat as Milestone 2:
+  tests exercise real logic against a mocked Prisma client, not real Neon.
+- `IMAGE`/`GALLERY` block `content.mediaAssetId` is only shape-validated
+  (a non-empty string) — it is **not** checked against a real `MediaAsset`
+  row, ownership, or the per-tier image quota in CLAUDE.md, since media
+  upload doesn't exist until Milestone 6: Media & Themes. Recorded in
+  CLAUDE.md so this isn't forgotten.
+- No pagination on `GET /api/gifts` (`listGiftsForOwner` returns every gift
+  a user owns). Fine at V1 scale; worth revisiting if a creator can
+  accumulate very many gifts.
+- No frontend UI yet — this milestone is the API layer only, consistent
+  with the roadmap (Milestone 4: Editor builds the UI on top of these
+  routes).
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged.
+
+### Ready for Milestone 4: Editor
+Yes, once this deploy is live (no migration pending this time, so the
+usual `/api/health` check is optional, but still fine to confirm).

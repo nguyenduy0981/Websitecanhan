@@ -47,6 +47,8 @@ npm run build
 - `src/modules/auth/` — register/login/logout, password reset, session
   cookies, DB-backed rate limiting, argon2id hashing. Routes under
   `src/app/api/auth/*`.
+- `src/modules/gifts/` — gift + block CRUD, ownership/IDOR checks, publish
+  (DRAFT → ACTIVE), block reordering. Routes under `src/app/api/gifts/*`.
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.
