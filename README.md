@@ -36,7 +36,14 @@ npm run build
 - `src/config/business-rules.ts` — non-negotiable business constants (gift
   lifetimes, quotas). See `CLAUDE.md`.
 - `src/env.ts` — the only place environment variables are read and validated.
-- `prisma/schema.prisma` — database schema.
+- `src/lib/logger.ts` — structured (pino) logging; redacts secrets/PII fields.
+- `src/lib/errors.ts` + `src/lib/api-handler.ts` — standard `AppError`
+  hierarchy and route wrapper producing a uniform `{ error: { code, message } }`
+  response; unexpected errors are logged in full server-side but never leak
+  details to the client.
+- `src/lib/prisma.ts` — cached Prisma client singleton.
+- `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
+  applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.
 - `docs/SETUP.md` — provisioning Neon, Cloudflare R2, Resend, PayOS, Vercel.
 - `docs/MILESTONE_REPORTS.md` — report appended after every milestone.

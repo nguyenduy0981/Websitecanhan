@@ -62,15 +62,15 @@ enum ReportStatus {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   passwordHash  String
   displayName   String?
-  role          UserRole @default(CREATOR)
-  emailVerified Boolean  @default(false)
+  role          UserRole  @default(CREATOR)
+  emailVerified Boolean   @default(false)
   suspendedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   sessions        Session[]
   gifts           Gift[]
@@ -109,11 +109,11 @@ model PasswordResetToken {
 }
 
 model Gift {
-  id              String     @id @default(cuid())
-  slug            String     @unique
+  id              String      @id @default(cuid())
+  slug            String      @unique
   ownerId         String
-  status          GiftStatus @default(DRAFT)
-  tier            GiftTier   @default(FREE)
+  status          GiftStatus  @default(DRAFT)
+  tier            GiftTier    @default(FREE)
   title           String
   message         String
   themeId         String?
@@ -125,12 +125,12 @@ model Gift {
   deletedAt       DateTime?
   suspendedAt     DateTime?
   prevStatus      GiftStatus?
-  statusChangedAt DateTime   @default(now())
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  statusChangedAt DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  owner  User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  music  MusicTrack? @relation(fields: [musicId], references: [id], onDelete: SetNull)
+  owner User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  music MusicTrack? @relation(fields: [musicId], references: [id], onDelete: SetNull)
 
   blocks          GiftBlock[]
   mediaAssets     MediaAsset[]
@@ -159,18 +159,18 @@ model GiftBlock {
 }
 
 model MediaAsset {
-  id        String            @id @default(cuid())
-  ownerId   String
-  giftId    String?
-  status    MediaAssetStatus  @default(PENDING)
+  id         String           @id @default(cuid())
+  ownerId    String
+  giftId     String?
+  status     MediaAssetStatus @default(PENDING)
   storageKey String           @unique
-  variants  Json
-  mimeType  String
-  bytes     Int
-  width     Int?
-  height    Int?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  variants   Json
+  mimeType   String
+  bytes      Int
+  width      Int?
+  height     Int?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   owner User  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   gift  Gift? @relation(fields: [giftId], references: [id], onDelete: SetNull)
@@ -280,13 +280,13 @@ model AuditLog {
 }
 
 model JobRun {
-  id              String    @id @default(cuid())
-  name            String
-  startedAt       DateTime  @default(now())
-  finishedAt      DateTime?
-  ok              Boolean?
-  itemsProcessed  Int       @default(0)
-  error           String?
+  id             String    @id @default(cuid())
+  name           String
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+  ok             Boolean?
+  itemsProcessed Int       @default(0)
+  error          String?
 
   @@index([name, startedAt])
   @@map("job_runs")
