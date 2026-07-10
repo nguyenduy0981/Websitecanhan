@@ -1,0 +1,293 @@
+// LoveBox — Prisma schema (PostgreSQL / Neon)
+// Authoritative data model. See specs/SPEC.md and CLAUDE.md for business rules.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CREATOR
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum GiftStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  RECOVERY
+  DELETION_PENDING
+  DELETED
+  SUSPENDED
+}
+
+enum GiftTier {
+  FREE
+  VIP
+}
+
+enum GiftBlockType {
+  TEXT
+  IMAGE
+  GALLERY
+}
+
+enum MediaAssetStatus {
+  PENDING
+  READY
+  ORPHANED
+  DELETED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  VERIFIED
+  ACTIVATED
+  FAILED
+  REJECTED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  ACTION_TAKEN
+  DISMISSED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  displayName   String?
+  role          UserRole @default(CREATOR)
+  emailVerified Boolean  @default(false)
+  suspendedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  gifts           Gift[]
+  mediaAssets     MediaAsset[]
+  payments        Payment[]
+  reports         Report[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id // token hash
+  userId    String
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Gift {
+  id              String     @id @default(cuid())
+  slug            String     @unique
+  ownerId         String
+  status          GiftStatus @default(DRAFT)
+  tier            GiftTier   @default(FREE)
+  title           String
+  message         String
+  themeId         String?
+  effectId        String?
+  musicId         String?
+  publishedAt     DateTime?
+  activeExpiresAt DateTime?
+  recoveryEndsAt  DateTime?
+  deletedAt       DateTime?
+  suspendedAt     DateTime?
+  prevStatus      GiftStatus?
+  statusChangedAt DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  owner  User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  music  MusicTrack? @relation(fields: [musicId], references: [id], onDelete: SetNull)
+
+  blocks          GiftBlock[]
+  mediaAssets     MediaAsset[]
+  payments        Payment[]
+  reports         Report[]
+  views           GiftView[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@index([status, activeExpiresAt])
+  @@index([status, recoveryEndsAt])
+  @@index([ownerId])
+  @@map("gifts")
+}
+
+model GiftBlock {
+  id       String        @id @default(cuid())
+  giftId   String
+  type     GiftBlockType
+  position Int
+  content  Json
+
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@unique([giftId, position])
+  @@map("gift_blocks")
+}
+
+model MediaAsset {
+  id        String            @id @default(cuid())
+  ownerId   String
+  giftId    String?
+  status    MediaAssetStatus  @default(PENDING)
+  storageKey String           @unique
+  variants  Json
+  mimeType  String
+  bytes     Int
+  width     Int?
+  height    Int?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  owner User  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  gift  Gift? @relation(fields: [giftId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([ownerId])
+  @@map("media_assets")
+}
+
+model MusicTrack {
+  id         String   @id @default(cuid())
+  title      String
+  artist     String
+  storageKey String
+  duration   Int
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  gifts Gift[]
+
+  @@map("music_tracks")
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  userId                String
+  giftId                String?
+  provider              String
+  providerTransactionId String?
+  orderCode             String        @unique
+  amount                Int
+  currency              String        @default("VND")
+  product               String        @default("VIP_15D")
+  status                PaymentStatus @default(CREATED)
+  rawWebhook            Json?
+  verifiedAt            DateTime?
+  activatedAt           DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gift Gift? @relation(fields: [giftId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerTransactionId])
+  @@index([userId])
+  @@map("payments")
+}
+
+model Report {
+  id         String       @id @default(cuid())
+  giftId     String
+  reporterId String?
+  reason     String
+  details    String?
+  status     ReportStatus @default(OPEN)
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  gift     Gift  @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  reporter User? @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+
+  @@index([giftId])
+  @@index([status])
+  @@map("reports")
+}
+
+model GiftView {
+  id          String   @id @default(cuid())
+  giftId      String
+  deviceClass String?
+  createdAt   DateTime @default(now())
+
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@index([giftId, createdAt])
+  @@map("gift_views")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String?
+  giftId    String?
+  props     Json
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  gift Gift? @relation(fields: [giftId], references: [id], onDelete: SetNull)
+
+  @@index([name, createdAt])
+  @@map("analytics_events")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String
+  meta       Json
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+model JobRun {
+  id              String    @id @default(cuid())
+  name            String
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  ok              Boolean?
+  itemsProcessed  Int       @default(0)
+  error           String?
+
+  @@index([name, startedAt])
+  @@map("job_runs")
+}
