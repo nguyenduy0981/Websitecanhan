@@ -291,3 +291,17 @@ model JobRun {
   @@index([name, startedAt])
   @@map("job_runs")
 }
+
+// Backs DB-based rate limiting (login/register/password-reset) without
+// introducing a paid infra dependency (e.g. Redis) — see CLAUDE.md Cost rules.
+// `key` is an action+identifier composite, e.g. "login:1.2.3.4" or
+// "login:user@example.com". Rows older than the check window are pruned
+// opportunistically by the rate limiter itself.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@map("rate_limit_hits")
+}

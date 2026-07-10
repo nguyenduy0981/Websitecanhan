@@ -42,6 +42,11 @@ npm run build
   response; unexpected errors are logged in full server-side but never leak
   details to the client.
 - `src/lib/prisma.ts` — cached Prisma client singleton.
+- `src/lib/validation.ts` — `parseOrThrow(schema, data)` zod helper, throws `ValidationError`.
+- `src/lib/request.ts` — `getClientIp()` for rate limiting/audit logs.
+- `src/modules/auth/` — register/login/logout, password reset, session
+  cookies, DB-backed rate limiting, argon2id hashing. Routes under
+  `src/app/api/auth/*`.
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.
