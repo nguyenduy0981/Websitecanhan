@@ -306,3 +306,24 @@ passed without running them.
   build-time-only dependencies never exposed to a live request from the
   internet, so left as-is rather than forcing a major-version downgrade/
   upgrade with real breakage risk.
+- Milestone 12 beta: with all 11 feature/hardening milestones done, "Beta"
+  had no further code-feature scope in SPEC.md/CLAUDE.md — it's an
+  operational readiness milestone. Concretely: replaced the homepage's
+  leftover Milestone-0 "đang được xây dựng" (under construction) copy
+  with real landing content (3-step how-it-works, free/VIP duration
+  pulled from the actual `business-rules.ts` constants rather than
+  hardcoded numbers, so it can't drift out of sync); added `app/icon.tsx`
+  (generated via `next/og` `ImageResponse`, no static image asset needed)
+  + `app/robots.ts` + `app/sitemap.ts` (Next's file-based conventions —
+  robots.ts disallows `/g/`, `/dashboard`, `/gifts/`, `/admin` as
+  defense-in-depth on top of the existing per-page noindex header/meta
+  tag from Milestone 5); added a "Cấu hình hệ thống" section to
+  `/admin/monitoring` surfacing live ✓/✗ status for
+  R2/Resend/PayOS/`SUPER_ADMIN_EMAIL` (reusing the existing
+  `isR2Configured` etc. booleans from `src/env.ts`) so the non-technical
+  owner has one page to check "what's still blocking real usage" instead
+  of re-reading CLAUDE.md/SETUP.md each time. `docs/BETA_CHECKLIST.md`
+  consolidates all of the above plus a suggested small-cohort rollout
+  plan into one actionable, phone-readable document. No new business
+  logic, no schema changes — pure pre-launch polish + owner-facing
+  visibility.

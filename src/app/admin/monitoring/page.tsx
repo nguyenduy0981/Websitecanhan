@@ -7,6 +7,25 @@ import { countGiftsByStatus } from "@/modules/gifts";
 import { countActivatedPayments } from "@/modules/payments";
 import { listRecentJobRuns } from "@/modules/jobs";
 import { giftStatusLabel } from "@/lib/gift-status-label";
+import { env, isR2Configured, isResendConfigured, isPayOSConfigured } from "@/env";
+
+const INTEGRATIONS = [
+  {
+    name: "Lưu trữ ảnh (Cloudflare R2)",
+    configured: isR2Configured,
+    blocks: "Không thể tải ảnh lên quà cho đến khi cấu hình xong.",
+  },
+  {
+    name: "Gửi email (Resend)",
+    configured: isResendConfigured,
+    blocks: "Email đặt lại mật khẩu chưa được gửi thật (link vẫn tạo được, chỉ là không gửi email).",
+  },
+  {
+    name: "Thanh toán VIP (PayOS)",
+    configured: isPayOSConfigured,
+    blocks: "Không thể nâng cấp VIP cho đến khi cấu hình xong.",
+  },
+] as const;
 
 // The layout only guarantees MODERATOR+; site-wide business metrics and
 // cron health are ADMIN only, so it's checked again here (same pattern as
@@ -27,6 +46,35 @@ export default async function AdminMonitoringPage() {
 
   return (
     <div>
+      <h2 className="mb-2 text-lg font-semibold">Cấu hình hệ thống</h2>
+      <ul className="mb-6 flex flex-col gap-2">
+        {INTEGRATIONS.map((integration) => (
+          <li
+            key={integration.name}
+            className={`rounded-md border p-3 text-sm ${
+              integration.configured ? "" : "border-amber-500"
+            }`}
+          >
+            <span className="font-medium">
+              {integration.configured ? "✓" : "✗"} {integration.name}
+            </span>
+            {!integration.configured && (
+              <p className="mt-1 text-xs text-amber-700">{integration.blocks}</p>
+            )}
+          </li>
+        ))}
+        <li className="rounded-md border p-3 text-sm">
+          <span className="font-medium">
+            {env.SUPER_ADMIN_EMAIL ? "✓" : "✗"} Tài khoản quản trị đầu tiên (SUPER_ADMIN_EMAIL)
+          </span>
+          {!env.SUPER_ADMIN_EMAIL && (
+            <p className="mt-1 text-xs text-amber-700">
+              Chưa đặt biến SUPER_ADMIN_EMAIL — xem docs/SETUP.md.
+            </p>
+          )}
+        </li>
+      </ul>
+
       <h2 className="mb-4 text-lg font-semibold">Tổng quan hệ thống</h2>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
