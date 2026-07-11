@@ -986,3 +986,159 @@ Milestone 0.
 ### Ready for Milestone 9: Admin & Moderation
 Yes, pending the owner configuring PayOS credentials (and ideally one real
 test purchase) whenever they're ready.
+
+## Milestone 9: Admin & Moderation — 2026-07-11
+
+Owner deferred PayOS credential setup ("phần này tôi làm sau, tiếp tục
+thôi") and asked to continue. Before writing any code, resolved the one
+real open design question this milestone has: how does a phone-only owner
+with no DB access ever get the first admin role, given `registerUser`
+always creates `CREATOR` and no admin UI exists yet? Landed on a
+self-healing `SUPER_ADMIN_EMAIL` env-var bootstrap (see CLAUDE.md
+assumptions) rather than a one-time DB seed script, since the owner can
+never run one.
+
+### Completed
+- **`SUPER_ADMIN_EMAIL` bootstrap** (`src/env.ts`, `src/modules/auth/service.ts`):
+  new optional env var; `maybeBootstrapSuperAdmin()` runs on every
+  `registerUser`/`loginUser`/`getSessionUser` call and promotes a matching
+  account to `SUPER_ADMIN` if it isn't already. Self-healing by design —
+  checked on every session fetch, not just at creation — so an accidental
+  demotion of that one account heals on its next login; every other
+  account is untouched. Short-circuits immediately once already
+  `SUPER_ADMIN`, so it's not a per-request DB write after the first
+  promotion.
+- **`src/modules/admin/rbac.ts`** — `hasRole`/`requireRole`, a simple
+  numeric rank check (`CREATOR < MODERATOR < ADMIN < SUPER_ADMIN`).
+  `requireRole` throws `ForbiddenError`, called at the route layer next to
+  the existing `requireAuth()` — no service function trusts its caller's
+  role by itself.
+- **`src/modules/admin/audit.ts`** — `writeAuditLog()`, best-effort (never
+  throws), same graceful-degradation pattern as `recordGiftView` from
+  Milestone 5. Used by every moderation action.
+- **`src/modules/admin/reports.ts`** — `createReport()` (public/anonymous-
+  friendly, rate-limited 5/hour by IP via the Milestone 2 rate-limit
+  table, and reuses `classifyGiftForViewer()` so a `DRAFT` gift is exactly
+  as unreportable as it is unviewable — closes an enumeration path before
+  it could exist), `listReportsForAdmin()`, `resolveReport()` (`DISMISS`
+  or `SUSPEND`; rejects re-resolving an already-closed report).
+- **`src/modules/admin/moderation.ts`** — `suspendGift()`/`unsuspendGift()`.
+  Confirmed `SUSPENDED` is genuinely orthogonal to the normal
+  `DRAFT→ACTIVE→EXPIRED→RECOVERY→DELETION_PENDING→DELETED` chain (the
+  Milestone 7 lifecycle cron already filters every query by specific
+  statuses, so it never touches a `SUSPENDED` gift). `suspendGift` stores
+  whatever status the gift actually held as `prevStatus` and is
+  idempotent (two reports on the same gift can both resolve to "suspend"
+  without either erroring); `unsuspendGift` restores exactly that
+  `prevStatus` (including a status the lifecycle cron itself had already
+  moved it to, e.g. suspending an `EXPIRED` gift and later unsuspending it
+  returns it to `EXPIRED`, not back to `ACTIVE`) and is a real
+  `ConflictError` on a non-suspended gift, since there's nothing to
+  restore. Deliberately does not compensate `activeExpiresAt` for
+  suspended time — server time stays the sole source of truth for
+  expiration per CLAUDE.md, even across a suspension.
+- **`src/modules/admin/users.ts`** + **`src/modules/auth/admin.ts`** —
+  `listUsers()`/`changeUserRole()` (SUPER_ADMIN only, route-gated), so the
+  role system is actually usable beyond the one bootstrapped account.
+  Wraps the auth module's `listUsersForAdmin()`/`setUserRole()` (User rows
+  stay owned by the `auth` module even for admin use, same pattern as
+  `getGiftForAdmin()` below) with an audit-log write recording the
+  before/after role.
+- **`src/modules/gifts/admin.ts`** — `getGiftForAdmin()`/
+  `listBlocksForAdmin()`/`setGiftStatusForAdmin()`: deliberate ownership
+  bypass for trusted, RBAC-gated moderation use only, so a moderator can
+  actually see what was reported — Gift/GiftBlock prisma access stays
+  inside the `gifts` module even for this path, consistent with the
+  existing modular-monolith rule.
+- **Routes**: `POST /api/reports` (public); `GET /api/admin/reports`
+  (optional `?status=`), `POST /api/admin/reports/[reportId]/resolve`,
+  `GET /api/admin/gifts/[giftId]` (content review), `POST
+  /api/admin/gifts/[giftId]/suspend` / `/unsuspend`, `GET
+  /api/admin/users`, `PATCH /api/admin/users/[userId]/role` — all
+  MODERATOR+ (users routes SUPER_ADMIN) via `requireAuth()` +
+  `requireRole()`.
+- **UI**: a small "Báo cáo nội dung này" link + inline form on the public
+  viewer (`/g/[slug]`, only reachable once a gift is actually `active`,
+  matching the existing viewer-decision logic); an `/admin` section
+  (`/admin/reports` list + resolve buttons, `/admin/gifts/[giftId]` full
+  content review + suspend/unsuspend toggle, `/admin/users` SUPER_ADMIN
+  role management) gated by a shared layout that calls `hasRole()`/
+  `notFound()` — not a 403 page — for an insufficient role, matching this
+  codebase's existing "don't confirm what you can't prove" instinct (same
+  treatment as a DRAFT gift). A "Quản trị" link appears on the dashboard
+  only for MODERATOR+.
+
+### Files
+`src/modules/admin/{rbac,audit,reports,moderation,users,schemas,index}.ts`,
+`src/modules/auth/admin.ts` (+ exported from `src/modules/auth/index.ts`,
+along with `checkRateLimit`/`RATE_LIMITS` which admin's report rate
+limiting needed), `src/modules/gifts/admin.ts` (+ exported from
+`src/modules/gifts/index.ts`), `src/modules/auth/service.ts` (bootstrap),
+`src/modules/auth/rate-limit.ts` (+`report` rule), `src/env.ts`
+(+`SUPER_ADMIN_EMAIL`), `src/app/api/reports/route.ts`,
+`src/app/api/admin/reports/route.ts`,
+`src/app/api/admin/reports/[reportId]/resolve/route.ts`,
+`src/app/api/admin/gifts/[giftId]/{route,suspend/route,unsuspend/route}.ts`,
+`src/app/api/admin/users/route.ts`,
+`src/app/api/admin/users/[userId]/role/route.ts`,
+`src/app/admin/layout.tsx`, `src/app/admin/reports/{page,ReportActions}.tsx`,
+`src/app/admin/gifts/[giftId]/{page,SuspendToggle}.tsx`,
+`src/app/admin/users/{page,RoleSelect}.tsx`,
+`src/app/g/[slug]/ReportButton.tsx` (+ `GiftView.tsx`, `page.tsx` updated),
+`src/app/dashboard/page.tsx` (updated — admin nav link),
+`src/lib/report-reason-label.ts`, `tests/unit/admin-{rbac,moderation,
+reports,users}.test.ts`, `tests/unit/auth-super-admin-bootstrap.test.ts`,
+`CLAUDE.md`, `docs/SETUP.md`, `.env.example`.
+
+### Migrations
+None — uses the existing `Report`, `AuditLog`, and `UserRole`/`GiftStatus.
+SUSPENDED` schema from Milestone 0, previously unused by any code.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **163/163 tests** (28 new): RBAC rank checks;
+  SUPER_ADMIN bootstrap on register/login/session-fetch (including the
+  self-healing re-promotion case and the "already SUPER_ADMIN, skip the
+  write" fast path); report creation (rate-limit-first ordering, unknown
+  slug, **DRAFT gift treated as not-found**, anonymous reporter allowed);
+  report resolution (unknown/already-resolved report rejected, DISMISS
+  vs. SUSPEND branching, SUSPEND actually calls `suspendGift` with the
+  report context); suspend/unsuspend (prevStatus round-trip, suspend
+  idempotency, unsuspend-when-not-suspended rejected, DRAFT fallback if
+  prevStatus was somehow never recorded); user role listing/changing
+  (password hash never leaks into the admin summary shape, audit log
+  records the before/after role).
+- `npm run build` — pass; all new routes and `/admin/*` pages registered
+  as dynamic (`ƒ`). One non-fatal `prisma:error Can't reach database
+  server at localhost:5432` line appeared in the build log while
+  collecting page data for `/admin/reports` (it calls
+  `listReportsForAdmin()` at the page level, unlike earlier pages that
+  call `cookies()` directly and were caught as dynamic before any DB call
+  triggered) — same "no live Postgres in this sandbox" caveat as every
+  prior milestone, harmless here since the build still completed and
+  correctly marked the route dynamic; will not occur on Vercel where
+  `DATABASE_URL` points at a real reachable Neon instance.
+
+### Known issues / honestly-scoped gaps
+- **No live Postgres in this environment** — same caveat as every prior
+  milestone; all of the above is verified against a mocked Prisma client,
+  not a real database's actual constraint/transaction behavior.
+- **`SUPER_ADMIN_EMAIL` is not yet set anywhere** — until the owner sets
+  it in Vercel and logs in once with that email (steps added to
+  `docs/SETUP.md`), there is no admin account and the `/admin` section is
+  unreachable by anyone. This is expected/by-design, not a bug — flagging
+  so it's not mistaken for the moderation feature being broken.
+- No pagination on `/admin/reports` or `/admin/users` — acceptable at
+  current expected scale (V1, low volume); revisit if either list grows
+  large.
+- `Report.status` moves straight from `OPEN` to `DISMISSED`/`ACTION_TAKEN`
+  — the schema's `REVIEWED` intermediate status exists but nothing sets it
+  yet (no "mark as seen, decide later" step in the V1 UI). Low-risk gap,
+  easy to add later without a migration.
+- Suspending a gift does not currently notify its owner (no email/in-app
+  notice that their gift was suspended) — acceptable for V1 given Resend
+  isn't configured yet either; worth adding once transactional email is
+  live.
+
+### Ready for Milestone 10: Analytics & Monitoring
+Yes.

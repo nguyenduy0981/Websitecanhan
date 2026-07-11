@@ -13,6 +13,7 @@ export const RATE_LIMITS = {
   login: { limit: 10, windowMs: 15 * 60 * 1000 },
   register: { limit: 5, windowMs: 60 * 60 * 1000 },
   passwordReset: { limit: 3, windowMs: 60 * 60 * 1000 },
+  report: { limit: 5, windowMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Pure decision helper (no I/O) so the limiting logic is unit-testable without a DB. */

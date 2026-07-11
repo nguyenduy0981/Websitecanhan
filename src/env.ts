@@ -28,6 +28,11 @@ const envSchema = z.object({
   PAYOS_CHECKSUM_KEY: z.string().optional(),
 
   VIP_PRICE_VND: z.coerce.number().int().positive().default(49000),
+
+  // Bootstraps the very first SUPER_ADMIN without needing raw DB access
+  // (the owner is phone-only — see CLAUDE.md). Optional: if set, the user
+  // with this email is auto-promoted to SUPER_ADMIN on register/login.
+  SUPER_ADMIN_EMAIL: z.string().email().optional(),
 });
 
 export type Env = Omit<z.infer<typeof envSchema>, "APP_URL"> & { APP_URL: string };

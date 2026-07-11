@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTheme } from "@/config/themes";
 import { EffectOverlay } from "./EffectOverlay";
+import { ReportButton } from "./ReportButton";
 
 interface Block {
   id: string;
@@ -14,12 +15,14 @@ interface Block {
 // text renders on a public viewer → treat as hostile: escape/sanitize
 // everywhere."
 export function GiftView({
+  slug,
   title,
   message,
   blocks,
   themeId,
   effectId,
 }: {
+  slug: string;
   title: string;
   message: string;
   blocks: Block[];
@@ -69,6 +72,9 @@ export function GiftView({
           >
             Tạo hộp quà của riêng bạn
           </Link>
+          <div className="mt-3">
+            <ReportButton slug={slug} />
+          </div>
         </footer>
       </div>
     </main>

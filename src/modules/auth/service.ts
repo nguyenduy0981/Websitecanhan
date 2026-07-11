@@ -33,6 +33,24 @@ function toPublicUser(user: User): PublicUser {
   };
 }
 
+/**
+ * Self-healing SUPER_ADMIN bootstrap: with no DB access available to the
+ * (phone-only) owner, this is the only way to ever grant the first admin
+ * role. Runs on every register/login/session-fetch for the configured
+ * email, so even an accidental demotion of that account heals on its next
+ * login. Never affects any other user's role.
+ */
+async function maybeBootstrapSuperAdmin(user: User): Promise<User> {
+  if (
+    !env.SUPER_ADMIN_EMAIL ||
+    user.role === "SUPER_ADMIN" ||
+    user.email.toLowerCase() !== env.SUPER_ADMIN_EMAIL.toLowerCase()
+  ) {
+    return user;
+  }
+  return prisma.user.update({ where: { id: user.id }, data: { role: "SUPER_ADMIN" } });
+}
+
 export interface AuthResult {
   user: PublicUser;
   sessionToken: string;
@@ -69,13 +87,14 @@ export async function registerUser(
   }
 
   const passwordHash = await hashPassword(input.password);
-  const user = await prisma.user.create({
+  let user = await prisma.user.create({
     data: {
       email: input.email,
       passwordHash,
       displayName: input.displayName,
     },
   });
+  user = await maybeBootstrapSuperAdmin(user);
 
   const { token, expiresAt } = await createSessionForUser(user.id, meta);
   return { user: toPublicUser(user), sessionToken: token, sessionExpiresAt: expiresAt };
@@ -88,7 +107,7 @@ export async function loginUser(
   await checkRateLimit(`login:${meta.ip}`, RATE_LIMITS.login);
   await checkRateLimit(`login:${input.email}`, RATE_LIMITS.login);
 
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  let user = await prisma.user.findUnique({ where: { email: input.email } });
   const INVALID_CREDENTIALS = "Invalid email or password";
 
   if (!user) {
@@ -102,6 +121,8 @@ export async function loginUser(
   if (!passwordOk) {
     throw new UnauthorizedError(INVALID_CREDENTIALS);
   }
+
+  user = await maybeBootstrapSuperAdmin(user);
 
   const { token, expiresAt } = await createSessionForUser(user.id, meta);
   return { user: toPublicUser(user), sessionToken: token, sessionExpiresAt: expiresAt };
@@ -176,7 +197,8 @@ export async function getSessionUser(cookies: CookieReader): Promise<PublicUser 
     return null;
   }
 
-  return toPublicUser(session.user);
+  const user = await maybeBootstrapSuperAdmin(session.user);
+  return toPublicUser(user);
 }
 
 export async function requireAuth(cookies: CookieReader): Promise<PublicUser> {

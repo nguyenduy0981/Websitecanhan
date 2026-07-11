@@ -208,3 +208,41 @@ passed without running them.
   hosted checkout (`window.location.href = checkoutUrl`) and, on return,
   explicitly never claims VIP is active — only the webhook can activate it
   — the return page just says "confirming, refresh to check."
+- Milestone 9 admin & moderation: the owner has no DB access (phone-only),
+  so the first SUPER_ADMIN can only be bootstrapped via a new optional
+  `SUPER_ADMIN_EMAIL` env var — on every register/login/session-fetch, if
+  the account's email matches it and isn't already SUPER_ADMIN, it's
+  promoted. This is deliberately self-healing (checked on every session
+  fetch, not just at creation) so an accidental demotion of that one
+  account heals on its next login; it never touches any other user's
+  role. RBAC is a simple rank check (`CREATOR < MODERATOR < ADMIN <
+  SUPER_ADMIN`, `requireRole()` in the new `admin` module) enforced at the
+  route layer, the same place `requireAuth()` already runs — no service
+  function trusts its caller's role by itself. Content reporting
+  (`POST /api/reports`) is public/anonymous-friendly (rate-limited 5/hour
+  by IP, reusing the Milestone 2 rate-limit table) and reuses
+  `classifyGiftForViewer()` so a `DRAFT` gift is exactly as unreportable
+  as it is unviewable — the report endpoint can't be used to probe for
+  unpublished gifts by slug. `SUSPENDED` is confirmed orthogonal to the
+  normal `DRAFT→ACTIVE→EXPIRED→RECOVERY→DELETION_PENDING→DELETED` chain
+  (per the lifecycle rule already in this file): `suspendGift()` stores
+  whatever status the gift was actually in as `prevStatus` and
+  `unsuspendGift()` restores exactly that — including a status the
+  lifecycle cron itself had already transitioned it to (e.g. suspending an
+  `EXPIRED` gift and later unsuspending it returns it to `EXPIRED`, not
+  back to `ACTIVE`). Suspending is idempotent (two reports on the same
+  gift can both resolve to "suspend" without either erroring);
+  unsuspending a non-suspended gift is a real `ConflictError` since
+  there's nothing to restore. Suspension time is never compensated into
+  `activeExpiresAt` — server time stays the sole source of truth for
+  expiration even across a suspension. Every moderation action
+  (suspend/unsuspend/report-resolve/role-change) writes a best-effort
+  `AuditLog` row (never throws — same graceful-degradation pattern as
+  `recordGiftView`) via a shared `writeAuditLog()` helper. Admin content
+  review bypasses the normal ownership check on purpose
+  (`getGiftForAdmin`/`listBlocksForAdmin` in the `gifts` module, used only
+  by RBAC-gated `/api/admin/*` routes) so a moderator can actually see
+  what was reported. `/admin` pages `notFound()` (not a 403 page) for a
+  session that lacks the role, matching this codebase's existing
+  "don't confirm what you can't prove" instinct (same as a DRAFT gift
+  being treated as not-found rather than "exists but you can't see it").
