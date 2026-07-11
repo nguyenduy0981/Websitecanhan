@@ -20,6 +20,17 @@ export default async function RegisterPage() {
           Đăng nhập
         </Link>
       </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Bằng việc đăng ký, bạn đồng ý với{" "}
+        <Link href="/terms" className="underline underline-offset-2">
+          Điều khoản dịch vụ
+        </Link>{" "}
+        và{" "}
+        <Link href="/privacy" className="underline underline-offset-2">
+          Chính sách bảo mật
+        </Link>
+        .
+      </p>
     </main>
   );
 }

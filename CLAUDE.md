@@ -327,3 +327,29 @@ passed without running them.
   plan into one actionable, phone-readable document. No new business
   logic, no schema changes — pure pre-launch polish + owner-facing
   visibility.
+- Milestones 13-14 (Launch/Growth): like Milestone 12, neither
+  specs/SPEC.md nor CLAUDE.md define further code-feature scope for these
+  beyond the roadmap name — real "launch" is gated on the owner finishing
+  `docs/BETA_CHECKLIST.md` (real credentials, real beta users), which
+  isn't something code can do. Scoped this pass to genuinely useful,
+  low-risk pre-public-launch items: `/terms` and `/privacy` pages (a
+  good-faith, accurate draft describing what LoveBox actually does —
+  free/VIP lifecycle durations pulled from `business-rules.ts`, PayOS/R2/
+  Resend named as the actual third-party processors, argon2id/HTTP-only-
+  cookie security described accurately — **not lawyer-reviewed**; flagged
+  here, not on the public page itself, so the owner knows to get real
+  legal review before a wide public launch given PayOS handles real
+  payments), linked from a new shared `SiteFooter` component and from the
+  register page ("by registering you agree to...", no blocking checkbox
+  — kept lightweight for V1). Added `app/opengraph-image.tsx` (root-level,
+  same `next/og` `ImageResponse` pattern as Milestone 12's `icon.tsx`) so
+  sharing the homepage itself gets a real branded preview card; it's
+  deliberately generic and inherited by every page that doesn't set its
+  own `openGraph.images` — including gift pages, which is safe precisely
+  *because* it's generic and never derived from real gift content (same
+  "never leak gift content via social preview" rule from Milestone 5).
+  Added a small homepage social-proof counter ("X hộp quà đã được tạo",
+  reusing the existing `countGiftsByStatus()` from Milestone 10) that
+  only renders once the real total crosses 10 — an honest low number
+  undermines trust more than omitting the stat entirely, so it's hidden
+  below that threshold rather than shown early.
