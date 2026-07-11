@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { spinnerClass } from "@/lib/ui-classes";
 
 export function ReportActions({ reportId }: { reportId: string }) {
   const router = useRouter();
@@ -30,22 +31,28 @@ export function ReportActions({ reportId }: { reportId: string }) {
 
   return (
     <div>
-      {error && <p className="mb-1 text-xs text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="lb-form-error mb-1 text-xs text-red-600">
+          {error}
+        </p>
+      )}
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => resolve("SUSPEND")}
           disabled={loading !== null}
-          className="rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
+          className="lb-btn inline-flex items-center gap-1.5 rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
         >
+          {loading === "SUSPEND" && <span className={spinnerClass} aria-hidden="true" />}
           {loading === "SUSPEND" ? "Đang xử lý..." : "Tạm ngưng quà"}
         </button>
         <button
           type="button"
           onClick={() => resolve("DISMISS")}
           disabled={loading !== null}
-          className="rounded-md border px-3 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
+          className="lb-btn inline-flex items-center gap-1.5 rounded-md border px-3 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
         >
+          {loading === "DISMISS" && <span className={spinnerClass} aria-hidden="true" />}
           {loading === "DISMISS" ? "Đang xử lý..." : "Bỏ qua"}
         </button>
       </div>

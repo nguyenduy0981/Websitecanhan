@@ -24,7 +24,7 @@ export default async function AdminGiftReviewPage({
   const blocks = await listBlocksForAdmin(giftId);
 
   return (
-    <div>
+    <div className="lb-fade-in-up">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Xem nội dung quà (quyền quản trị)</h2>
         <SuspendToggle giftId={gift.id} suspended={gift.status === "SUSPENDED"} />

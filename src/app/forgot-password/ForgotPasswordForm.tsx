@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-
-const inputClass =
-  "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
-const buttonClass =
-  "mt-2 w-full rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
+import { inputClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -34,14 +31,14 @@ export function ForgotPasswordForm() {
 
   if (message) {
     return (
-      <p role="status" className="rounded-md border p-3 text-sm">
+      <p role="status" className="lb-pop-in rounded-md border p-3 text-sm">
         {message}
       </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate className="lb-fade-in-up">
       <label htmlFor="email" className="block text-sm font-medium">
         Email
       </label>
@@ -55,9 +52,12 @@ export function ForgotPasswordForm() {
         className={inputClass}
       />
 
-      <button type="submit" disabled={submitting} className={buttonClass}>
-        {submitting ? "Đang gửi..." : "Gửi liên kết đặt lại"}
-      </button>
+      <SubmitButton
+        submitting={submitting}
+        label="Gửi liên kết đặt lại"
+        submittingLabel="Đang gửi..."
+        variant="primary"
+      />
     </form>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { spinnerClass } from "@/lib/ui-classes";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -23,8 +24,9 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={loading}
-      className="rounded-md border px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
+      className="lb-btn inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
     >
+      {loading && <span className={spinnerClass} aria-hidden="true" />}
       {loading ? "Đang đăng xuất..." : "Đăng xuất"}
     </button>
   );

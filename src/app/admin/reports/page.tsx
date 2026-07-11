@@ -8,7 +8,7 @@ export default async function AdminReportsPage() {
   const reports = await listReportsForAdmin("OPEN");
 
   return (
-    <div>
+    <div className="lb-fade-in-up">
       <h2 className="mb-4 text-lg font-semibold">Báo cáo đang chờ xử lý ({reports.length})</h2>
 
       {reports.length === 0 ? (
@@ -26,7 +26,7 @@ export default async function AdminReportsPage() {
                 </div>
                 <Link
                   href={`/admin/gifts/${report.gift.id}`}
-                  className="shrink-0 text-xs underline"
+                  className="lb-btn shrink-0 text-xs underline"
                 >
                   Xem nội dung
                 </Link>

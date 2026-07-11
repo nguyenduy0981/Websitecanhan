@@ -40,6 +40,7 @@ export function OpeningSequence({ children }: { children: ReactNode }) {
 
       <div className={styles.burst} aria-hidden="true">
         <span className={styles.flash} />
+        <span className={styles.ring} />
         <span className={`${styles.lid} ${styles.lidLeft}`} />
         <span className={`${styles.lid} ${styles.lidRight}`} />
         {BURST_PARTICLES.map((p) => (

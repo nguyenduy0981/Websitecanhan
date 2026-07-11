@@ -4,6 +4,8 @@ import { EffectCanvas } from "./EffectCanvas";
 import { ReportButton } from "./ReportButton";
 import { OpeningSequence, openingSequenceStyles as os } from "./OpeningSequence";
 import { RevealWords } from "./RevealWords";
+import { ParallaxLayer } from "./ParallaxLayer";
+import { ZoomableImage } from "./ZoomableImage";
 
 interface Block {
   id: string;
@@ -37,6 +39,14 @@ export function GiftView({
     <main className={`flex min-h-screen flex-col ${theme.containerClassName}`}>
       <OpeningSequence>
         {effectId && <EffectCanvas effectId={effectId} />}
+        <ParallaxLayer speed={0.12}>
+          <span
+            className="absolute left-1/2 top-16 -translate-x-1/2 select-none text-[9rem] opacity-[0.06]"
+            aria-hidden="true"
+          >
+            💌
+          </span>
+        </ParallaxLayer>
         <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col p-6">
           <article className="flex-1">
             <h1 className={`${os.section} ${theme.headingFontClassName} text-3xl font-bold`}>
@@ -55,15 +65,7 @@ export function GiftView({
             >
               {blocks.map((block) => {
                 if (block.type === "IMAGE" && block.content.url) {
-                  return (
-                    // eslint-disable-next-line @next/next/no-img-element -- remote R2 URL, not worth next/image config for V1
-                    <img
-                      key={block.id}
-                      src={block.content.url}
-                      alt="Ảnh trong quà"
-                      className="w-full rounded-lg object-cover"
-                    />
-                  );
+                  return <ZoomableImage key={block.id} src={block.content.url} alt="Ảnh trong quà" />;
                 }
                 if (block.type === "TEXT" && block.content.text) {
                   return (

@@ -41,6 +41,13 @@ export default async function HomePage() {
     <>
       <main className="flex min-h-screen flex-col items-center gap-16 p-8 pb-8 pt-16 text-center">
         <section className="flex flex-col items-center gap-4">
+          <span
+            className="lb-fade-in-up lb-float select-none text-6xl"
+            style={{ "--lb-delay": "0ms" } as React.CSSProperties}
+            aria-hidden="true"
+          >
+            🎁
+          </span>
           <h1 className="lb-fade-in-up text-4xl font-bold">LoveBox</h1>
           <p
             className="lb-fade-in-up max-w-md text-muted-foreground"
@@ -55,14 +62,14 @@ export default async function HomePage() {
           >
             <Link
               href={user ? "/dashboard" : "/register"}
-              className="rounded-md border px-5 py-2.5 font-medium transition-transform duration-150 hover:scale-[1.04] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              className="lb-btn lb-pulse rounded-md border border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 font-medium text-white shadow-sm hover:from-violet-500 hover:to-fuchsia-500 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
             >
               {user ? "Vào Dashboard" : "Tạo hộp quà đầu tiên"}
             </Link>
             {!user && (
               <Link
                 href="/login"
-                className="rounded-md px-5 py-2.5 text-sm underline underline-offset-2 transition-transform duration-150 hover:scale-[1.04] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                className="lb-btn rounded-md px-5 py-2.5 text-sm underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               >
                 Đã có tài khoản? Đăng nhập
               </Link>
@@ -82,10 +89,7 @@ export default async function HomePage() {
         <ScrollReveal>
           <section className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
             {STEPS.map((step) => (
-              <div
-                key={step.title}
-                className="rounded-md border p-4 transition-transform duration-200 hover:-translate-y-1"
-              >
+              <div key={step.title} className="lb-btn rounded-md border p-4">
                 <h2 className="font-semibold">{step.title}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
               </div>
@@ -103,7 +107,9 @@ export default async function HomePage() {
           </section>
         </ScrollReveal>
       </main>
-      <SiteFooter />
+      <ScrollReveal>
+        <SiteFooter />
+      </ScrollReveal>
     </>
   );
 }

@@ -6,6 +6,11 @@ import type { GiftStatus, GiftTier } from "@prisma/client";
 import { giftStatusLabel } from "@/lib/gift-status-label";
 import { THEMES, DEFAULT_THEME_ID, getTheme } from "@/config/themes";
 import { EFFECTS, DEFAULT_EFFECT_ID } from "@/config/effects";
+import { inputClass, errorTextClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
+import { Checkmark } from "@/app/ui/Checkmark";
+import { CopyButton } from "@/app/ui/CopyButton";
+import { ConfirmModal } from "@/app/ui/ConfirmModal";
 
 interface Block {
   id: string;
@@ -39,10 +44,8 @@ const DEVICE_LABELS: Record<string, string> = {
   unknown: "Không xác định",
 };
 
-const inputClass =
-  "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 const buttonClass =
-  "rounded-md border px-3 py-1.5 text-sm font-medium transition-transform duration-150 hover:scale-[1.03] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:hover:scale-100 disabled:active:scale-100";
+  "lb-btn rounded-md border px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
 
 // Matches the CSS transition duration on the block <li> below, so the
 // item is only actually removed from state once its fade/scale-out has
@@ -87,6 +90,9 @@ export function GiftEditor({
   const [actionError, setActionError] = useState<string | null>(null);
   const [removingBlockId, setRemovingBlockId] = useState<string | null>(null);
   const [justPublished, setJustPublished] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isFirstRender = useRef(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -218,25 +224,35 @@ export function GiftEditor({
 
   async function publish() {
     setActionError(null);
-    const res = await fetch(`/api/gifts/${gift.id}/publish`, { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) {
-      setActionError(data.error?.message ?? "Không thể xuất bản");
-      return;
+    setPublishing(true);
+    try {
+      const res = await fetch(`/api/gifts/${gift.id}/publish`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error?.message ?? "Không thể xuất bản");
+        return;
+      }
+      setStatus(data.gift.status);
+      setJustPublished(true);
+      setTimeout(() => setJustPublished(false), 2400);
+    } finally {
+      setPublishing(false);
     }
-    setStatus(data.gift.status);
-    setJustPublished(true);
-    setTimeout(() => setJustPublished(false), 2400);
   }
 
   async function deleteGift() {
-    if (!window.confirm("Xóa quà nháp này? Không thể hoàn tác.")) return;
-    const res = await fetch(`/api/gifts/${gift.id}`, { method: "DELETE" });
-    if (res.ok) {
-      router.push("/dashboard");
-    } else {
-      const data = await res.json();
-      setActionError(data.error?.message ?? "Không thể xóa");
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/gifts/${gift.id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/dashboard");
+      } else {
+        const data = await res.json();
+        setActionError(data.error?.message ?? "Không thể xóa");
+        setDeleteConfirmOpen(false);
+      }
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -281,7 +297,11 @@ export function GiftEditor({
         </div>
 
         {justPublished && (
-          <p role="status" className="lb-pop-in mb-4 rounded-md border border-green-500 p-3 text-sm text-green-700">
+          <p
+            role="status"
+            className="lb-pop-in mb-4 flex items-center gap-2 rounded-md border border-green-500 p-3 text-sm text-green-700"
+          >
+            <Checkmark size={24} />
             🎉 Đã xuất bản! Quà của bạn đã sẵn sàng để chia sẻ.
           </p>
         )}
@@ -301,31 +321,23 @@ export function GiftEditor({
         {gift.tier !== "VIP" && (
           <div className="mb-4">
             {vipCheckoutError && (
-              <p
-                role="alert"
-                className="lb-pop-in mb-2 rounded-md border border-red-500 p-3 text-sm text-red-600"
-              >
+              <p role="alert" className={errorTextClass}>
                 {vipCheckoutError}
               </p>
             )}
-            <button
-              type="button"
+            <SubmitButton
               onClick={startVipCheckout}
-              disabled={vipCheckoutLoading}
-              className={buttonClass}
-            >
-              {vipCheckoutLoading
-                ? "Đang tạo thanh toán..."
-                : `Nâng cấp VIP (${vipPriceVnd.toLocaleString("vi-VN")}đ, +15 ngày)`}
-            </button>
+              submitting={vipCheckoutLoading}
+              variant="primary"
+              className="mt-0 w-auto lb-pulse"
+              label={`Nâng cấp VIP (${vipPriceVnd.toLocaleString("vi-VN")}đ, +15 ngày)`}
+              submittingLabel="Đang tạo thanh toán..."
+            />
           </div>
         )}
 
         {actionError && (
-          <p
-            role="alert"
-            className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600"
-          >
+          <p role="alert" className={errorTextClass}>
             {actionError}
           </p>
         )}
@@ -497,20 +509,39 @@ export function GiftEditor({
         <div className="mt-6 flex flex-wrap gap-2">
           {status === "DRAFT" && (
             <>
-              <button type="button" onClick={publish} className={buttonClass}>
-                Xuất bản
-              </button>
-              <button type="button" onClick={deleteGift} className={buttonClass}>
+              <SubmitButton
+                onClick={publish}
+                submitting={publishing}
+                variant="primary"
+                className="mt-0 w-auto"
+                label="Xuất bản"
+                submittingLabel="Đang xuất bản..."
+              />
+              <button type="button" onClick={() => setDeleteConfirmOpen(true)} className={buttonClass}>
                 Xóa quà nháp
               </button>
             </>
           )}
         </div>
 
+        <ConfirmModal
+          open={deleteConfirmOpen}
+          title="Xóa quà nháp này?"
+          description="Không thể hoàn tác sau khi xóa."
+          confirmLabel="Xóa"
+          destructive
+          busy={deleting}
+          onConfirm={deleteGift}
+          onCancel={() => setDeleteConfirmOpen(false)}
+        />
+
         {status !== "DRAFT" && (
-          <div className="mt-6 rounded-md border p-3">
+          <div className="lb-fade-in-up mt-6 rounded-md border p-3">
             <p className="text-sm font-medium">Link chia sẻ</p>
-            <p className="break-all text-sm text-muted-foreground">{shareUrl}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="break-all text-sm text-muted-foreground">{shareUrl}</p>
+              <CopyButton value={shareUrl} />
+            </div>
             {shareQrDataUrl && (
               // eslint-disable-next-line @next/next/no-img-element -- small server-generated data URL, not worth next/image's overhead
               <img
@@ -518,7 +549,8 @@ export function GiftEditor({
                 alt={`Mã QR dẫn đến ${shareUrl}`}
                 width={160}
                 height={160}
-                className="mt-3"
+                className="lb-pop-in mt-3"
+                style={{ animationDelay: "150ms" }}
               />
             )}
           </div>
@@ -554,10 +586,15 @@ export function GiftEditor({
 
       <section
         aria-label="Xem trước"
-        className={`rounded-md border p-4 ${getTheme(themeId).containerClassName}`}
+        className={`rounded-md border p-4 transition-colors duration-300 ${getTheme(themeId).containerClassName}`}
       >
         <h2 className="mb-3 text-lg font-semibold">Xem trước</h2>
-        <h3 className={`${getTheme(themeId).headingFontClassName} text-xl font-bold`}>{title}</h3>
+        <h3
+          key={themeId}
+          className={`lb-fade-in-up ${getTheme(themeId).headingFontClassName} text-xl font-bold`}
+        >
+          {title}
+        </h3>
         <p className="mt-2 whitespace-pre-wrap">{message}</p>
         <div className="mt-4 flex flex-col gap-3">
           {blocks.map((block) =>
@@ -577,7 +614,7 @@ export function GiftEditor({
           )}
         </div>
         {effectId !== "none" && (
-          <p className="mt-4 text-xs opacity-70">
+          <p key={effectId} className="lb-scale-in mt-4 text-xs opacity-70">
             {`Hiệu ứng “${EFFECTS.find((e) => e.id === effectId)?.name}” sẽ hiện khi người nhận mở quà.`}
           </p>
         )}

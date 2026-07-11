@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { spinnerClass } from "@/lib/ui-classes";
 
 const ROLES = ["CREATOR", "MODERATOR", "ADMIN", "SUPER_ADMIN"] as const;
 
@@ -32,19 +33,26 @@ export function RoleSelect({ userId, role }: { userId: string; role: string }) {
 
   return (
     <div>
-      <select
-        value={role}
-        disabled={loading}
-        onChange={(e) => handleChange(e.target.value)}
-        className="rounded-md border px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
-      >
-        {ROLES.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
-      </select>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      <div className="flex items-center gap-1.5">
+        <select
+          value={role}
+          disabled={loading}
+          onChange={(e) => handleChange(e.target.value)}
+          className="lb-input rounded-md border px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
+        >
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        {loading && <span className={spinnerClass} aria-hidden="true" />}
+      </div>
+      {error && (
+        <p role="alert" className="lb-form-error mt-1 text-xs text-red-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

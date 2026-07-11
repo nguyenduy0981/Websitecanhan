@@ -4,7 +4,8 @@ import Link from "next/link";
 import { getSessionUser } from "@/modules/auth";
 import { listGiftsForOwner } from "@/modules/gifts";
 import { hasRole } from "@/modules/admin";
-import { giftStatusLabel } from "@/lib/gift-status-label";
+import { StatusBadge } from "@/app/ui/StatusBadge";
+import { ExpiryCountdown } from "@/app/ui/ExpiryCountdown";
 import { LogoutButton } from "./LogoutButton";
 import { CreateGiftForm } from "./CreateGiftForm";
 
@@ -55,10 +56,15 @@ export default async function DashboardPage() {
             >
               <Link
                 href={`/gifts/${gift.id}`}
-                className="flex items-center justify-between rounded-md border p-3 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                className="lb-btn flex items-center justify-between rounded-md border p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               >
                 <span className="font-medium">{gift.title}</span>
-                <span className="text-sm text-muted-foreground">{giftStatusLabel(gift.status)}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <StatusBadge status={gift.status} />
+                  {gift.status === "ACTIVE" && gift.activeExpiresAt && (
+                    <ExpiryCountdown expiresAt={gift.activeExpiresAt.toISOString()} />
+                  )}
+                </div>
               </Link>
             </li>
           ))}

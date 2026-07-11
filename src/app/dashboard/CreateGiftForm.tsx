@@ -2,11 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-const inputClass =
-  "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
-const buttonClass =
-  "mt-2 rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
+import { inputClass, errorTextClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 export function CreateGiftForm() {
   const router = useRouter();
@@ -14,7 +11,13 @@ export function CreateGiftForm() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorNonce, setErrorNonce] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  function showError(msg: string) {
+    setError(msg);
+    setErrorNonce((n) => n + 1);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,13 +33,13 @@ export function CreateGiftForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error?.message ?? "Không thể tạo quà");
+        showError(data.error?.message ?? "Không thể tạo quà");
         return;
       }
 
       router.push(`/gifts/${data.gift.id}`);
     } catch {
-      setError("Không thể kết nối máy chủ. Vui lòng thử lại.");
+      showError("Không thể kết nối máy chủ. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -47,7 +50,7 @@ export function CreateGiftForm() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border px-4 py-2 font-medium transition-transform duration-150 hover:scale-[1.03] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        className="lb-btn rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         + Tạo quà mới
       </button>
@@ -57,7 +60,7 @@ export function CreateGiftForm() {
   return (
     <form onSubmit={handleSubmit} noValidate className="lb-fade-in-up rounded-md border p-4">
       {error && (
-        <p role="alert" className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p key={errorNonce} role="alert" className={errorTextClass}>
           {error}
         </p>
       )}
@@ -87,13 +90,17 @@ export function CreateGiftForm() {
       />
 
       <div className="mt-2 flex gap-2">
-        <button type="submit" disabled={submitting} className={buttonClass}>
-          {submitting ? "Đang tạo..." : "Tạo quà"}
-        </button>
+        <SubmitButton
+          submitting={submitting}
+          label="Tạo quà"
+          submittingLabel="Đang tạo..."
+          variant="primary"
+          className="mt-0 w-auto"
+        />
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="mt-2 rounded-md px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="lb-btn mt-0 rounded-md px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           Hủy
         </button>

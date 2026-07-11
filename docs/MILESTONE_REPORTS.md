@@ -1753,3 +1753,129 @@ specs/SPEC.md first per the task's own instruction.
   first font beyond the system stack added to the project — worth
   keeping in mind if the owner ever wants to audit exactly what gets
   self-hosted into the deployed bundle.
+
+## Full Animation Coverage Pass — 2026-07-11
+
+Owner-requested follow-up ad hoc task: the Visual Polish pass above only
+really covered the gift-opening moment in depth. This pass covers the
+*entire* app — every route and every interactive component — with a
+single shared motion-design system, per the task's explicit "không được
+bỏ sót bất kỳ trang hay component nào" (nothing may be skipped)
+instruction.
+
+### Step 1 — Inventory (pages + interactive components)
+Pages: `/` (landing), `/login`, `/register`, `/forgot-password`,
+`/reset-password`, `/dashboard`, `/gifts/[giftId]` (editor), `/g/[slug]`
+(public viewer), `/admin/reports`, `/admin/gifts/[giftId]`,
+`/admin/users`, `/admin/monitoring`, `/terms`, `/privacy`, plus the
+special files `not-found.tsx`, `error.tsx`, `global-error.tsx`.
+Interactive components: `LoginForm`, `RegisterForm`,
+`ForgotPasswordForm`, `ResetPasswordForm`, `CreateGiftForm`,
+`LogoutButton`, `GiftEditor` (title/message inputs, theme/effect
+selects, block add/move/delete, publish, delete-gift, VIP checkout),
+`ReportButton`, `OpeningSequence`, `EffectCanvas`, `ReportActions`,
+`SuspendToggle`, `RoleSelect`, admin nav links. Every item above is
+addressed in the table below.
+
+### Step 2 — Motion design system
+`src/app/globals.css` gained a token layer (`--lb-duration-fast: 150ms`
+/ `-base: 250ms` / `-slow: 400ms`, plus `--lb-ease-spring` /
+`--lb-ease-out` / `--lb-ease-in-out`) and the full reusable-keyframe set
+the task named explicitly — fade-up (already existed), **scale-in**,
+**shimmer**, **shake**, **pulse** (new), pop (already existed) — plus a
+few more this app's surface actually needed: `breathe` (scale-only
+ambient bob for illustration emoji, since reusing `.lb-pulse`'s
+box-shadow ring on a plain emoji rendered as a stray square glow — see
+Known issues), `float` (hero mockup), `page-enter` (global route
+transition), and a justified one-shot exception for a drawn checkmark
+(`stroke-dashoffset`, not transform/opacity — see below). Every existing
+ad hoc `inputClass`/`buttonClass` string literal duplicated across
+per-file `const`s was consolidated into `src/lib/ui-classes.ts`
+(`inputClass`, `buttonClass`, `buttonPrimaryClass`, `errorTextClass`,
+`spinnerClass`) plus a small set of shared client primitives under
+`src/app/ui/`: `SubmitButton` (spinner + relabel, never a static button
+mid-request), `PasswordToggleInput`, `CopyButton` ("Đã copy ✓"
+feedback), `Checkmark` (drawn success icon), `ConfirmModal` (spring-in
+card over a fading/blurred backdrop, replaces `window.confirm`),
+`StatusBadge` (color-coded gift status), `ExpiryCountdown` (live
+minute-granularity countdown with a scale-in "tick" on each label
+change). `src/app/template.tsx` (Next's per-navigation-remount special
+file, distinct from `layout.tsx`) gives every route a light, subtle
+fade/slide entrance app-wide without fighting any page's own richer
+entrance animation.
+
+### Step 3-5 — Inventory → animation mapping
+
+| Page / component | Animation(s) added |
+|---|---|
+| `/` landing | Floating gift emoji hero mockup (`lb-float`), staggered hero entrance (pre-existing `lb-fade-in-up`, unchanged), primary CTA now a slow-pulsing gradient button (`lb-pulse` + `lb-btn`), step cards get `lb-btn` hover-lift+shadow inside the existing scroll-reveal, footer wrapped in `ScrollReveal` for a fade-in on scroll |
+| `/login`, `/register` | Shared `inputClass`/`errorTextClass` (pop-in + shake on validation errors), `PasswordToggleInput` show/hide toggle, `SubmitButton` spinner+relabel primary CTA — card entrance was already in place from the prior pass |
+| `/forgot-password` | `SubmitButton` spinner+relabel, pop-in success message |
+| `/reset-password` | `errorTextClass` shake+pop, `PasswordToggleInput`, `SubmitButton`, drawn `Checkmark` on the success state |
+| `/dashboard` | `StatusBadge` (color-coded, scale-in on status change), `ExpiryCountdown` (live countdown, tick-pop on each minute-granularity label change), card hover-lift+shadow via `lb-btn` (was translate-only before), `LogoutButton` spinner, `CreateGiftForm` migrated to shared primitives — staggered card list + empty-state illustration were already in place |
+| `/gifts/[giftId]` editor | Publish success banner now includes a drawn `Checkmark`, `SubmitButton` for Publish and VIP-checkout (VIP CTA is now a pulsing gradient primary button, matching the landing CTA), share-link section now `lb-fade-in-up`s in with a `CopyButton` ("Đã copy ✓") and a staggered pop-in QR code, gift-deletion now goes through `ConfirmModal` instead of a native `window.confirm`, theme preview panel cross-fades background color on theme change (`transition-colors`) and the effect-name caption re-pops (`lb-scale-in`) on effect change — block add/remove enter/exit and the autosave-status pop-in were already in place |
+| `/g/[slug]` public viewer | Opening sequence deepened: added an expanding light "ring" burst layer and content/section reveal now recedes from a slight scale (0.96 → 1) instead of a flat fade, for a "rising out of the box" depth cue; a new subtle scroll-parallax decorative layer (`ParallaxLayer`, rAF-throttled, disabled under reduced-motion, zero cost until scrolled); gallery images now use `ZoomableImage` (tap → fullscreen zoom over a blurred fading backdrop); `ReportButton` migrated to shared primitives |
+| `/admin/*` (reports, gifts/[giftId], users, monitoring) | Kept intentionally minimal per the task's own instruction — page-level `lb-fade-in-up` entrance, `lb-btn` hover on nav/action links, compact inline spinners (not just text-swap) on `ReportActions`/`SuspendToggle`/`RoleSelect`, staggered row entrance on the user list, and a new compact `loading.tsx` skeleton for all four routes (none existed before) |
+| `not-found.tsx` | Illustration (🔍, `lb-breathe`), entrance fade, "Về trang chủ" + gradient "Tự tạo hộp quà" CTA — was bare text before |
+| `error.tsx` | Illustration (😵, `lb-breathe`), gradient "Thử lại" primary + "Về trang chủ" + a small tertiary "tự tạo hộp quà mới" link — was bare text+button before |
+| `global-error.tsx` | Same illustration/CTA treatment; **also fixed a real pre-existing bug**: this file replaces the root layout entirely on a root-level error, so it never actually had `globals.css` loaded — none of its Tailwind/animation classes could have rendered in production before this pass |
+| `UnavailableView` (`/g/[slug]` non-active statuses) | Illustration (📭, `lb-breathe`), entrance fade, "Về trang chủ" + gradient "Tự tạo hộp quà" CTA — was bare text before |
+| `/terms`, `/privacy` | Not touched — static legal text with zero interactive state; not in the task's per-page checklist |
+
+### Verification
+- `npm run lint`, `npm run typecheck`, `npm run test` (172 unit tests),
+  `npm run test:integration` (12 real-Postgres tests, including the
+  concurrent-webhook exactly-once test), and `npm run build` all pass
+  clean.
+- Real Playwright pass at a 390px mobile viewport against a real
+  `next start` + real local Postgres: register → dashboard (empty) →
+  create gift → add block → publish (celebration + checkmark) → copy
+  share link → dashboard (populated, status badge + countdown) → public
+  viewer closed → tap to open (burst + parallax watermark visible) →
+  404 page → gift-not-found (`UnavailableView`) → login validation error
+  (shake) → password-visibility toggle. Zero console/page errors across
+  every step.
+- One real visual bug was caught and fixed during this pass: reusing
+  `.lb-pulse` (designed for CTA buttons, includes a spreading
+  box-shadow ring) on a plain illustration emoji rendered as a stray
+  square glow that looked like an errant focus outline. Fixed by adding
+  a dedicated `.lb-breathe` (scale-only, no box-shadow) for illustration
+  icons and swapping all four affected files to it.
+
+### Bundle size impact (production build, First Load JS)
+| Route | Before this pass | After |
+|---|---|---|
+| `/g/[slug]` | 3.53 kB / 109 kB | 4.37 kB / 110 kB |
+| `/gifts/[giftId]` | ~4.9 kB / 107 kB | 5.91 kB / 108 kB |
+| `/dashboard` | ~1.5 kB / 107 kB | 2.01 kB / 108 kB |
+| `/login`, `/register` | ~1.2 kB / 107 kB | 1.72-1.84 kB / 107-108 kB |
+| Shared baseline | 102 kB | 102 kB (unchanged) |
+
+All deltas are the shared UI primitives themselves (`SubmitButton`,
+`ConfirmModal`, `ZoomableImage`, `ParallaxLayer`, etc.) — no new npm
+dependency was added anywhere in this pass; every animation is CSS
+(keyframes/transitions) or a small hand-rolled client component.
+
+### Known issues / honestly-scoped exclusions
+- **Drag-and-drop block reordering was explicitly requested but not
+  implemented.** CLAUDE.md already records a deliberate Milestone-4
+  decision to use up/down buttons instead of drag-and-drop
+  ("simpler, free, and keyboard-operable for accessibility"). Real
+  drag-and-drop (ghost element + drop indicator + touch support + a
+  keyboard-accessible equivalent, since native HTML5 DnD is mouse-only)
+  is a genuine feature addition, not an animation-pass item — scoped
+  out, and the existing buttons were instead given the same `lb-btn`
+  hover/press treatment as every other button in the app. Revisit as its
+  own task if the owner specifically wants drag-and-drop.
+- **No dedicated toast/modal notification *system*** — same gap noted in
+  the previous Visual Polish pass. `ConfirmModal` is a real, reusable
+  spring-in/backdrop-blur modal primitive now (used for gift deletion),
+  but there is still no toast queue; transient success/error messages
+  remain inline `role="alert"`/`role="status"` banners using the shared
+  `lb-form-error`/`lb-pop-in` classes.
+- **No `tests/e2e/*.spec.ts` committed suite** — the Playwright
+  verification above was real (against a real production build + real
+  Postgres) but ad hoc, not committed as a re-runnable suite (same gap
+  flagged in every prior pass).
+- `/terms` and `/privacy` were left untouched — deliberately, not an
+  oversight (see table above).
