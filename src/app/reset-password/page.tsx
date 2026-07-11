@@ -8,12 +8,12 @@ export default async function ResetPasswordPage({
   const { token } = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
+    <main className="lb-fade-in-up mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
       <h1 className="mb-6 text-2xl font-bold">Đặt lại mật khẩu</h1>
       {token ? (
         <ResetPasswordForm token={token} />
       ) : (
-        <p role="alert" className="rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p role="alert" className="lb-pop-in rounded-md border border-red-500 p-3 text-sm text-red-600">
           Thiếu mã đặt lại mật khẩu. Vui lòng dùng liên kết trong email.
         </p>
       )}

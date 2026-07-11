@@ -53,10 +53,10 @@ export function ReportButton({ slug }: { slug: string }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-auto mt-2 w-full max-w-xs rounded-md border p-3 text-left text-sm"
+      className="lb-fade-in-up mx-auto mt-2 w-full max-w-xs rounded-md border p-3 text-left text-sm"
     >
       {error && (
-        <p role="alert" className="mb-2 rounded-md border border-red-500 p-2 text-xs text-red-600">
+        <p role="alert" className="lb-pop-in mb-2 rounded-md border border-red-500 p-2 text-xs text-red-600">
           {error}
         </p>
       )}

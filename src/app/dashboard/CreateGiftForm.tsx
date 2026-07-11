@@ -47,7 +47,7 @@ export function CreateGiftForm() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        className="rounded-md border px-4 py-2 font-medium transition-transform duration-150 hover:scale-[1.03] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         + Tạo quà mới
       </button>
@@ -55,9 +55,9 @@ export function CreateGiftForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="rounded-md border p-4">
+    <form onSubmit={handleSubmit} noValidate className="lb-fade-in-up rounded-md border p-4">
       {error && (
-        <p role="alert" className="mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p role="alert" className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
           {error}
         </p>
       )}
