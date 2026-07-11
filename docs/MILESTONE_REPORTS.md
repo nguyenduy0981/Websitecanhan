@@ -1504,3 +1504,100 @@ None.
 Once the owner has completed the `docs/BETA_CHECKLIST.md` steps
 (integrations configured, a small real cohort has used the product) —
 this milestone's code-side work is done.
+
+## Milestones 13-14: Launch & Growth — 2026-07-11
+
+Owner said to keep going ("xong làm tiếp gì thì làm luôn nhé"). Like
+Milestone 12, neither `specs/SPEC.md` nor `CLAUDE.md` define further
+code-feature scope for "Launch"/"Growth" beyond the roadmap names — real
+launch is gated on the owner finishing `docs/BETA_CHECKLIST.md` (real
+credentials, real beta users), which isn't something code can do.
+Combined both into one pass covering genuinely useful, low-risk items a
+real public launch benefits from, without inventing scope (no fake
+"referral program," no public gift gallery — the latter would directly
+contradict the unlisted/noindex privacy rule from Milestone 5).
+
+### Completed
+- **`/terms` and `/privacy` pages**: a good-faith, accurate draft — free
+  tier / VIP tier durations pulled from `business-rules.ts` rather than
+  typed as separate literals so they can't drift out of sync with the
+  real enforced values; PayOS, Cloudflare R2, and Resend named as the
+  actual third-party processors (matching what `docs/SETUP.md`/
+  `docs/BETA_CHECKLIST.md` already describe); security practices
+  (argon2id, HTTP-only cookies, real magic-byte upload validation)
+  described accurately, not aspirationally. **Not lawyer-reviewed** —
+  this is flagged here (the owner-facing report), not as a banner on the
+  public page itself, so the owner knows to get real legal review before
+  a wide public launch given PayOS handles real money.
+- **`SiteFooter` component** (`src/app/SiteFooter.tsx`): links to
+  `/terms`/`/privacy`, added to the homepage and the register page ("by
+  registering you agree to..." — no blocking checkbox, kept lightweight
+  for V1 rather than adding friction to signup).
+- **`app/opengraph-image.tsx`**: root-level, same `next/og`
+  `ImageResponse` pattern as Milestone 12's `icon.tsx` — no binary asset
+  checked in. Deliberately generic branding (not derived from any real
+  content), so it's safe that it's inherited as the default social
+  preview for every page that doesn't set its own `openGraph.images`,
+  *including* gift pages — that inheritance is exactly why it had to stay
+  generic, consistent with the "never leak gift content via a social
+  preview" rule from Milestone 5.
+- **Homepage social-proof counter**: "X hộp quà đã được tạo," reusing the
+  existing `countGiftsByStatus()` from Milestone 10 (summed across all
+  statuses). Only renders once the real total crosses 10 — an honest low
+  number (or literal "0") undermines trust more than omitting the stat,
+  so it's hidden below that threshold rather than shown prematurely.
+
+### Files
+`src/app/terms/page.tsx`, `src/app/privacy/page.tsx`,
+`src/app/SiteFooter.tsx`, `src/app/opengraph-image.tsx`,
+`src/app/page.tsx` (updated — footer + counter), `src/app/register/page.tsx`
+(updated — terms/privacy link), `CLAUDE.md`.
+
+### Migrations
+None.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **172/172** (unchanged — no service-layer logic
+  touched).
+- `npm run test:integration` — pass, **12/12**, against the same real
+  local Postgres (restarted again after another idle period — same
+  documented caveat as Milestones 11-12).
+- `npm run build` — pass; `/terms`, `/privacy`, `/opengraph-image` all
+  registered as static (`○`) routes.
+- Real browser verification (Playwright, continuing the practice from
+  Milestones 11-12): confirmed `/terms`/`/privacy` return 200 and mention
+  the real third-party processors (PayOS, Cloudflare R2); confirmed the
+  `og:image` meta tag on the homepage points at the new generated image;
+  confirmed the footer link actually navigates to `/terms` client-side
+  (an initial quick check misread a timing race in the test script
+  itself as a broken link — re-verified with an explicit
+  click-and-wait-for-URL and confirmed the navigation works correctly,
+  zero console errors); confirmed the register page shows the terms/
+  privacy agreement line.
+
+### Known issues / honestly-scoped gaps
+- **Terms/Privacy are not lawyer-reviewed** — see "Completed" above.
+  Accurate to what the app actually does today, but the owner should get
+  real legal review before a wide public launch, especially given real
+  payment collection via PayOS.
+- **R2/PayOS/Resend/`SUPER_ADMIN_EMAIL` are still not configured** —
+  unchanged; this is now the single blocking dependency for everything
+  else in `docs/BETA_CHECKLIST.md`, and is entirely on the owner's side
+  (real-world account setup), not something further code work can
+  resolve.
+- No `tests/e2e/*.spec.ts` files were added to the repository (same gap
+  noted in Milestones 11-12) — verification continues to be a one-off
+  manual/scratch-script check each milestone rather than a committed,
+  re-runnable suite.
+- No account-deletion self-service flow (Privacy Policy says "contact us
+  via your registered email" for deletion requests) — acceptable at V1
+  scale, worth automating if request volume grows.
+
+### Ready for further work
+Code-side work for the roadmap through Milestone 14 is done. What
+remains is entirely on the owner: finish `docs/BETA_CHECKLIST.md`
+(configure R2/PayOS/Resend/`SUPER_ADMIN_EMAIL`, get one real test
+purchase/upload/email working end-to-end, optionally get `/terms`/
+`/privacy` reviewed by a lawyer), then run a real small beta cohort
+before a wider public launch.
