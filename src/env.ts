@@ -6,7 +6,10 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
   CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 characters"),
-  APP_URL: z.string().url().default("http://localhost:3000"),
+  // Intentionally optional here — see computeAppUrl() below. If left unset,
+  // it's derived from Vercel's own deployment env vars instead of silently
+  // defaulting to localhost in production.
+  APP_URL: z.string().url().optional(),
 
   // Cloudflare R2 (S3 API) — optional until media storage is wired up.
   R2_ACCOUNT_ID: z.string().optional(),
@@ -27,7 +30,24 @@ const envSchema = z.object({
   VIP_PRICE_VND: z.coerce.number().int().positive().default(49000),
 });
 
-export type Env = z.infer<typeof envSchema>;
+export type Env = Omit<z.infer<typeof envSchema>, "APP_URL"> & { APP_URL: string };
+
+/**
+ * Resolves the app's own public base URL. An explicit APP_URL always wins
+ * (e.g. a real custom domain). Otherwise, on Vercel, derive it from the
+ * platform's own env vars so a forgotten APP_URL can never silently point
+ * share links / QR codes / password-reset emails at localhost in
+ * production — see the bug this fixed: gift share links rendering as
+ * "localhost:3000/g/..." because APP_URL was never set on Vercel.
+ */
+function computeAppUrl(explicit: string | undefined): string {
+  if (explicit) return explicit;
+
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  if (vercelHost) return `https://${vercelHost}`;
+
+  return "http://localhost:3000";
+}
 
 function loadEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
@@ -37,7 +57,7 @@ function loadEnv(): Env {
       .join("\n");
     throw new Error(`Invalid environment variables:\n${issues}`);
   }
-  return parsed.data;
+  return { ...parsed.data, APP_URL: computeAppUrl(parsed.data.APP_URL) };
 }
 
 export const env = loadEnv();

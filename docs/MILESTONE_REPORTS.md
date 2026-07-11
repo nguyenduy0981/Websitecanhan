@@ -571,3 +571,34 @@ None — uses the existing `Gift`/`GiftBlock`/`GiftView` tables.
 ### Ready for Milestone 6: Media & Themes
 Yes, pending the owner opening a real published gift's share link once
 deployed to confirm the viewer renders as expected.
+
+## Hotfix: APP_URL defaulted to localhost in production — 2026-07-11
+
+The owner tried a real published gift's share link right after Milestone 5
+deployed and hit `localhost:3000/g/... — ERR_CONNECTION_REFUSED`. Root
+cause: `APP_URL` was never set in Vercel's project settings, and
+`src/env.ts` silently defaulted it to `http://localhost:3000` — exactly
+the kind of bug this environment's lack of a live database couldn't have
+caught, since it only shows up once real users click a real link.
+
+**Fix**: `src/env.ts` now derives `APP_URL` from Vercel's own
+`VERCEL_PROJECT_PRODUCTION_URL` (preferred, stable production domain) or
+`VERCEL_URL` (per-deployment fallback) whenever `APP_URL` isn't explicitly
+set, so this class of bug can't silently recur — Vercel always injects one
+of those two. An explicit `APP_URL` env var (e.g. a real custom domain
+like `https://lovebox.vn`) still always takes priority.
+
+### Verification (actually executed)
+- `npm run test` — pass, **92/92** (4 new regression tests in
+  `tests/unit/env-app-url.test.ts`, covering: explicit `APP_URL` wins even
+  when Vercel env vars are present; falls back to
+  `VERCEL_PROJECT_PRODUCTION_URL`; falls back to `VERCEL_URL`; only
+  defaults to localhost when neither is set).
+- `npm run lint` / `npm run typecheck` / `npm run build` — all pass.
+
+### Known issue
+Even with this fix, if the owner's Vercel project happens to have
+`APP_URL` explicitly set to something wrong, that still wins over the
+auto-detected value — recommend double-checking (or simply removing) any
+`APP_URL` override in Vercel project settings so the auto-detection can do
+its job, unless a real custom domain is configured.

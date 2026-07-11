@@ -131,3 +131,9 @@ passed without running them.
   never take down the gift content itself (graceful degradation). QR code
   for the share link is generated server-side (the `qrcode` package, no
   new paid service) in the editor page and passed down as a data URL.
+- Hotfix (found via real production testing after Milestone 5): share
+  links rendered as `localhost:3000/g/...` because `APP_URL` was never set
+  on Vercel and silently defaulted to localhost. `src/env.ts` now derives
+  `APP_URL` from Vercel's own `VERCEL_PROJECT_PRODUCTION_URL`/`VERCEL_URL`
+  env vars whenever it isn't explicitly set, so this can't silently
+  regress; an explicit `APP_URL` (e.g. a real custom domain) always wins.
