@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { GiftStatus } from "@prisma/client";
+import { useRouter, useSearchParams } from "next/navigation";
+import type { GiftStatus, GiftTier } from "@prisma/client";
 import { giftStatusLabel } from "@/lib/gift-status-label";
 import { THEMES, DEFAULT_THEME_ID, getTheme } from "@/config/themes";
 import { EFFECTS, DEFAULT_EFFECT_ID } from "@/config/effects";
@@ -20,6 +20,7 @@ interface GiftData {
   title: string;
   message: string;
   status: GiftStatus;
+  tier: GiftTier;
   themeId: string | null;
   effectId: string | null;
 }
@@ -36,18 +37,24 @@ export function GiftEditor({
   initialBlocks,
   appUrl,
   shareQrDataUrl,
+  vipPriceVnd,
 }: {
   gift: GiftData;
   initialBlocks: Block[];
   appUrl: string;
   shareQrDataUrl: string | null;
+  vipPriceVnd: number;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paymentParam = searchParams.get("payment");
   const isEditable = gift.status === "DRAFT" || gift.status === "ACTIVE";
 
   const [title, setTitle] = useState(gift.title);
   const [message, setMessage] = useState(gift.message);
   const [status, setStatus] = useState<GiftStatus>(gift.status);
+  const [vipCheckoutError, setVipCheckoutError] = useState<string | null>(null);
+  const [vipCheckoutLoading, setVipCheckoutLoading] = useState(false);
   const [themeId, setThemeId] = useState(gift.themeId ?? DEFAULT_THEME_ID);
   const [effectId, setEffectId] = useState(gift.effectId ?? DEFAULT_EFFECT_ID);
   const [blocks, setBlocks] = useState(
@@ -201,19 +208,74 @@ export function GiftEditor({
     }
   }
 
+  async function startVipCheckout() {
+    setVipCheckoutError(null);
+    setVipCheckoutLoading(true);
+    try {
+      const res = await fetch(`/api/gifts/${gift.id}/vip-checkout`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setVipCheckoutError(data.error?.message ?? "Không thể tạo thanh toán");
+        return;
+      }
+      // Full-page redirect to PayOS's hosted checkout — keeps card/bank
+      // details entirely on PayOS's side. VIP itself only ever activates
+      // via the server-side webhook, never from this redirect.
+      window.location.href = data.checkout.checkoutUrl;
+    } catch {
+      setVipCheckoutError("Không thể kết nối máy chủ. Vui lòng thử lại.");
+    } finally {
+      setVipCheckoutLoading(false);
+    }
+  }
+
   const shareUrl = `${appUrl}/g/${gift.slug}`;
 
   return (
     <div className="grid gap-8 md:grid-cols-2">
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{giftStatusLabel(status)}</span>
+          <span className="text-sm text-muted-foreground">
+            {giftStatusLabel(status)} · {gift.tier === "VIP" ? "VIP" : "Miễn phí"}
+          </span>
           <span className="text-sm text-muted-foreground" role="status">
             {saveStatus === "saving" && "Đang lưu..."}
             {saveStatus === "saved" && "Đã lưu"}
             {saveStatus === "error" && "Lỗi khi lưu"}
           </span>
         </div>
+
+        {paymentParam === "return" && (
+          <p role="status" className="mb-4 rounded-md border p-3 text-sm">
+            Thanh toán đang được xác nhận, có thể mất vài phút. Tải lại trang để kiểm tra trạng thái
+            VIP.
+          </p>
+        )}
+        {paymentParam === "cancelled" && (
+          <p role="status" className="mb-4 rounded-md border p-3 text-sm">
+            Bạn đã hủy thanh toán.
+          </p>
+        )}
+
+        {gift.tier !== "VIP" && (
+          <div className="mb-4">
+            {vipCheckoutError && (
+              <p role="alert" className="mb-2 rounded-md border border-red-500 p-3 text-sm text-red-600">
+                {vipCheckoutError}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={startVipCheckout}
+              disabled={vipCheckoutLoading}
+              className={buttonClass}
+            >
+              {vipCheckoutLoading
+                ? "Đang tạo thanh toán..."
+                : `Nâng cấp VIP (${vipPriceVnd.toLocaleString("vi-VN")}đ, +15 ngày)`}
+            </button>
+          </div>
+        )}
 
         {actionError && (
           <p role="alert" className="mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">

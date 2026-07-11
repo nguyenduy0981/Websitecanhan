@@ -66,6 +66,11 @@ npm run build
   combined cron route: `src/app/api/cron/lifecycle/route.ts` (see
   `vercel.json` for the schedule; requires the `Authorization: Bearer
   $CRON_SECRET` header — this is how Vercel Cron calls it automatically).
+- `src/modules/payments/` — VIP checkout (PayOS/VietQR, via the official
+  `@payos/node` SDK) and the webhook that's the *only* path that can ever
+  activate VIP — see CLAUDE.md's P0 payment security rule. Routes: `POST
+  /api/gifts/[giftId]/vip-checkout` (authenticated) and `POST
+  /api/payments/webhook/payos` (public, signature-verified).
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.

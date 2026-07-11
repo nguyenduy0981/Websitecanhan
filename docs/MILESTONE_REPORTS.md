@@ -842,3 +842,147 @@ None — uses existing `Gift`/`GiftBlock`/`MediaAsset`/`AnalyticsEvent`/
 
 ### Ready for Milestone 8: VIP & Payments
 Yes.
+
+## Milestone 8: VIP & Payments — 2026-07-11
+
+Confirmed before starting: owner doesn't have an international card yet
+for Cloudflare R2's required verification, so R2 setup is deferred (agreed
+to revisit later); proceeded with this milestone since it doesn't depend
+on R2. This is the highest-risk milestone so far (real money), so before
+writing any code I looked up PayOS's actual current API rather than
+relying on possibly-stale training knowledge — see "Completed" below.
+
+### Completed
+- **Researched PayOS's real API first**: found there's an official,
+  actively-published Node SDK (`@payos/node`, npm latest v2.0.5, requires
+  Node 20+ — this project already requires ≥20). Rather than trust web
+  summaries, installed it into a scratch directory and read its actual
+  `.d.ts` type definitions and the `webhooks.verify()` source directly —
+  confirmed it throws `WebhookError` (a `PayOSError` subclass) on any
+  signature/data mismatch and otherwise returns the verified `WebhookData`.
+  Used the SDK directly instead of hand-rolling HMAC verification, since
+  PayOS's own team maintains and tests that crypto code.
+- **`src/modules/payments/provider.ts`** — `PaymentProvider` interface
+  (per CLAUDE.md Architecture) so PayOS is swappable later without
+  touching the activation logic.
+- **`src/modules/payments/providers/payos.ts`** — wraps
+  `paymentRequests.create()` (checkout) and `webhooks.verify()` (throws →
+  we translate to `ValidationError`, never activate). Guarded by a new
+  `ServiceUnavailableError` (503) when `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/
+  `PAYOS_CHECKSUM_KEY` aren't all configured — same "awaiting credentials"
+  honesty pattern as R2 in Milestone 6.
+- **`src/modules/payments/service.ts`**:
+  - `createVipCheckout(userId, giftId)`: only `DRAFT`/`ACTIVE` gifts
+    eligible; generates a collision-retried numeric `orderCode`
+    (`Date.now() * 1000 + random(0,999)`, same retry pattern as gift slugs
+    from Milestone 3); creates a `Payment` row *before* calling PayOS, so
+    there's always a server-side record to match a webhook against.
+  - `handlePaymentWebhook(rawBody)` — the only path that can ever activate
+    VIP, implementing every clause of CLAUDE.md's P0 payment rule in order:
+    1. Signature verified by the PayOS SDK; throws propagate — nothing
+       below this line runs for a forged webhook.
+    2. Only a genuine success notification (`success === true && code ===
+       '00'`) proceeds; everything else is logged and ignored.
+    3. Unknown `orderCode` → logged and ignored (no matching `Payment`).
+    4. Already-`ACTIVATED` → early-exit no-op (fast-path idempotency).
+    5. **Exact amount + currency**, checked against what *our own server*
+       recorded at checkout time (never the webhook's own claims) — a
+       mismatch sets `REJECTED` and returns without activating.
+    6. **Exactly-once activation**: one interactive Prisma transaction
+       where an `updateMany({ where: { status: { notIn: ['ACTIVATED'] } }
+       })` claim and the `Gift.tier`/`activeExpiresAt` update commit or
+       roll back together. This was a deliberate design correction made
+       *during* this milestone — an earlier two-step version (claim, then
+       separately update the gift) had a real crash-window bug: if the
+       process died between the two steps, a webhook retry would find the
+       payment already `VERIFIED`-but-not-`ACTIVATED` and could
+       double-apply the +15-day extension. Combining both into one
+       transaction closes that gap. A test (`activates exactly once: a
+       concurrent duplicate delivery...`) exercises the race directly by
+       simulating `updateMany` returning `count: 0`.
+  - VIP duration math reuses existing Milestone 0 business rules
+    unchanged: `renewedVipExpiry()` for an `ACTIVE` gift (current expiry +
+    15 days), or leaves `activeExpiresAt` untouched for a `DRAFT` gift
+    (Milestone 3's `publishGift()` already computes the correct VIP
+    duration when it's eventually published) — no VIP-specific duration
+    logic was reinvented.
+- **Routes**: `POST /api/gifts/[giftId]/vip-checkout` (authenticated) and
+  `POST /api/payments/webhook/payos` (public — authenticity comes from the
+  webhook's own signature, not a session cookie).
+- **Editor UI**: a "Nâng cấp VIP" button (hidden once already VIP) that
+  redirects the full page to PayOS's hosted checkout — card/bank details
+  never touch our server. The return page explicitly **never claims VIP is
+  active** — it shows "confirming payment, refresh to check" and the tier
+  badge always reflects the real `gift.tier` from the database, not an
+  assumption from the redirect.
+
+### Files
+`src/modules/payments/{provider,service,index}.ts`,
+`src/modules/payments/providers/payos.ts`,
+`src/app/api/gifts/[giftId]/vip-checkout/route.ts`,
+`src/app/api/payments/webhook/payos/route.ts`,
+`src/app/gifts/[giftId]/{GiftEditor,page}.tsx` (updated), `src/lib/errors.ts`
+(+`ServiceUnavailableError`, from Milestone 6), `package.json`
+(+`@payos/node`), `tests/unit/payments-service.test.ts`, `CLAUDE.md`,
+`README.md`, `docs/SETUP.md`.
+
+### Migrations
+None — uses the existing `Payment` table (including its
+`[provider, providerTransactionId]` DB-level duplicate guard) from
+Milestone 0.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **135/135 tests** (12 new, all in
+  `payments-service.test.ts`): checkout rejects non-DRAFT/ACTIVE gifts;
+  checkout retries on an order-code collision; **signature failure never
+  activates** (provider throws, nothing downstream is called); non-success
+  webhook ignored without any DB write; unknown orderCode ignored;
+  already-activated payment is a no-op; **amount mismatch** rejects and
+  never activates; **currency mismatch** rejects and never activates;
+  VIP activation extends an `ACTIVE` gift's expiry by exactly 15 days;
+  VIP activation on a `DRAFT` gift leaves `activeExpiresAt` null; and the
+  concurrent-duplicate-delivery race (`updateMany` count 0) never touches
+  the gift. Also caught and fixed a real bug *during* test-writing: the
+  original code logged "VIP payment activated" even when a call lost the
+  concurrency race — harmless for correctness (no double-activation) but
+  misleading for observability; fixed to log accurately based on whether
+  the transaction actually won the claim.
+- `npm run build` — pass; both new routes registered.
+- **Actually ran the app**: started a real `next start` and used `curl` to
+  confirm for real: `POST /api/gifts/.../vip-checkout` without a session
+  cookie → `401`; `POST /api/payments/webhook/payos` with a fabricated
+  body (PayOS not configured in this environment) → a clean `503
+  SERVICE_UNAVAILABLE` with an honest message, not a crash or a false
+  "processed" response.
+
+### Known issues / honestly-scoped gaps
+- **PayOS is not configured** (owner doesn't have the necessary card for
+  Cloudflare R2 yet either, and hasn't set up PayOS credentials) — VIP
+  checkout will 503 until `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/
+  `PAYOS_CHECKSUM_KEY` are set and the webhook URL is registered in the
+  PayOS dashboard (steps in `docs/SETUP.md`).
+- **Never tested against the live PayOS API** — the integration is built
+  directly against the official SDK's real, inspected TypeScript types and
+  source (not guessed), but a real end-to-end purchase (checkout → real
+  bank transfer → real webhook → real activation) has not been observed.
+  Strongly recommend the owner do one real test purchase once credentials
+  are configured, and report back anything that looks wrong before
+  relying on this for real revenue.
+- **No live Postgres in this environment** — same caveat as every prior
+  milestone; the webhook's transactional logic is verified against a
+  mocked Prisma client, not a real database's actual transaction
+  semantics.
+- VIP purchase is only allowed for `DRAFT`/`ACTIVE` gifts by design (see
+  CLAUDE.md) — buying VIP for an `EXPIRED`/`RECOVERY` gift to "resurrect"
+  it is explicitly out of scope for V1.
+- No refund flow, no partial-payment/`UNDERPAID` handling beyond rejecting
+  the amount mismatch (PayOS's `PaymentLinkStatus` type includes
+  `UNDERPAID`, which this integration doesn't specifically distinguish
+  from other failures yet) — acceptable for V1, worth revisiting once real
+  transaction volume exists.
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged.
+
+### Ready for Milestone 9: Admin & Moderation
+Yes, pending the owner configuring PayOS credentials (and ideally one real
+test purchase) whenever they're ready.
