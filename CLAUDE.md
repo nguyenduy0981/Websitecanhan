@@ -160,3 +160,24 @@ passed without running them.
   royalty-free seed content and no admin panel (Milestone 9) to manage the
   `MusicTrack` catalog, so building a picker now would be non-functional
   theater rather than a real feature.
+- Milestone 7 lifecycle: `EXPIRED`/`RECOVERY`/`DELETION_PENDING` are each
+  guaranteed to be a real, observable status for at least one full cron
+  interval — every promotion step only touches rows whose
+  `statusChangedAt` is older than the *current* run's start time, so a
+  gift can never skip two lifecycle states within the same cron
+  invocation. Concretely: `expire` (ACTIVE → EXPIRED at `activeExpiresAt`)
+  → `recovery-start` (EXPIRED → RECOVERY, sets `recoveryEndsAt = now +
+  RECOVERY_DURATION_DAYS`) → `recovery-end` (RECOVERY → DELETION_PENDING
+  at `recoveryEndsAt`) → `purge` (DELETION_PENDING → DELETED: deletes all
+  `GiftBlock` rows and every `MediaAsset` — DB row + R2 object — then
+  clears `title`/`message`/`themeId`/`effectId`/`musicId`; the `Gift` row
+  itself is kept, not hard-deleted, so `Payment`/`GiftView`/
+  `AnalyticsEvent` history referencing it stays intact). All 7 job steps
+  (the 4 above plus `orphan-cleanup`, `analytics-retention`,
+  `rate-limit-cleanup`) run from one combined cron route
+  (`/api/cron/lifecycle`, daily, `vercel.json`) rather than separate
+  schedules, since Vercel's Hobby/free plan caps both cron frequency (once
+  a day) and the number of cron schedules — see CLAUDE.md Cost rules. Each
+  step is wrapped independently (`runJob`, records a `JobRun` row) so one
+  step failing never blocks the rest. Orphaned-media cleanup gives
+  uploads a 1-day grace period before treating them as abandoned.
