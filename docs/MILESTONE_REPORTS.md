@@ -724,3 +724,121 @@ Yes — recommend the owner finish R2 setup (docs/SETUP.md) before relying
 on image upload in production; everything else in this milestone doesn't
 require it to keep working (TEXT blocks, themes, effects all function
 without R2).
+
+## Milestone 7: Lifecycle — 2026-07-11
+
+Confirmed before starting: owner does not have an international card yet
+to add to Cloudflare (required even for R2's free tier), so R2 setup is
+deferred — agreed to proceed with Milestone 7 (which doesn't depend on
+R2) and come back to R2 later. Also worked through a Cloudflare dashboard
+navigation question along the way (unrelated to code).
+
+### Completed
+- **`src/modules/jobs/lifecycle.ts`** — the four automatic status
+  transitions, each processing only rows whose `statusChangedAt` predates
+  the *current* run's start time, so every intermediate status
+  (`EXPIRED`, `RECOVERY`, `DELETION_PENDING`) is guaranteed to be a real,
+  observable state for at least one full cron interval rather than
+  collapsing through several transitions within a single invocation:
+  - `expireActiveGifts`: `ACTIVE` & `activeExpiresAt` passed → `EXPIRED`.
+  - `promoteExpiredToRecovery`: `EXPIRED` (from a prior run) → `RECOVERY`,
+    `recoveryEndsAt = now + RECOVERY_DURATION_DAYS` (reuses the Milestone 0
+    constant, currently 7).
+  - `promoteRecoveryToDeletionPending`: `RECOVERY` & `recoveryEndsAt`
+    passed → `DELETION_PENDING`.
+  - `purgeDeletionPendingGifts`: `DELETION_PENDING` (from a prior run) →
+    for each gift, deletes every `MediaAsset` (DB row + R2 object, via the
+    `media` module) and every `GiftBlock`, clears
+    `title`/`message`/`themeId`/`effectId`/`musicId`, sets `DELETED` +
+    `deletedAt`. The `Gift` row itself is kept (not hard-deleted) so
+    `Payment`/`GiftView`/`AnalyticsEvent` rows referencing it aren't
+    cascade-deleted along with it — matches CLAUDE.md: "permanently delete
+    gift content AND all associated storage objects" (content and
+    storage, not the historical record).
+- **`src/modules/jobs/cleanup.ts`**:
+  - `cleanupOrphanedMedia`: deletes `READY` `MediaAsset` rows (older than
+    a 1-day grace period) that no `GiftBlock` in their gift actually
+    references — closes the Milestone 6 known gap where replacing a
+    block's image didn't release the old asset, and also catches uploads
+    abandoned mid-edit.
+  - `cleanupOldAnalytics`: trims `AnalyticsEvent` and `GiftView` past
+    `ANALYTICS_RETENTION_DAYS` (90, from Milestone 0).
+  - `cleanupOldRateLimitHits`: bulk-sweeps `RateLimitHit` rows older than
+    a day — the Milestone 2 per-request opportunistic cleanup never
+    touches a rate-limit key that's hit once and never again.
+- **`src/modules/jobs/job-run.ts`** (`runJob`): wraps each step, recording
+  a `JobRun` row (`startedAt`/`finishedAt`/`ok`/`itemsProcessed`/`error`)
+  and never letting one step's failure stop the others in the same
+  invocation.
+- **`src/modules/jobs/index.ts`** (`runLifecycleJobs`): runs all 7 steps
+  in order from one function, returning a summary.
+- **`/api/cron/lifecycle`**: the single cron entry point, requires
+  `Authorization: Bearer $CRON_SECRET` (401 otherwise) — this is exactly
+  the header Vercel Cron sends automatically when `CRON_SECRET` is set as
+  an env var, no extra Vercel configuration needed beyond `vercel.json`.
+- **`vercel.json`**: daily schedule (`0 3 * * *` UTC ≈ 10am Vietnam time)
+  for `/api/cron/lifecycle`. Deliberately **one combined route** for all 7
+  steps rather than separate cron schedules per step, since Vercel's
+  Hobby/free plan caps cron frequency at once/day and limits the number of
+  cron schedules — see CLAUDE.md Cost rules.
+
+### Files
+`src/modules/jobs/{job-run,lifecycle,cleanup,index}.ts`,
+`src/app/api/cron/lifecycle/route.ts`, `vercel.json`,
+`tests/unit/jobs-{lifecycle,cleanup,job-run}.test.ts`, `CLAUDE.md`,
+`README.md`.
+
+### Migrations
+None — uses existing `Gift`/`GiftBlock`/`MediaAsset`/`AnalyticsEvent`/
+`GiftView`/`RateLimitHit`/`JobRun` tables.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **123/123 tests** (13 new): each lifecycle
+  transition's `where`/`data` asserted directly against a mocked Prisma
+  client, including the exact `recoveryEndsAt` math (7 days) and the
+  `statusChangedAt < jobStartedAt` run-boundary guard on every promotion
+  step; purge asserted to delete every media asset + all blocks, clear
+  content fields, and set `DELETED` while leaving the `Gift` row itself
+  intact; orphan detection correctly distinguishing a referenced `IMAGE`
+  asset from an unreferenced one and correctly reading `GALLERY` items
+  arrays; analytics retention cutoff asserted at exactly 90 days;
+  `runJob` asserted to record a `JobRun` row and never throw even when the
+  wrapped step itself throws.
+- `npm run build` — pass; `/api/cron/lifecycle` registered.
+- **Actually ran the app**: built and started a real `next start` with a
+  known `CRON_SECRET`, then used `curl` to confirm the auth guard for
+  real: no `Authorization` header → `401`; wrong secret → `401`; correct
+  secret → passes the auth check and attempts to run (fails only on the
+  DB connection, since this environment has no live Postgres — the
+  by-now-familiar limitation — and correctly returns the generic
+  `{"error":{"code":"INTERNAL_ERROR",...}}` shape rather than leaking
+  internals).
+
+### Known issues / honestly-scoped gaps
+- **No live Postgres in this environment** — same caveat as every prior
+  milestone; the actual end-to-end sequence (a gift really expiring, going
+  through recovery, and being purged over real time) has not been
+  observed against a live database. Recommend the owner (or a future
+  session) checks the `JobRun` table after the first few scheduled runs in
+  production to confirm each step is completing with `ok: true`.
+- The full DRAFT→...→DELETED journey takes at minimum `3 + 7 = 10` days
+  (FREE tier) or `15 + 7 = 22` days (VIP) to observe naturally in
+  production — not something crammable into this session; the unit tests
+  substitute for that by asserting the transition logic and timing math
+  directly.
+- R2 still isn't configured (owner deferred it — see conversation above),
+  so `purgeDeletionPendingGifts`'s media-deletion step will hit the same
+  `ServiceUnavailableError` `deleteMediaAsset` throws internally — but
+  since that call is intentionally best-effort (Milestone 6:
+  `deleteMediaAsset` logs a warning and still deletes the DB row on a
+  storage-delete failure), a gift with images can still fully purge even
+  without R2 configured; only the (currently nonexistent, since R2 isn't
+  set up) storage objects would be left behind.
+- Cron scheduling itself (does Vercel actually invoke it daily as
+  configured) can only be confirmed once deployed and observed over a day
+  or two — not verifiable from this environment.
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged.
+
+### Ready for Milestone 8: VIP & Payments
+Yes.

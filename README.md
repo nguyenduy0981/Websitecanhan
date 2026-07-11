@@ -61,6 +61,11 @@ npm run build
   `src/app/api/gifts/[giftId]/media/route.ts`.
 - `src/config/themes.ts`, `src/config/effects.ts` — static, free theme/effect
   catalogs applied via `Gift.themeId`/`effectId`.
+- `src/modules/jobs/` — expire/recovery/purge lifecycle transitions +
+  orphaned-media/analytics-retention/rate-limit cleanup, all run from one
+  combined cron route: `src/app/api/cron/lifecycle/route.ts` (see
+  `vercel.json` for the schedule; requires the `Authorization: Bearer
+  $CRON_SECRET` header — this is how Vercel Cron calls it automatically).
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.
