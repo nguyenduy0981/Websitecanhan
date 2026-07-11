@@ -181,3 +181,30 @@ passed without running them.
   step is wrapped independently (`runJob`, records a `JobRun` row) so one
   step failing never blocks the rest. Orphaned-media cleanup gives
   uploads a 1-day grace period before treating them as abandoned.
+- Milestone 8 VIP & payments: uses the official `@payos/node` SDK rather
+  than hand-rolled HMAC — `payos.webhooks.verify()` recomputes the
+  signature over the webhook's `data` object and throws on any mismatch,
+  so `handlePaymentWebhook` never even reaches the activation logic for a
+  forged/malformed webhook. `Payment.orderCode` (our DB uniqueness +
+  lookup key) is generated as `Date.now() * 1000 + random(0,999)`,
+  collision-retried the same way gift slugs are (Milestone 3).
+  `Payment.providerTransactionId` is left null until the webhook actually
+  arrives (it's the bank's transaction reference, not the pre-payment
+  `paymentLinkId`) — that reference is what the `@@unique([provider,
+  providerTransactionId])` constraint guards. Exactly-once activation:
+  fast-path skip if `status === 'ACTIVATED'`, then one interactive Prisma
+  transaction where an `updateMany({ where: { status: { notIn:
+  ['ACTIVATED'] } } })` claim and the `Gift.tier`/`activeExpiresAt` update
+  commit or roll back together — this closes a real gap an earlier
+  two-step version had (a crash between "mark verified" and "update gift"
+  could have double-applied the +15 days on webhook retry). VIP purchase
+  is only allowed for `DRAFT`/`ACTIVE` gifts (other statuses would need
+  unspecified "resurrection" semantics, out of scope for V1); on an
+  `ACTIVE` gift, `activeExpiresAt` extends via the existing
+  `renewedVipExpiry()` (current expiry + 15 days, from Milestone 0) — on a
+  still-`DRAFT` gift, only `tier` is set and `activeExpiresAt` stays null,
+  since the existing `publishGift()` (Milestone 3) already computes the
+  correct VIP duration at publish time. The frontend redirects to PayOS's
+  hosted checkout (`window.location.href = checkoutUrl`) and, on return,
+  explicitly never claims VIP is active — only the webhook can activate it
+  — the return page just says "confirming, refresh to check."

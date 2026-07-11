@@ -38,12 +38,23 @@ Required as of Milestone 6 for gift image uploads to actually work.
 
 ## PayOS (VietQR bank-transfer payments) — `PAYOS_*`
 
-1. Register a merchant account with PayOS and complete verification.
+1. Register a merchant account at https://payos.vn and complete verification.
 2. From the merchant dashboard, copy the Client ID, API Key, and Checksum Key.
-3. Set `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`.
-4. VIP activation only ever happens from a verified server-side webhook — see
-   the payment security rule in `CLAUDE.md`. Never wire activation to a
-   frontend "success" screen.
+3. Set `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` in Vercel.
+4. **Register the webhook URL** in the PayOS dashboard (Webhooks section):
+   `https://<your-domain>/api/payments/webhook/payos`. PayOS sends a test
+   request to confirm the URL responds correctly before activating it.
+5. VIP activation only ever happens from that verified server-side
+   webhook — see the P0 payment security rule in `CLAUDE.md`. Never wire
+   activation to a frontend "success" screen; the app already doesn't (the
+   return page after checkout only says "confirming, refresh to check").
+6. Until all three `PAYOS_*` vars are set, VIP checkout returns a clear
+   "not configured yet" error (503) instead of failing unhelpfully.
+7. This integration was built against the official `@payos/node` SDK
+   (v2.0.5) using its published TypeScript types — recommend a real
+   end-to-end test purchase once credentials are configured, since it
+   hasn't been possible to test against the live PayOS API from this
+   environment.
 
 ## Vercel (hosting)
 

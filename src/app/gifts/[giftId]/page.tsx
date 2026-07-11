@@ -48,6 +48,7 @@ export default async function GiftEditorPage({
           title: gift.title,
           message: gift.message,
           status: gift.status,
+          tier: gift.tier,
           themeId: gift.themeId,
           effectId: gift.effectId,
         }}
@@ -65,6 +66,7 @@ export default async function GiftEditorPage({
         })}
         appUrl={env.APP_URL}
         shareQrDataUrl={shareQrDataUrl}
+        vipPriceVnd={env.VIP_PRICE_VND}
       />
     </main>
   );
