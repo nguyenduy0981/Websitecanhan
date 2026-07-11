@@ -15,14 +15,20 @@ here.
 
 ## Cloudflare R2 (media storage) — `R2_*`
 
+Required as of Milestone 6 for gift image uploads to actually work.
+
 1. Create an R2 bucket in the Cloudflare dashboard.
 2. Under R2 → Manage API Tokens, create a token with read/write access scoped
    to that bucket. Copy the Account ID, Access Key ID, and Secret Access Key.
 3. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
-4. If serving media through a public bucket URL or custom domain, set
-   `R2_PUBLIC_URL`.
-5. Until these are set, media upload features remain in "awaiting
-   credentials" mode — see `CLAUDE.md` "Honesty".
+4. Enable public access on the bucket (R2 bucket Settings → Public Access →
+   "Allow Access", or attach a custom domain) and set `R2_PUBLIC_URL` to that
+   public base URL (the `r2.dev` URL or your custom domain) — this is what
+   gift images are actually served from.
+5. Until all of `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/
+   `R2_BUCKET`/`R2_PUBLIC_URL` are set, image upload returns a clear
+   "not configured yet" error instead of failing unhelpfully — see
+   `CLAUDE.md` "Honesty".
 
 ## Resend (transactional email) — `RESEND_API_KEY`, `EMAIL_FROM`
 

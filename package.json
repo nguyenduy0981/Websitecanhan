@@ -18,8 +18,10 @@
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.723.0",
     "@prisma/client": "^6.2.1",
     "argon2": "^0.41.1",
+    "file-type": "^22.0.1",
     "next": "^15.1.4",
     "pino": "^9.6.0",
     "qrcode": "^1.5.4",

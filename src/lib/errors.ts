@@ -59,6 +59,12 @@ export class InternalError extends AppError {
   readonly expose = false;
 }
 
+/** A dependent feature is "awaiting credentials" (e.g. R2 not configured yet) — safe to explain to the client. */
+export class ServiceUnavailableError extends AppError {
+  readonly statusCode = 503;
+  readonly code = "SERVICE_UNAVAILABLE";
+}
+
 export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }

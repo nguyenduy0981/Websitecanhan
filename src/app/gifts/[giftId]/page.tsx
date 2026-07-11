@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { getSessionUser } from "@/modules/auth";
 import { getGiftForOwner, listBlocks } from "@/modules/gifts";
+import { getMediaUrlsByIds } from "@/modules/media";
 import { NotFoundError } from "@/lib/errors";
 import { env } from "@/env";
 import { GiftEditor } from "./GiftEditor";
@@ -33,6 +34,11 @@ export default async function GiftEditorPage({
   const shareUrl = `${env.APP_URL}/g/${gift.slug}`;
   const shareQrDataUrl = await QRCode.toDataURL(shareUrl).catch(() => null);
 
+  const imageMediaIds = blocks
+    .map((block) => (block.content as { mediaAssetId?: string }).mediaAssetId)
+    .filter((id): id is string => Boolean(id));
+  const mediaUrls = await getMediaUrlsByIds(imageMediaIds);
+
   return (
     <main className="mx-auto max-w-3xl p-6">
       <GiftEditor
@@ -42,13 +48,21 @@ export default async function GiftEditorPage({
           title: gift.title,
           message: gift.message,
           status: gift.status,
+          themeId: gift.themeId,
+          effectId: gift.effectId,
         }}
-        initialBlocks={blocks.map((block) => ({
-          id: block.id,
-          type: block.type,
-          position: block.position,
-          content: block.content as { text?: string },
-        }))}
+        initialBlocks={blocks.map((block) => {
+          const content = block.content as { text?: string; mediaAssetId?: string };
+          return {
+            id: block.id,
+            type: block.type,
+            position: block.position,
+            content: {
+              ...content,
+              url: content.mediaAssetId ? mediaUrls[content.mediaAssetId] : undefined,
+            },
+          };
+        })}
         appUrl={env.APP_URL}
         shareQrDataUrl={shareQrDataUrl}
       />
