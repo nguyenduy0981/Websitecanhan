@@ -23,6 +23,7 @@ const { prismaMock, providerMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/modules/analytics", () => ({ recordAnalyticsEvent: vi.fn() }));
 vi.mock("@/modules/payments/providers/payos", () => providerMock);
 vi.mock("@/modules/gifts", async () => {
   const actual = await vi.importActual<typeof import("@/modules/gifts")>("@/modules/gifts");

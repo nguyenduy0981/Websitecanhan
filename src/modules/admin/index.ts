@@ -6,7 +6,13 @@ export { hasRole, requireRole } from "./rbac";
 
 export { writeAuditLog } from "./audit";
 
-export { createReport, listReportsForAdmin, resolveReport, type ReportWithGift } from "./reports";
+export {
+  createReport,
+  listReportsForAdmin,
+  resolveReport,
+  countOpenReports,
+  type ReportWithGift,
+} from "./reports";
 
 export { suspendGift, unsuspendGift } from "./moderation";
 

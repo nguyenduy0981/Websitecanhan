@@ -21,6 +21,7 @@ const { prismaMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/modules/analytics", () => ({ recordAnalyticsEvent: vi.fn() }));
 
 const { createGift, listGiftsForOwner, updateGift, deleteGift, publishGift } = await import(
   "@/modules/gifts/service"

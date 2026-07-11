@@ -6,6 +6,7 @@ import { ConflictError } from "@/lib/errors";
 import { env } from "@/env";
 import { renewedVipExpiry } from "@/config/business-rules";
 import { getGiftForOwner } from "@/modules/gifts";
+import { recordAnalyticsEvent } from "@/modules/analytics";
 import { payOSProvider } from "./providers/payos";
 import type { PaymentProvider } from "./provider";
 
@@ -186,6 +187,11 @@ export async function handlePaymentWebhook(rawBody: unknown): Promise<void> {
 
   if (wonClaim) {
     logger.info({ paymentId: payment.id, orderCode: event.orderCode }, "VIP payment activated");
+    await recordAnalyticsEvent("vip_activated", {
+      userId: payment.userId,
+      giftId: payment.giftId ?? undefined,
+      props: { amountVnd: payment.amount, orderCode: event.orderCode },
+    });
   } else {
     logger.info(
       { paymentId: payment.id, orderCode: event.orderCode },

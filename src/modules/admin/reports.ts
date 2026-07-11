@@ -49,6 +49,11 @@ export async function listReportsForAdmin(status?: ReportStatus): Promise<Report
   }) as Promise<ReportWithGift[]>;
 }
 
+/** For the admin monitoring overview. */
+export async function countOpenReports(): Promise<number> {
+  return prisma.report.count({ where: { status: "OPEN" } });
+}
+
 /**
  * SUSPEND both resolves the report and suspends the reported gift;
  * DISMISS only resolves the report. Resolving an already-resolved report

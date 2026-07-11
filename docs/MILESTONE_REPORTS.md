@@ -1142,3 +1142,109 @@ SUSPENDED` schema from Milestone 0, previously unused by any code.
 
 ### Ready for Milestone 10: Analytics & Monitoring
 Yes.
+
+## Milestone 10: Analytics & Monitoring — 2026-07-11
+
+Owner hit an unrelated deploy blocker mid-session (`CRON_SECRET` had a
+non-ASCII character from phone-keyboard autocorrect, causing `vercel
+build` to fail with "characters that are not valid in HTTP headers") —
+walked through regenerating a clean secret and re-pasting it in the
+Vercel dashboard; not a code issue, no repo changes needed for that part.
+Once confirmed fixed, continued to Milestone 10 as planned.
+
+### Completed
+- **`src/modules/analytics/stats.ts`** — `getGiftViewStats(giftId)`
+  aggregates the existing `GiftView` table (Milestone 5, no new schema):
+  total views, views in the last 7/30 days, and a device breakdown
+  (mobile/tablet/desktop/unknown, from the existing `deviceClass` field).
+  `recordAnalyticsEvent(name, meta)` is best-effort (never throws — same
+  graceful-degradation pattern as `recordGiftView`/`writeAuditLog`),
+  writing to the previously-unused `AnalyticsEvent` table.
+- **Instrumented 3 high-signal events**: `gift_created` and
+  `gift_published` (`gifts/service.ts`), `vip_activated` (`payments/
+  service.ts`, fired only when the webhook transaction actually wins the
+  activation claim — never on a duplicate-delivery no-op, keeping it
+  consistent with the Milestone 8 exactly-once guarantee). Kept
+  deliberately minimal for V1 rather than instrumenting every possible
+  action.
+- **Gift editor stats**: once a gift has been published (never before —
+  no views are possible pre-publish), the editor shows total/7-day/30-day
+  view counts and a device breakdown, fetched server-side by the existing
+  Server-Component-calls-module-directly pattern (Milestone 4).
+- **Admin monitoring page** (`/admin/monitoring`, ADMIN+ — one rank above
+  the MODERATOR+ the rest of `/admin` requires): site-wide overview
+  (total users, gifts by status, VIP activation count, open report count)
+  plus recent cron job history (`JobRun` rows from Milestone 7's lifecycle
+  cron, surfacing failures in red). Rather than centralizing all this
+  aggregation inside the `analytics` module, each owning module exposes
+  one small dedicated count function (`auth.countUsers`,
+  `gifts.countGiftsByStatus`, `payments.countActivatedPayments`,
+  `admin.countOpenReports`, `jobs.listRecentJobRuns`) that the page
+  composes directly — consistent with the `getGiftForAdmin`-style
+  ownership-bypass pattern from Milestone 9, and avoids the `analytics`
+  module needing to reach into tables it doesn't own.
+- Added an admin nav link ("Giám sát") visible only to ADMIN+.
+
+### Files
+`src/modules/analytics/{stats,index}.ts`, `src/modules/gifts/service.ts`
+(updated — event calls), `src/modules/payments/service.ts` (updated —
+event call), `src/modules/jobs/query.ts` (+ exported from `jobs/index.ts`),
+`src/modules/auth/admin.ts` (+`countUsers`, exported from `auth/index.ts`),
+`src/modules/gifts/admin.ts` (+`countGiftsByStatus`, exported from
+`gifts/index.ts`), `src/modules/payments/query.ts` (+ exported from
+`payments/index.ts`), `src/modules/admin/reports.ts` (+`countOpenReports`,
+exported from `admin/index.ts`), `src/app/admin/monitoring/page.tsx`,
+`src/app/admin/layout.tsx` (updated — nav link),
+`src/app/gifts/[giftId]/{page,GiftEditor}.tsx` (updated — view stats),
+`tests/unit/analytics-stats.test.ts`,
+`tests/unit/admin-monitoring-helpers.test.ts`,
+`tests/unit/gift-service.test.ts` / `tests/unit/payments-service.test.ts`
+(updated — mock the new `@/modules/analytics` dependency), `CLAUDE.md`.
+
+### Migrations
+None — uses the existing `AnalyticsEvent`, `GiftView`, and `JobRun`
+schema from Milestone 0/5/7, previously unused (`AnalyticsEvent`) or only
+written-not-read (`GiftView`, `JobRun`) by any code.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **172/172 tests** (9 new): view-stats aggregation
+  (total/7d/30d counts, device breakdown including an `unknown` bucket for
+  null `deviceClass`, empty-state for a gift with zero views);
+  `recordAnalyticsEvent` writes the right shape and never throws even when
+  the underlying write fails; `countGiftsByStatus` always returns all 7
+  status keys, zero-filled, so the UI never needs to guard against a
+  missing key; `countActivatedPayments`/`countOpenReports` filter by the
+  right status; `listRecentJobRuns` orders newest-first and respects its
+  limit. Also updated the two existing test files whose service functions
+  now call `recordAnalyticsEvent` (`gift-service.test.ts`,
+  `payments-service.test.ts`) to mock `@/modules/analytics`, keeping them
+  isolated from the new dependency rather than letting it silently
+  no-op through an unmocked prisma call.
+- `npm run build` — pass; `/admin/monitoring` and all other routes
+  registered correctly as dynamic (`ƒ`). Same non-fatal
+  `Can't reach database server` log noted in the Milestone 9 report
+  appeared again during page-data collection for `/admin/monitoring`
+  (same root cause: no live Postgres in this sandbox) — harmless, build
+  still completed successfully.
+
+### Known issues / honestly-scoped gaps
+- **No live Postgres in this environment** — same caveat as every prior
+  milestone.
+- Only 3 business events are instrumented (`gift_created`,
+  `gift_published`, `vip_activated`) — deliberately minimal for V1 rather
+  than tracking every possible action; easy to add more `recordAnalyticsEvent`
+  calls later without a migration.
+- No time-series charts (day-by-day view trends) — only rolling
+  total/7d/30d counts. A real chart would need either client-side
+  aggregation of raw `GiftView` rows or a new pre-aggregated table;
+  deferred as unnecessary complexity for V1's expected traffic volume.
+- `/admin/monitoring` has no pagination on job run history (fixed at the
+  most recent 30) — acceptable at current expected cron volume (7 steps/
+  day = ~210/month).
+- No alerting (e.g. email/Slack ping on a failed cron step) — the
+  monitoring page must be checked manually for now; would need Resend
+  (not yet configured) or a similar low-cost channel to add real alerting.
+
+### Ready for Milestone 11: Testing & Hardening
+Yes.

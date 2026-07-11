@@ -28,6 +28,11 @@ export async function listUsersForAdmin(): Promise<AdminUserSummary[]> {
   return users.map(toAdminUserSummary);
 }
 
+/** Total registered users — for the admin monitoring overview. */
+export async function countUsers(): Promise<number> {
+  return prisma.user.count();
+}
+
 /** Returns the previous role too, so the caller can write a meaningful audit log entry. */
 export async function setUserRole(
   targetUserId: string,

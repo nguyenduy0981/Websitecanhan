@@ -25,6 +25,20 @@ interface GiftData {
   effectId: string | null;
 }
 
+interface ViewStats {
+  total: number;
+  last7Days: number;
+  last30Days: number;
+  byDevice: Record<string, number>;
+}
+
+const DEVICE_LABELS: Record<string, string> = {
+  mobile: "Điện thoại",
+  tablet: "Máy tính bảng",
+  desktop: "Máy tính",
+  unknown: "Không xác định",
+};
+
 const inputClass =
   "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 const buttonClass =
@@ -38,12 +52,14 @@ export function GiftEditor({
   appUrl,
   shareQrDataUrl,
   vipPriceVnd,
+  viewStats,
 }: {
   gift: GiftData;
   initialBlocks: Block[];
   appUrl: string;
   shareQrDataUrl: string | null;
   vipPriceVnd: number;
+  viewStats: ViewStats | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -457,6 +473,33 @@ export function GiftEditor({
                 height={160}
                 className="mt-3"
               />
+            )}
+          </div>
+        )}
+
+        {viewStats && (
+          <div className="mt-4 rounded-md border p-3">
+            <p className="text-sm font-medium">Lượt xem</p>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-lg font-bold">{viewStats.total}</p>
+                <p className="text-xs text-muted-foreground">Tổng</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{viewStats.last7Days}</p>
+                <p className="text-xs text-muted-foreground">7 ngày qua</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold">{viewStats.last30Days}</p>
+                <p className="text-xs text-muted-foreground">30 ngày qua</p>
+              </div>
+            </div>
+            {Object.keys(viewStats.byDevice).length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {Object.entries(viewStats.byDevice)
+                  .map(([device, count]) => `${DEVICE_LABELS[device] ?? device}: ${count}`)
+                  .join(" · ")}
+              </p>
             )}
           </div>
         )}

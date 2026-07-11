@@ -21,6 +21,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/reports" className="underline">
             Báo cáo
           </Link>
+          {hasRole(user, "ADMIN") && (
+            <Link href="/admin/monitoring" className="underline">
+              Giám sát
+            </Link>
+          )}
           {hasRole(user, "SUPER_ADMIN") && (
             <Link href="/admin/users" className="underline">
               Người dùng
