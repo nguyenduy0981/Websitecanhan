@@ -1401,3 +1401,106 @@ None.
 
 ### Ready for Milestone 12: Beta
 Yes.
+
+## Milestone 12: Beta — 2026-07-11
+
+All 11 feature/hardening milestones were complete going into this one,
+and neither `specs/SPEC.md` nor `CLAUDE.md` define further code-feature
+scope for "Beta" beyond the roadmap name itself — this milestone is
+operational readiness, not new business logic. Scoped it to what's
+genuinely achievable without the owner's real-world credentials
+(R2/PayOS/Resend/`SUPER_ADMIN_EMAIL`, still owner-pending — tracked
+honestly rather than faked) plus a few real, concrete gaps this session's
+own testing had already surfaced.
+
+### Completed
+- **Homepage copy** (`src/app/page.tsx`): replaced the literal
+  Milestone-0 placeholder text "đang được xây dựng" (under construction)
+  — which had survived untouched through 11 milestones of the product
+  actually becoming fully functional — with real landing content: a
+  clear value proposition, a 3-step "how it works" section, and a
+  free-vs-VIP duration blurb that imports `FREE_ACTIVE_DURATION_DAYS`/
+  `VIP_ACTIVE_DURATION_DAYS` from `business-rules.ts` instead of
+  hardcoding the numbers a second time. Primary CTA now points
+  logged-out visitors at `/register` (was `/login`) since a landing page
+  should lead with sign-up.
+- **`app/icon.tsx`, `app/robots.ts`, `app/sitemap.ts`**: closes a gap
+  Milestone 11's own Playwright verification had already caught (a
+  console 404 for `/favicon.ico`, dismissed at the time as an unrelated
+  pre-existing gap). Used Next's file-based conventions rather than
+  static files in `public/` — `icon.tsx` generates a 32×32 PNG via
+  `next/og`'s `ImageResponse` (no binary asset to check in),
+  `robots.ts`/`sitemap.ts` read `env.APP_URL` so they're never
+  accidentally hardcoded to localhost (same class of bug as the
+  Milestone 5 `APP_URL` hotfix). `robots.ts` disallows `/g/`,
+  `/dashboard`, `/gifts/`, `/admin` — defense-in-depth on top of the
+  per-page `X-Robots-Tag`/`<meta robots>` noindex already in place for
+  gift pages since Milestone 5.
+- **`/admin/monitoring` "Cấu hình hệ thống" section**: live ✓/✗ status
+  for R2, Resend, PayOS (reusing the existing `isR2Configured`/
+  `isResendConfigured`/`isPayOSConfigured` booleans `src/env.ts` already
+  computed) and whether `SUPER_ADMIN_EMAIL` is set, each with a one-line
+  plain-language note on what's blocked without it. Gives the
+  non-technical, phone-only owner one page to check "what's still
+  pending" instead of re-reading CLAUDE.md/docs/SETUP.md.
+- **`docs/BETA_CHECKLIST.md`**: consolidates the above into one
+  actionable, phone-readable document — what's done, what's pending
+  (with a table linking each integration to its `docs/SETUP.md` section),
+  concrete "do one real test of each integration" steps once configured,
+  a suggested small-cohort (5-15 people) beta rollout plan, and an
+  honest summary of known limitations to set expectations around during
+  beta (pulled from prior milestones' "Known issues" sections, not
+  re-litigated here).
+
+### Files
+`src/app/page.tsx`, `src/app/icon.tsx`, `src/app/robots.ts`,
+`src/app/sitemap.ts`, `src/app/admin/monitoring/page.tsx` (updated),
+`docs/BETA_CHECKLIST.md`, `CLAUDE.md`.
+
+### Migrations
+None.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **172/172** (unchanged — no service-layer logic
+  touched this milestone).
+- `npm run test:integration` — pass, **12/12**, against the same real
+  local Postgres as Milestone 11 (the sandbox's Postgres service had
+  gone idle/down between milestones — restarted it, data was intact,
+  re-ran clean; a reminder that this session's local Postgres is a
+  convenience, not guaranteed persistent, same caveat as noted in
+  Milestone 11's report).
+- `npm run build` — pass; `/icon`, `/robots.txt`, `/sitemap.xml` all
+  registered as static (`○`) routes.
+- **Actually verified in a real browser** (Playwright against a real
+  `next start` + the real local Postgres, continuing Milestone 11's
+  practice): loaded the homepage, confirmed the new copy renders, the
+  page `<title>` is the new metadata, and — the specific thing being
+  fixed — zero console/page errors (the `/favicon.ico` 404 from
+  Milestone 11 no longer appears, because a real `<link rel="icon"
+  href="/icon?...">` tag is now emitted and browsers never fall back to
+  guessing `/favicon.ico` when that tag is present). Also fetched
+  `/robots.txt` and `/sitemap.xml` directly and confirmed their content
+  is correct.
+
+### Known issues / honestly-scoped gaps
+- **R2/PayOS/Resend/`SUPER_ADMIN_EMAIL` are still not configured** —
+  unchanged from every prior milestone, now surfaced live on
+  `/admin/monitoring` instead of only in docs. This blocks image upload,
+  VIP checkout, real password-reset email delivery, and all `/admin`
+  access respectively, until the owner completes the steps in
+  `docs/SETUP.md` (now cross-referenced from `docs/BETA_CHECKLIST.md`
+  too).
+- No `tests/e2e/*.spec.ts` files were added to the repository (same gap
+  noted in Milestone 11) — this milestone's browser verification was
+  again a one-off manual check via a scratch script, not a committed,
+  re-runnable Playwright test.
+- The homepage's new copy/CTA choices (registering as the primary CTA,
+  the specific 3-step framing) are a reasonable default, not something
+  validated with real users yet — worth revisiting once beta feedback
+  exists.
+
+### Ready for Milestone 13: Launch
+Once the owner has completed the `docs/BETA_CHECKLIST.md` steps
+(integrations configured, a small real cohort has used the product) —
+this milestone's code-side work is done.
