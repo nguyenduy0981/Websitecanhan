@@ -2,18 +2,23 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-const inputClass =
-  "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
-const buttonClass =
-  "mt-2 w-full rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
+import { errorTextClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
+import { PasswordToggleInput } from "@/app/ui/PasswordToggleInput";
+import { Checkmark } from "@/app/ui/Checkmark";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorNonce, setErrorNonce] = useState(0);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  function showError(message: string) {
+    setError(message);
+    setErrorNonce((n) => n + 1);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,14 +34,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error?.message ?? "Không thể đặt lại mật khẩu");
+        showError(data.error?.message ?? "Không thể đặt lại mật khẩu");
         return;
       }
 
       setDone(true);
       setTimeout(() => router.push("/login"), 1500);
     } catch {
-      setError("Không thể kết nối máy chủ. Vui lòng thử lại.");
+      showError("Không thể kết nối máy chủ. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -44,37 +49,37 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   if (done) {
     return (
-      <p role="status" className="rounded-md border p-3 text-sm">
+      <p role="status" className="flex flex-col items-center gap-2 rounded-md border p-4 text-center text-sm">
+        <Checkmark size={40} />
         Đặt lại mật khẩu thành công. Đang chuyển đến trang đăng nhập...
       </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate className="lb-fade-in-up">
       {error && (
-        <p role="alert" className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p key={errorNonce} role="alert" className={errorTextClass}>
           {error}
         </p>
       )}
 
-      <label htmlFor="password" className="block text-sm font-medium">
-        Mật khẩu mới (tối thiểu 8 ký tự)
-      </label>
-      <input
+      <PasswordToggleInput
         id="password"
-        type="password"
+        label="Mật khẩu mới (tối thiểu 8 ký tự)"
         autoComplete="new-password"
         required
         minLength={8}
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className={inputClass}
+        onChange={setPassword}
       />
 
-      <button type="submit" disabled={submitting} className={buttonClass}>
-        {submitting ? "Đang lưu..." : "Đặt lại mật khẩu"}
-      </button>
+      <SubmitButton
+        submitting={submitting}
+        label="Đặt lại mật khẩu"
+        submittingLabel="Đang lưu..."
+        variant="primary"
+      />
     </form>
   );
 }

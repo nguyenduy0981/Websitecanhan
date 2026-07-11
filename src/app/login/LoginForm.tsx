@@ -2,18 +2,22 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-const inputClass =
-  "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
-const buttonClass =
-  "mt-2 w-full rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
+import { inputClass, errorTextClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
+import { PasswordToggleInput } from "@/app/ui/PasswordToggleInput";
 
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorNonce, setErrorNonce] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  function showError(message: string) {
+    setError(message);
+    setErrorNonce((n) => n + 1);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,14 +33,14 @@ export function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error?.message ?? "Đăng nhập thất bại");
+        showError(data.error?.message ?? "Đăng nhập thất bại");
         return;
       }
 
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Không thể kết nối máy chủ. Vui lòng thử lại.");
+      showError("Không thể kết nối máy chủ. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -45,7 +49,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} noValidate>
       {error && (
-        <p role="alert" className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p key={errorNonce} role="alert" className={errorTextClass}>
           {error}
         </p>
       )}
@@ -63,22 +67,22 @@ export function LoginForm() {
         className={inputClass}
       />
 
-      <label htmlFor="password" className="mt-4 block text-sm font-medium">
-        Mật khẩu
-      </label>
-      <input
+      <PasswordToggleInput
         id="password"
-        type="password"
+        label="Mật khẩu"
         autoComplete="current-password"
         required
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className={inputClass}
+        onChange={setPassword}
+        className="mt-4"
       />
 
-      <button type="submit" disabled={submitting} className={buttonClass}>
-        {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
-      </button>
+      <SubmitButton
+        submitting={submitting}
+        label="Đăng nhập"
+        submittingLabel="Đang đăng nhập..."
+        variant="primary"
+      />
     </form>
   );
 }

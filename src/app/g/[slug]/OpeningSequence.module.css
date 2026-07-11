@@ -116,6 +116,35 @@
   opacity: 0;
 }
 
+/* Expanding light ring — an extra depth layer behind the lid/particles,
+   transform+opacity only (scale expands, never width/height). */
+.ring {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  opacity: 0;
+}
+
+.toggle:checked ~ .burst .ring {
+  animation: lb-ring-expand 750ms ease-out forwards;
+}
+
+@keyframes lb-ring-expand {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(6);
+  }
+}
+
 .toggle:checked ~ .burst .flash {
   animation: lb-flash 600ms ease-out forwards;
 }
@@ -211,10 +240,13 @@
    until opened (visibility, not just opacity — an opacity:0 element is
    still focusable and screen-reader-visible, which would let a keyboard
    user tab into "Xóa"/report links before the gift is even opened). */
+/* Content emerges slightly scaled-down/receded (as if rising out of the
+   box) rather than a flat fade — a cheap, transform-only way to add
+   "layered depth" without filter/blur. */
 .content {
   visibility: hidden;
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(10px) scale(0.96);
   transition:
     opacity 700ms ease-out 150ms,
     transform 700ms ease-out 150ms,
@@ -224,7 +256,7 @@
 .toggle:checked ~ .content {
   visibility: visible;
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   transition:
     opacity 700ms ease-out 150ms,
     transform 700ms ease-out 150ms,
@@ -233,10 +265,11 @@
 
 /* Section-level stagger (title / message / blocks / footer) — delay is
    set per-usage via inline style so callers don't need one class per
-   section. */
+   section. Each section also recedes very slightly less than the last,
+   reinforcing the depth-of-field feel as content layers in. */
 .section {
   opacity: 0;
-  transform: translateY(14px);
+  transform: translateY(14px) scale(0.985);
   transition:
     opacity 550ms ease-out,
     transform 550ms ease-out;
@@ -244,7 +277,7 @@
 
 .toggle:checked ~ .content .section {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 /* Word-by-word "soft writing" reveal for the message — see

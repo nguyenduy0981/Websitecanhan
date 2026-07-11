@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { REPORT_REASON_LABELS as REASON_LABELS } from "@/lib/report-reason-label";
+import { errorTextClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
 
 export function ReportButton({ slug }: { slug: string }) {
   const [open, setOpen] = useState(false);
@@ -35,7 +37,7 @@ export function ReportButton({ slug }: { slug: string }) {
   }
 
   if (done) {
-    return <p className="text-xs opacity-70">Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét sớm.</p>;
+    return <p className="lb-pop-in text-xs opacity-70">Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét sớm.</p>;
   }
 
   if (!open) {
@@ -43,7 +45,7 @@ export function ReportButton({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs underline opacity-60 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        className="lb-btn text-xs underline opacity-60 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         Báo cáo nội dung này
       </button>
@@ -56,7 +58,7 @@ export function ReportButton({ slug }: { slug: string }) {
       className="lb-fade-in-up mx-auto mt-2 w-full max-w-xs rounded-md border p-3 text-left text-sm"
     >
       {error && (
-        <p role="alert" className="lb-pop-in mb-2 rounded-md border border-red-500 p-2 text-xs text-red-600">
+        <p role="alert" className={`${errorTextClass} mb-2 p-2 text-xs`}>
           {error}
         </p>
       )}
@@ -89,17 +91,16 @@ export function ReportButton({ slug }: { slug: string }) {
       />
 
       <div className="mt-2 flex gap-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md border px-3 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50"
-        >
-          {submitting ? "Đang gửi..." : "Gửi báo cáo"}
-        </button>
+        <SubmitButton
+          submitting={submitting}
+          label="Gửi báo cáo"
+          submittingLabel="Đang gửi..."
+          className="mt-0 w-auto px-3 py-1 text-xs"
+        />
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md px-3 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="lb-btn rounded-md px-3 py-1 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           Hủy
         </button>

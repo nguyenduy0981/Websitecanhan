@@ -2,11 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-
-const inputClass =
-  "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
-const buttonClass =
-  "mt-2 w-full rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
+import { inputClass, errorTextClass } from "@/lib/ui-classes";
+import { SubmitButton } from "@/app/ui/SubmitButton";
+import { PasswordToggleInput } from "@/app/ui/PasswordToggleInput";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -14,7 +12,13 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorNonce, setErrorNonce] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  function showError(message: string) {
+    setError(message);
+    setErrorNonce((n) => n + 1);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,14 +34,14 @@ export function RegisterForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error?.message ?? "Đăng ký thất bại");
+        showError(data.error?.message ?? "Đăng ký thất bại");
         return;
       }
 
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Không thể kết nối máy chủ. Vui lòng thử lại.");
+      showError("Không thể kết nối máy chủ. Vui lòng thử lại.");
     } finally {
       setSubmitting(false);
     }
@@ -46,7 +50,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} noValidate>
       {error && (
-        <p role="alert" className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p key={errorNonce} role="alert" className={errorTextClass}>
           {error}
         </p>
       )}
@@ -76,23 +80,23 @@ export function RegisterForm() {
         className={inputClass}
       />
 
-      <label htmlFor="password" className="mt-4 block text-sm font-medium">
-        Mật khẩu (tối thiểu 8 ký tự)
-      </label>
-      <input
+      <PasswordToggleInput
         id="password"
-        type="password"
+        label="Mật khẩu (tối thiểu 8 ký tự)"
         autoComplete="new-password"
         required
         minLength={8}
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className={inputClass}
+        onChange={setPassword}
+        className="mt-4"
       />
 
-      <button type="submit" disabled={submitting} className={buttonClass}>
-        {submitting ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-      </button>
+      <SubmitButton
+        submitting={submitting}
+        label="Tạo tài khoản"
+        submittingLabel="Đang tạo tài khoản..."
+        variant="primary"
+      />
     </form>
   );
 }

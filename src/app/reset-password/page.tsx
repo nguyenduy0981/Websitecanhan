@@ -1,4 +1,5 @@
 import { ResetPasswordForm } from "./ResetPasswordForm";
+import { errorTextClass } from "@/lib/ui-classes";
 
 export default async function ResetPasswordPage({
   searchParams,
@@ -13,7 +14,7 @@ export default async function ResetPasswordPage({
       {token ? (
         <ResetPasswordForm token={token} />
       ) : (
-        <p role="alert" className="lb-pop-in rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p role="alert" className={errorTextClass}>
           Thiếu mã đặt lại mật khẩu. Vui lòng dùng liên kết trong email.
         </p>
       )}

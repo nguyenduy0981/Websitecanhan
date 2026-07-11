@@ -45,7 +45,7 @@ export default async function AdminMonitoringPage() {
   ]);
 
   return (
-    <div>
+    <div className="lb-fade-in-up">
       <h2 className="mb-2 text-lg font-semibold">Cấu hình hệ thống</h2>
       <ul className="mb-6 flex flex-col gap-2">
         {INTEGRATIONS.map((integration) => (

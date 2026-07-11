@@ -15,11 +15,15 @@ export default async function AdminUsersPage() {
   const users = await listUsers();
 
   return (
-    <div>
+    <div className="lb-fade-in-up">
       <h2 className="mb-4 text-lg font-semibold">Người dùng ({users.length})</h2>
       <ul className="flex flex-col gap-2">
-        {users.map((u) => (
-          <li key={u.id} className="flex items-center justify-between gap-2 rounded-md border p-3">
+        {users.map((u, i) => (
+          <li
+            key={u.id}
+            className="lb-fade-in-up flex items-center justify-between gap-2 rounded-md border p-3"
+            style={{ "--lb-delay": `${Math.min(i, 8) * 30}ms` } as React.CSSProperties}
+          >
             <div>
               <p className="text-sm font-medium">{u.displayName ?? u.email}</p>
               <p className="text-xs text-muted-foreground">{u.email}</p>
