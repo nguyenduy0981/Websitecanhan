@@ -114,3 +114,20 @@ passed without running them.
   (simpler, free, and keyboard-operable for accessibility). The public
   share link (`/g/:slug`) is displayed after publish but does not resolve
   to a real page until Milestone 5.
+- Milestone 5 public viewer: `/g/[slug]` is public (no auth). A `DRAFT`
+  gift is treated identically to "doesn't exist" (`notFound()`) so
+  unpublished content never leaks. `EXPIRED`/`SUSPENDED`/`RECOVERY`/
+  `DELETION_PENDING`/`DELETED` render a generic friendly message instead of
+  the real content or a raw 404 — `SUSPENDED` in particular never reveals
+  that moderation was involved. All gift text is rendered as JSX children
+  (never `dangerouslySetInnerHTML`), relying on React's automatic escaping
+  per the "treat as hostile" rule. Metadata (title/description/OG tags) on
+  the viewer page is static and generic — never derived from the gift's
+  real title/message — so a social-media link preview can't leak private
+  content to someone who hasn't opened the link; `X-Robots-Tag: noindex`
+  (next.config.ts) plus a matching `robots` meta tag both apply.
+  `GiftView` rows are recorded on each view of an `ACTIVE` gift via
+  `recordGiftView()`, which never throws — a failed analytics write must
+  never take down the gift content itself (graceful degradation). QR code
+  for the share link is generated server-side (the `qrcode` package, no
+  new paid service) in the editor page and passed down as a data URL.

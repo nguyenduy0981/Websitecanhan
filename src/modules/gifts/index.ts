@@ -15,6 +15,14 @@ export { getGiftForOwner } from "./authorization";
 export { listBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from "./blocks";
 
 export {
+  getGiftBySlug,
+  listBlocksPublic,
+  recordGiftView,
+  classifyGiftForViewer,
+  type ViewerDecision,
+} from "./public";
+
+export {
   createGiftSchema,
   updateGiftSchema,
   createBlockSchema,

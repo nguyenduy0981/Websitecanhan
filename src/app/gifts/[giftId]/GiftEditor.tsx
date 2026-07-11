@@ -31,10 +31,12 @@ export function GiftEditor({
   gift,
   initialBlocks,
   appUrl,
+  shareQrDataUrl,
 }: {
   gift: GiftData;
   initialBlocks: Block[];
   appUrl: string;
+  shareQrDataUrl: string | null;
 }) {
   const router = useRouter();
   const isEditable = gift.status === "DRAFT" || gift.status === "ACTIVE";
@@ -274,9 +276,16 @@ export function GiftEditor({
           <div className="mt-6 rounded-md border p-3">
             <p className="text-sm font-medium">Link chia sẻ</p>
             <p className="break-all text-sm text-muted-foreground">{shareUrl}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Trang xem công khai sẽ hoạt động khi Milestone 5 hoàn tất.
-            </p>
+            {shareQrDataUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- small server-generated data URL, not worth next/image's overhead
+              <img
+                src={shareQrDataUrl}
+                alt={`Mã QR dẫn đến ${shareUrl}`}
+                width={160}
+                height={160}
+                className="mt-3"
+              />
+            )}
           </div>
         )}
       </section>

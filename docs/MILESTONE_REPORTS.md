@@ -468,3 +468,106 @@ None.
 ### Ready for Milestone 5: Public Viewer
 Yes, pending the owner confirming the real DB-backed flows work as
 expected on the live deploy.
+
+## Milestone 5: Public Viewer — 2026-07-11
+
+Confirmed before starting: owner registered, logged in, and reached the
+dashboard successfully on the real production deploy — Milestone 4's
+DB-backed flows work end-to-end on real Neon. Also resolved, during this
+same session, a Vercel deploy that initially showed "Error" on the
+Milestone 4 merge commit; the owner retried and it came up "Ready" /
+"Current" — noting this in case the same transient-looking failure
+recurs on a future deploy and is worth a closer look at build logs then.
+
+### Completed
+- **`src/modules/gifts/public.ts`**: `getGiftBySlug` (no ownership check —
+  this is the intentionally-public path), `listBlocksPublic`,
+  `classifyGiftForViewer` (pure function mapping `GiftStatus` → `active` /
+  `unavailable` (with a friendly message) / `not_found` — `DRAFT` maps to
+  `not_found` so unpublished content can never leak through a guessed or
+  shared-too-early link), and `recordGiftView` (analytics write that
+  **never throws**, per SPEC.md's graceful-degradation requirement — a
+  failed view-count write must never take the gift content down with it).
+- **`src/lib/device.ts`**: `classifyDevice(userAgent)` — coarse
+  mobile/tablet/desktop bucket for `GiftView.deviceClass`, no IP or other
+  PII, matching the schema's existing privacy design from Milestone 0.
+- **`/g/[slug]`** (`src/app/g/[slug]/page.tsx`, public, no auth):
+  - Static, generic metadata (title/description/OG/Twitter tags) that is
+    **never derived from the real gift title or message** — so a social
+    link preview can't leak private content to someone who hasn't opened
+    the link — plus a `robots: noindex` meta tag alongside the existing
+    `X-Robots-Tag` HTTP header from `next.config.ts` (defense in depth).
+  - `DRAFT` and missing slugs → Next's `notFound()` (real 404 page).
+  - `EXPIRED` / `SUSPENDED` / `RECOVERY` / `DELETION_PENDING` / `DELETED` →
+    a friendly `UnavailableView` message, never the real content; the
+    `SUSPENDED` message deliberately never mentions moderation.
+  - `ACTIVE` → renders title, message, and ordered `TEXT` blocks, records a
+    view, and shows a "tạo hộp quà của riêng bạn" call-to-action linking to
+    `/register` (per SPEC.md: a recipient "có thể chuyển thành creator
+    mới").
+  - All gift text is rendered as plain JSX children — no
+    `dangerouslySetInnerHTML` anywhere — so React's automatic escaping
+    covers the "treat user-generated text as hostile" rule by construction.
+- **QR code on the share link**: added the `qrcode` package (no new paid
+  service); the gift editor's Server Component page now generates a QR
+  data URL for the share link server-side and passes it down, so
+  `GiftEditor` can show a scannable code next to the link once a gift is
+  published.
+
+### Files
+`src/modules/gifts/public.ts`, `src/lib/device.ts`,
+`src/app/g/[slug]/{page,GiftView,UnavailableView}.tsx`,
+`src/app/gifts/[giftId]/{page,GiftEditor}.tsx` (QR code addition),
+`src/modules/gifts/index.ts` (new exports), `package.json` (+`qrcode`,
+`@types/qrcode`), `tests/unit/{gift-viewer,gift-view-tracking}.test.ts`,
+`CLAUDE.md`, `README.md`.
+
+### Migrations
+None — uses the existing `Gift`/`GiftBlock`/`GiftView` tables.
+
+### Verification (actually executed)
+- `npm run lint` — pass, 0 errors/warnings.
+- `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **88/88 tests** (11 new): `classifyGiftForViewer`
+  covering every `GiftStatus` (including an explicit assertion that the
+  `SUSPENDED` message never contains the word "suspend"/"vi phạm" —
+  encodes the "don't reveal moderation" rule as a test, not just a
+  comment); `classifyDevice` edge cases (no user agent, mobile, tablet,
+  desktop fallback); `recordGiftView` against a mocked Prisma client,
+  including **asserting it resolves without throwing even when the
+  underlying write rejects** — directly verifying the graceful-degradation
+  guarantee.
+- `npm run build` — pass; `/g/[slug]` registered as a dynamic route
+  alongside all prior routes.
+- **Actually ran the app**: verified with `curl -i` against a real
+  `next start` that `/g/<any-slug>` responds with the
+  `X-Robots-Tag: noindex, nofollow` header present — confirmed
+  independently of the database, since the header is applied by
+  `next.config.ts` regardless of how the request resolves further. The
+  request returned `500` rather than a clean 404/expired page because this
+  environment's `DATABASE_URL` isn't a reachable Postgres — expected,
+  matches every prior milestone's limitation, and does not indicate a bug
+  (`getGiftBySlug`'s DB call fails before `classifyGiftForViewer` logic
+  ever runs). The status-branching logic itself is verified by the unit
+  tests above instead.
+
+### Known issues / honestly-scoped gaps
+- **Could not verify the live "open a real published gift link" flow**
+  end-to-end (no live Postgres in this environment, same as every prior
+  milestone). Once deployed, please open a published gift's `/g/:slug`
+  link for real and confirm it renders correctly — that's the one thing
+  I can't check from here.
+- Only `TEXT` blocks render in the viewer (matches the editor's current
+  scope — `IMAGE`/`GALLERY` wait for Milestone 6).
+- No music/effects playback yet (Milestone 6/8 territory) — SPEC's
+  "graceful degradation" language about music/effects/analytics/email
+  failing without breaking content display is honored today by simply not
+  having those features yet; the analytics-never-throws behavior is
+  already in place and tested for when it's needed.
+- Social preview has no custom `og:image` (no media pipeline yet) — title/
+  description-only previews are fine for V1 and still don't leak content.
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged.
+
+### Ready for Milestone 6: Media & Themes
+Yes, pending the owner opening a real published gift's share link once
+deployed to confirm the viewer renders as expected.

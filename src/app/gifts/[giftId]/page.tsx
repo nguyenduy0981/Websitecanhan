@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect, notFound } from "next/navigation";
+import QRCode from "qrcode";
 import { getSessionUser } from "@/modules/auth";
 import { getGiftForOwner, listBlocks } from "@/modules/gifts";
 import { NotFoundError } from "@/lib/errors";
@@ -29,6 +30,8 @@ export default async function GiftEditorPage({
   }
 
   const blocks = await listBlocks(giftId, user.id);
+  const shareUrl = `${env.APP_URL}/g/${gift.slug}`;
+  const shareQrDataUrl = await QRCode.toDataURL(shareUrl).catch(() => null);
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -47,6 +50,7 @@ export default async function GiftEditorPage({
           content: block.content as { text?: string },
         }))}
         appUrl={env.APP_URL}
+        shareQrDataUrl={shareQrDataUrl}
       />
     </main>
   );
