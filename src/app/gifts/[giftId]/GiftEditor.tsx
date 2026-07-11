@@ -42,7 +42,12 @@ const DEVICE_LABELS: Record<string, string> = {
 const inputClass =
   "mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 const buttonClass =
-  "rounded-md border px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
+  "rounded-md border px-3 py-1.5 text-sm font-medium transition-transform duration-150 hover:scale-[1.03] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:hover:scale-100 disabled:active:scale-100";
+
+// Matches the CSS transition duration on the block <li> below, so the
+// item is only actually removed from state once its fade/scale-out has
+// visually finished.
+const BLOCK_REMOVE_ANIMATION_MS = 220;
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -80,6 +85,8 @@ export function GiftEditor({
   const [uploading, setUploading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [removingBlockId, setRemovingBlockId] = useState<string | null>(null);
+  const [justPublished, setJustPublished] = useState(false);
 
   const isFirstRender = useRef(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -171,13 +178,20 @@ export function GiftEditor({
 
   async function deleteBlock(blockId: string) {
     setActionError(null);
+    setRemovingBlockId(blockId);
     const res = await fetch(`/api/gifts/${gift.id}/blocks/${blockId}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
       setActionError(data.error?.message ?? "Không thể xóa khối nội dung");
+      setRemovingBlockId(null);
       return;
     }
-    setBlocks((prev) => prev.filter((b) => b.id !== blockId));
+    // Let the fade/scale-out transition actually play before the item
+    // disappears from the list for real.
+    setTimeout(() => {
+      setBlocks((prev) => prev.filter((b) => b.id !== blockId));
+      setRemovingBlockId(null);
+    }, BLOCK_REMOVE_ANIMATION_MS);
   }
 
   async function moveBlock(index: number, direction: -1 | 1) {
@@ -211,6 +225,8 @@ export function GiftEditor({
       return;
     }
     setStatus(data.gift.status);
+    setJustPublished(true);
+    setTimeout(() => setJustPublished(false), 2400);
   }
 
   async function deleteGift() {
@@ -251,15 +267,24 @@ export function GiftEditor({
     <div className="grid gap-8 md:grid-cols-2">
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
+          <span
+            key={status}
+            className={`lb-fade-in-up text-sm text-muted-foreground ${justPublished ? "lb-celebrate" : ""}`}
+          >
             {giftStatusLabel(status)} · {gift.tier === "VIP" ? "VIP" : "Miễn phí"}
           </span>
-          <span className="text-sm text-muted-foreground" role="status">
-            {saveStatus === "saving" && "Đang lưu..."}
-            {saveStatus === "saved" && "Đã lưu"}
-            {saveStatus === "error" && "Lỗi khi lưu"}
+          <span key={saveStatus} className="lb-pop-in text-sm text-muted-foreground" role="status">
+            {saveStatus === "saving" && "● Đang lưu..."}
+            {saveStatus === "saved" && "✓ Đã lưu"}
+            {saveStatus === "error" && "⚠ Lỗi khi lưu"}
           </span>
         </div>
+
+        {justPublished && (
+          <p role="status" className="lb-pop-in mb-4 rounded-md border border-green-500 p-3 text-sm text-green-700">
+            🎉 Đã xuất bản! Quà của bạn đã sẵn sàng để chia sẻ.
+          </p>
+        )}
 
         {paymentParam === "return" && (
           <p role="status" className="mb-4 rounded-md border p-3 text-sm">
@@ -276,7 +301,10 @@ export function GiftEditor({
         {gift.tier !== "VIP" && (
           <div className="mb-4">
             {vipCheckoutError && (
-              <p role="alert" className="mb-2 rounded-md border border-red-500 p-3 text-sm text-red-600">
+              <p
+                role="alert"
+                className="lb-pop-in mb-2 rounded-md border border-red-500 p-3 text-sm text-red-600"
+              >
                 {vipCheckoutError}
               </p>
             )}
@@ -294,7 +322,10 @@ export function GiftEditor({
         )}
 
         {actionError && (
-          <p role="alert" className="mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+          <p
+            role="alert"
+            className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600"
+          >
             {actionError}
           </p>
         )}
@@ -331,7 +362,16 @@ export function GiftEditor({
               id="theme"
               value={themeId}
               disabled={!isEditable}
-              onChange={(e) => setThemeId(e.target.value)}
+              onChange={(e) => {
+                const nextThemeId = e.target.value;
+                setThemeId(nextThemeId);
+                // Only auto-pair the theme's suggested effect if the user
+                // hasn't deliberately picked one yet — never override an
+                // explicit choice.
+                if (effectId === DEFAULT_EFFECT_ID) {
+                  setEffectId(getTheme(nextThemeId).defaultEffectId);
+                }
+              }}
               className={inputClass}
             >
               {THEMES.map((theme) => (
@@ -364,7 +404,14 @@ export function GiftEditor({
         <h2 className="mt-6 text-lg font-semibold">Nội dung</h2>
         <ul className="mt-2 flex flex-col gap-2">
           {blocks.map((block, index) => (
-            <li key={block.id} className="flex items-start justify-between gap-2 rounded-md border p-3">
+            <li
+              key={block.id}
+              className={`flex items-start justify-between gap-2 rounded-md border p-3 transition-all duration-200 ease-out ${
+                removingBlockId === block.id
+                  ? "scale-95 opacity-0"
+                  : "lb-fade-in-up scale-100 opacity-100"
+              }`}
+            >
               {block.type === "IMAGE" && block.content.url ? (
                 // eslint-disable-next-line @next/next/no-img-element -- remote R2 URL, not worth next/image config for V1
                 <img
@@ -510,7 +557,7 @@ export function GiftEditor({
         className={`rounded-md border p-4 ${getTheme(themeId).containerClassName}`}
       >
         <h2 className="mb-3 text-lg font-semibold">Xem trước</h2>
-        <h3 className="text-xl font-bold">{title}</h3>
+        <h3 className={`${getTheme(themeId).headingFontClassName} text-xl font-bold`}>{title}</h3>
         <p className="mt-2 whitespace-pre-wrap">{message}</p>
         <div className="mt-4 flex flex-col gap-3">
           {blocks.map((block) =>

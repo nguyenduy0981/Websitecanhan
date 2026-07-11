@@ -13,27 +13,100 @@
   }
 }
 
-/* Gift viewer effects (Milestone 6) — purely decorative; the
-   prefers-reduced-motion override above already neutralizes these for
-   anyone who asked for less motion. */
-@keyframes lovebox-rise {
+/* Visual Polish pass — shared, reusable micro-interaction primitives.
+   Every keyframe below only ever animates transform/opacity (never
+   width/height/top/left) so nothing here can trigger layout thrash or
+   contribute to CLS. The prefers-reduced-motion override above already
+   collapses every duration to ~0, which is exactly the "simple fade
+   instead of decorative motion" behavior the spec asks for — nothing
+   component-specific is needed for that, it's handled once, globally. */
+
+@keyframes lb-fade-in-up {
   from {
-    transform: translateY(0) rotate(0deg);
     opacity: 0;
-  }
-  10% {
-    opacity: 1;
+    transform: translateY(12px);
   }
   to {
-    transform: translateY(-110vh) rotate(180deg);
-    opacity: 0;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.lovebox-effect-particle {
-  position: absolute;
-  bottom: -10%;
-  animation-name: lovebox-rise;
-  animation-timing-function: ease-in;
-  animation-iteration-count: infinite;
+.lb-fade-in-up {
+  animation: lb-fade-in-up 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--lb-delay, 0ms);
+}
+
+/* Spring-ish entrance for alerts/toasts/modals — a slight scale
+   overshoot reads as "alive" without needing a JS spring library. */
+@keyframes lb-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+.lb-pop-in {
+  animation: lb-pop-in 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Skeleton loading shimmer — opacity only (no gradient position
+   animation, which would repaint every frame). */
+@keyframes lb-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.lb-skeleton {
+  animation: lb-skeleton-pulse 1.6s ease-in-out infinite;
+  background-color: rgba(120, 120, 120, 0.18);
+  border-radius: 0.375rem;
+}
+
+/* Scroll-reveal for landing-page sections — toggled by a tiny
+   IntersectionObserver client component (see ScrollReveal.tsx), not a
+   per-frame scroll handler. */
+.lb-scroll-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lb-scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* A small one-shot "celebration" pop, e.g. on a successful publish. */
+@keyframes lb-celebrate {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.12);
+  }
+  60% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.lb-celebrate {
+  animation: lb-celebrate 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }

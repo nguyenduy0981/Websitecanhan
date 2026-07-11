@@ -1601,3 +1601,155 @@ remains is entirely on the owner: finish `docs/BETA_CHECKLIST.md`
 purchase/upload/email working end-to-end, optionally get `/terms`/
 `/privacy` reviewed by a lawyer), then run a real small beta cohort
 before a wider public launch.
+
+## Visual Polish & Animation Pass — 2026-07-11
+
+Owner-requested ad hoc task (not on the original roadmap): make LoveBox
+feel emotionally rich and premium via a real gift-opening moment, a
+reusable ambient-effect engine, and micro-interactions across the app,
+under strict performance/accessibility discipline. Re-read CLAUDE.md and
+specs/SPEC.md first per the task's own instruction.
+
+### Effects added, by page
+- **`/g/[slug]` (public viewer) — the priority target**:
+  - A cinematic opening sequence: a breathing closed gift box on the
+    theme's own background → tap → a burst (radial light flash, two lid
+    halves flying apart, 12 scattering particles) → the real content
+    reveals in stagger (title → message → blocks → footer, ~150ms apart).
+  - The message reveals word-by-word (capped at the first 60 words,
+    30ms/word, so a very long message — up to 10,000 chars per the
+    schema — never turns into an absurd multi-minute reveal).
+  - 6 ambient background effects (hearts, confetti, snow, petals,
+    fireflies, bubbles — replacing the previous 2), rendered behind the
+    text (lower z-index) so they never obscure it, starting only once
+    the box is actually opened.
+  - Gift titles get a distinct serif display font (Playfair Display) on
+    the "romantic"/"elegant" themes.
+- **Landing page (`/`)**: staggered hero entrance (title → subtitle →
+  CTAs → social-proof stat), CTA hover/press scale states, scroll-reveal
+  for the "how it works" and duration-info sections.
+- **Gift editor (`/gifts/[giftId]`)**: new content blocks fade/slide in
+  on add; deleted blocks fade+scale out for ~220ms before actually
+  leaving the list (previously instant); the autosave indicator re-pops
+  on every status change (idle→saving→saved/error) instead of just
+  silently swapping text; a genuine "🎉 Đã xuất bản!" celebration banner
+  + a scale-bounce on the status badge on successful publish; the theme
+  picker now auto-suggests that theme's paired ambient effect (only if
+  the user hasn't already picked one explicitly).
+- **Auth pages (login/register/forgot/reset) + dashboard**: page-entrance
+  fade; error/alert banners now pop in with a slight spring overshoot
+  everywhere in the app (auth forms, editor, report form, create-gift
+  form) instead of appearing instantly; dashboard gift list items
+  stagger in; a proper empty-state illustration (🎁 + friendly copy,
+  replacing a plain line of text) for a brand-new account; `loading.tsx`
+  skeleton screens for `/dashboard` and `/gifts/[giftId]` (previously a
+  blank white screen during server data fetch).
+- **Toast/modal**: scoped down from the original ask — no new toast/
+  modal component system was built (none existed before this pass, and
+  building one is a real feature addition, not "polish," see Known
+  issues). The existing native `window.confirm()` for gift deletion is
+  intentionally left as-is (accessible, zero-risk). All *existing*
+  `role="alert"` banners across the app now share the same spring pop-in
+  entrance, which is the toast-like polish that was actually in scope.
+
+### Key technical decisions
+- **Opening sequence = pure CSS "checkbox hack"**, not client React
+  state. A real (visually sr-only, not `display:none`) `<input
+  type="checkbox">` drives every reveal via `~` sibling selectors,
+  toggling `visibility`+`opacity`+`transform`. Zero client JS/hydration
+  needed for the core interaction — GiftView stays a Server Component.
+  Chosen specifically so the reveal still works if JS fails to load
+  entirely (progressive enhancement) and so it costs nothing on the
+  server-rendered path. The one place this needed care: `opacity:0`
+  alone does *not* remove an element from the tab order or screen-reader
+  tree, so hidden content also gets `visibility:hidden` — otherwise a
+  keyboard/screen-reader user could reach the "report this content" link
+  before the gift was even opened.
+- **Ambient effects = one `<canvas>` + `requestAnimationFrame`**, not N
+  looping CSS/DOM particles. A single paint surface is cheaper to
+  recompute per frame than dozens of independently-animating DOM nodes,
+  and gives real control over pausing: `document.visibilitychange` stops
+  the rAF loop entirely when the tab is backgrounded (CSS animations have
+  no equivalent hard pause across all browsers). Particle count is
+  *only* scaled down, never up, from `navigator.deviceMemory`/
+  `hardwareConcurrency` — both are treated as "definitely low-end"
+  signals only, never "absent means capable" (Safari/Firefox don't
+  expose `deviceMemory` at all, so assuming otherwise would be wrong).
+  The engine doesn't even start until the opening checkbox's `change`
+  event fires — zero CPU/battery spent animating a screen nobody has
+  reached yet.
+- **`prefers-reduced-motion` needed almost no new code.** The existing
+  global override in `globals.css` (collapses every `animation-duration`/
+  `transition-duration` to ~0) already turns the entire opening sequence
+  into a same-frame jump to the final state — no separate "reduced"
+  branch was needed for any CSS-driven animation in this pass. The one
+  exception, canvas particles (not CSS, so the global override can't
+  touch it), explicitly checks `matchMedia('(prefers-reduced-motion:
+  reduce)')` once and renders nothing at all rather than trying to make
+  a canvas loop "instant."
+- **No new npm dependencies.** CSS + the Canvas 2D API + `next/font/
+  google` (self-hosted at build time by Next itself, zero extra runtime
+  request) only, per the task's explicit "no heavy animation library"
+  constraint.
+- **Theme+effect+typography pairing is a *suggestion*, not a lock.**
+  `Theme.defaultEffectId`/`headingFontClassName` are applied by the
+  editor only when the effect is still at the global default — an
+  explicit user choice of effect is never silently overwritten by
+  switching themes afterward.
+
+### Verification (actually executed, not just typecheck/build)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors, after every
+  meaningful change (not just once at the end).
+- `npm run test` — pass, **172/172** (unchanged — this pass touched no
+  service-layer logic).
+- `npm run test:integration` — pass, **12/12**, real Postgres.
+- `npm run build` — pass. Bundle impact: `/g/[slug]` route JS grew
+  1.39 kB → 3.53 kB (First Load JS 107 kB → 109 kB, +~2%); `/gifts/
+  [giftId]` grew 4.09 kB → 4.63 kB; every other touched route grew by
+  well under 1 kB; zero new shared-chunk weight.
+- **Real Playwright runs against a real running app + real Postgres**
+  (not a mock), continuing this project's established practice since
+  Milestone 11:
+  - Full create→theme/effect-pick→publish→view→open flow, confirming
+    the theme→effect auto-pairing actually fires, the burst/reveal
+    actually plays, and the ambient effect actually draws moving pixels
+    (sampled canvas `ImageData` between two screenshots to confirm
+    particles genuinely moved, not just rendered once).
+  - `prefers-reduced-motion` emulated end-to-end: confirmed the reveal
+    is near-instant and, critically, confirmed via `getImageData` that
+    the canvas engine **never draws a single pixel** under reduced
+    motion (not just "looks calmer").
+  - A full 390px-viewport screenshot pass across home, login, register,
+    dashboard (empty + populated + create-form open), the editor (draft,
+    themed preview, block added, publish celebration), and the gift
+    viewer (closed/waiting, mid-burst, opened-with-effect) — 14
+    screenshots, zero console/page errors across every one.
+
+### Known issues / honestly-scoped gaps
+- **No dedicated toast/modal component system was built.** The task
+  asked for "toast/modal spring animation," but no toast or modal system
+  existed anywhere in the app before this pass — building one from
+  scratch is a real feature addition (state management, stacking,
+  dismissal, a11y focus trapping for modals), not a polish-pass item.
+  Scoped down to applying the spring pop-in to every existing `role=
+  "alert"` banner instead, which delivers the same visual language
+  without inventing new UI surface area mid-polish-pass. Flagging this
+  explicitly rather than silently under-delivering against the request.
+- **No `tests/e2e/*.spec.ts` files were added** (same gap noted in
+  Milestones 11-14) — the extensive Playwright verification above was
+  real but ad hoc/manual, not committed as a re-runnable suite.
+- Music-triggered-by-tap (mentioned in the task) was intentionally not
+  implemented — there is still no real music-track selection UI anywhere
+  in the app (Milestone 6 deferred it for the same reason: no real
+  royalty-free seed content, no admin panel to manage a catalog at the
+  time). The opening sequence's checkbox-`change` event is the natural,
+  already-wired hook for this (see EffectCanvas.tsx's own listener
+  pattern) whenever music selection actually ships.
+- The burst/particle visuals were tuned by eye against the screenshots
+  above, not against real user feedback — reasonable defaults, not
+  validated with real recipients yet.
+- `next/font/google`'s Playfair Display is fetched by Next's own build
+  process at build time (not a new runtime dependency), but this is the
+  first font beyond the system stack added to the project — worth
+  keeping in mind if the owner ever wants to audit exactly what gets
+  self-hosted into the deployed bundle.

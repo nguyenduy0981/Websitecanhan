@@ -45,7 +45,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} noValidate>
       {error && (
-        <p role="alert" className="mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
+        <p role="alert" className="lb-pop-in mb-4 rounded-md border border-red-500 p-3 text-sm text-red-600">
           {error}
         </p>
       )}

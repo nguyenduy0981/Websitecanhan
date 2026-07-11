@@ -353,3 +353,43 @@ passed without running them.
   only renders once the real total crosses 10 — an honest low number
   undermines trust more than omitting the stat entirely, so it's hidden
   below that threshold rather than shown early.
+- Visual Polish & Animation Pass (ad hoc, post-roadmap): the gift-opening
+  moment (`src/app/g/[slug]/OpeningSequence.tsx`) is a pure-CSS "checkbox
+  hack" — a real `<input type="checkbox">` (visually hidden via the
+  sr-only pattern, not `display:none`, so Tab+Space still works) gates a
+  `visibility:hidden`→`visible` + opacity/transform reveal via `~`
+  sibling selectors, with zero client JS/hydration needed for the core
+  interaction. Chosen over a client-state approach specifically so the
+  reveal still works if JS ever fails to load, and so it costs nothing on
+  the server-rendered path. The ambient particle effects
+  (`effect-engine.ts`) are a single `<canvas>` driven by
+  `requestAnimationFrame` rather than N looping DOM/CSS particles —
+  cheaper to recompute per frame, trivial to pause via
+  `visibilitychange`, and the particle count is scaled down (never up —
+  `deviceMemory`/`hardwareConcurrency` are only used as a "definitely
+  low-end" signal, never assumed absent-means-capable, since Safari/
+  Firefox don't expose `deviceMemory` at all) via one JS check at start.
+  The engine only starts once the checkbox's `change` event fires
+  (listened for by DOM id), so zero CPU/battery is spent animating a
+  screen the visitor hasn't reached yet. Every animation everywhere in
+  this pass only ever touches `transform`/`opacity` (the existing global
+  `prefers-reduced-motion` collapse in `globals.css`, unchanged, already
+  turns every one of them into a same-frame jump — no separate
+  reduced-motion branch was needed anywhere). Canvas effects specifically
+  render nothing at all under `prefers-reduced-motion` (checked once via
+  `matchMedia`) rather than trying to make a canvas loop "instant." Each
+  theme now pairs a default ambient effect + an optional heading font
+  (Playfair Display, self-hosted via `next/font/google` — zero extra
+  runtime request, Vietnamese subset verified) via
+  `Theme.defaultEffectId`/`headingFontClassName`; the editor auto-applies
+  the pairing on theme change only if the effect is still at the global
+  default, so it never silently overwrites an explicit user choice.
+  Verified end-to-end with real Playwright runs against a real Postgres
+  (not just typecheck/build): the full create→publish→open flow, the
+  reduced-motion path (near-instant reveal, canvas confirmed never
+  drawing a single pixel), and a full-page 390px screenshot pass across
+  every major page — zero console/page errors in any of them. Bundle
+  impact: `/g/[slug]`'s route JS grew from 1.39 kB to 3.53 kB (First Load
+  JS 107 kB → 109 kB); every other touched route grew by well under 1 kB.
+  No new npm dependencies were added — CSS + canvas + `next/font` only,
+  per the task's "no heavy animation library" constraint.

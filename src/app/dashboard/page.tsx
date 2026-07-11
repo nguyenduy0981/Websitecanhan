@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const gifts = await listGiftsForOwner(user.id);
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
+    <main className="lb-fade-in-up mx-auto max-w-2xl p-6">
       <header className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">LoveBox</h1>
@@ -39,14 +39,23 @@ export default async function DashboardPage() {
 
       <h2 className="mb-3 text-lg font-semibold">Quà của bạn</h2>
       {gifts.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Bạn chưa có quà nào. Hãy tạo quà đầu tiên!</p>
+        <div className="lb-fade-in-up flex flex-col items-center gap-2 rounded-md border border-dashed p-8 text-center">
+          <span className="text-4xl" aria-hidden="true">
+            🎁
+          </span>
+          <p className="text-sm text-muted-foreground">Bạn chưa có quà nào. Hãy tạo quà đầu tiên!</p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {gifts.map((gift) => (
-            <li key={gift.id}>
+          {gifts.map((gift, i) => (
+            <li
+              key={gift.id}
+              className="lb-fade-in-up"
+              style={{ "--lb-delay": `${Math.min(i, 8) * 40}ms` } as React.CSSProperties}
+            >
               <Link
                 href={`/gifts/${gift.id}`}
-                className="flex items-center justify-between rounded-md border p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                className="flex items-center justify-between rounded-md border p-3 transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               >
                 <span className="font-medium">{gift.title}</span>
                 <span className="text-sm text-muted-foreground">{giftStatusLabel(gift.status)}</span>

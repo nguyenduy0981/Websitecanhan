@@ -11,7 +11,7 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
+    <main className="lb-fade-in-up mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
       <h1 className="mb-6 text-2xl font-bold">Đăng nhập</h1>
       <LoginForm />
       <p className="mt-6 text-sm text-muted-foreground">

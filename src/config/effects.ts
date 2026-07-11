@@ -1,6 +1,7 @@
 // Small, static, free effect catalog (no new infra) — applied to the
-// public viewer via Gift.effectId. Purely decorative CSS animation;
-// respects prefers-reduced-motion via the global override in globals.css.
+// public viewer via Gift.effectId. Rendered by a canvas + requestAnimationFrame
+// engine (src/app/g/[slug]/effect-engine.ts) that's fully skipped under
+// prefers-reduced-motion and only starts once the gift is actually opened.
 export interface Effect {
   id: string;
   name: string;
@@ -8,8 +9,12 @@ export interface Effect {
 
 export const EFFECTS: Effect[] = [
   { id: "none", name: "Không có" },
-  { id: "confetti", name: "Confetti" },
   { id: "hearts", name: "Trái tim bay" },
+  { id: "confetti", name: "Confetti" },
+  { id: "snow", name: "Tuyết rơi" },
+  { id: "petals", name: "Cánh hoa rơi" },
+  { id: "fireflies", name: "Đom đóm lấp lánh" },
+  { id: "bubbles", name: "Bong bóng" },
 ];
 
 export const DEFAULT_EFFECT_ID = "none";
