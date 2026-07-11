@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { withApiHandler } from "@/lib/api-handler";
 import { ValidationError } from "@/lib/errors";
-import { requireAuth } from "@/modules/auth";
+import { requireAuth, checkRateLimit, RATE_LIMITS } from "@/modules/auth";
 import { getGiftForOwner, assertEditable } from "@/modules/gifts";
 import { uploadImageForGift } from "@/modules/media";
 
@@ -9,6 +9,7 @@ type Ctx = { params: Promise<{ giftId: string }> };
 
 export const POST = withApiHandler<Ctx>(async (req: NextRequest, { params, log }) => {
   const user = await requireAuth(req.cookies);
+  await checkRateLimit(`media-upload:${user.id}`, RATE_LIMITS.mediaUpload);
   const { giftId } = await params;
 
   const gift = await getGiftForOwner(giftId, user.id);

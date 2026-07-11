@@ -1248,3 +1248,156 @@ written-not-read (`GiftView`, `JobRun`) by any code.
 
 ### Ready for Milestone 11: Testing & Hardening
 Yes.
+
+## Milestone 11: Testing & Hardening — 2026-07-11
+
+**Important finding**: every prior milestone report said "no live Postgres
+available in this environment." That was true for those sessions, but
+this one has Postgres 16 installable and startable locally (`apt`-provided
+`postgresql-16`, no Docker needed). This unlocked the single most
+valuable thing this milestone could do: real integration tests against a
+real database, closing a gap explicitly flagged as far back as Milestone
+2's report ("recommend adding one ... in Milestone 11").
+
+### Completed
+- **Real integration test suite** (`tests/integration/`, `npm run
+  test:integration`, separate `vitest.integration.config.ts`) — genuine
+  `PrismaClient` against a real Postgres, no mocking, alongside (not
+  replacing) the existing fast mocked-Prisma unit suite. `tests/
+  integration/db-helpers.ts` truncates every app table between tests for
+  isolation. 12 tests across 4 files:
+  - `auth-flow.test.ts`: real argon2id hash stored (never plaintext), the
+    real DB unique constraint on `email` (not just an app-level check),
+    a real session row resolvable via `getSessionUser`, a real expired
+    session rejected, and `resetPassword` really invalidating every
+    session for a user (including one from `registerUser` itself — this
+    test caught its own off-by-one on the first real run: I'd assumed 2
+    sessions from 2 explicit logins, but `registerUser` also creates one,
+    for 3 total; fixed the test, not the code, since the 3-session
+    behavior is correct/intended auto-login-on-register).
+  - `gifts-flow.test.ts`: a real unique slug persisted and looked-up-by,
+    and `publishGift` setting a real `activeExpiresAt` ~3 days out.
+  - **`payments-webhook-concurrency.test.ts`** — the headline test: fires
+    two literal concurrent `handlePaymentWebhook` calls (`Promise.all`)
+    for the same payment against the real database, then asserts the
+    database's own final state shows *exactly* one activation (`Payment.
+    status === 'ACTIVATED'` once, `Gift.activeExpiresAt` extended by
+    exactly 15 days, not 30). The Milestone 8 mocked version of this test
+    could only prove the `updateMany`+transaction *code path* was
+    correct (by manually scripting a `count: 0` mock return); it
+    structurally cannot prove Postgres's real row-level locking actually
+    serializes two genuinely simultaneous requests the way the code
+    assumes. This one does, and it passed on the first real run.
+  - `admin-moderation.test.ts`: `suspendGift`/`unsuspendGift`'s
+    `prevStatus` round-trip against real rows, including restoring a gift
+    the lifecycle cron had already moved to `EXPIRED` (not back to
+    `ACTIVE`), a real `AuditLog` row actually written, and suspend
+    idempotency verified by asserting no duplicate audit row.
+- **CI**: added a `postgres:16` service container to `.github/workflows/
+  ci.yml`, a `prisma migrate deploy` step against it, and a new `Test
+  (integration, real Postgres)` step — so every future push actually
+  exercises this, not just this one session. Ran the *exact* CI command
+  sequence locally (migrate deploy → unit → integration → build) against
+  the local Postgres to confirm it passes end-to-end before trusting it
+  to GitHub Actions.
+- **Security headers** (`next.config.ts`, site-wide): `Content-Security-
+  Policy` (self + `data:`/`https:` for images since R2's domain isn't
+  known at config-authoring time, `unsafe-inline` for script/style since a
+  strict nonce-based CSP needs per-request middleware — judged not worth
+  the added complexity/breakage-risk for a V1 phone-only-owner app),
+  `X-Frame-Options: DENY` + `frame-ancestors 'none'` (clickjacking),
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-
+  when-cross-origin`, `Permissions-Policy` (camera/mic/geolocation all
+  denied — unused features), `Strict-Transport-Security`. **Actually
+  verified, not just configured**: built and started the real app against
+  the real local Postgres, then drove a full real user flow with
+  Playwright (register → create gift → add a text block → publish → view
+  the public `/g/[slug]` page → a wrong-password login attempt) while
+  capturing browser console/page errors — zero CSP violations, only an
+  unrelated pre-existing `favicon.ico` 404. This is the first time this
+  project's UI has been exercised against a real database end-to-end
+  rather than only unit-tested against a mock.
+- **Route/rate-limit audit**: read every `route.ts` under `src/app/api/`
+  confirming `requireAuth`/`requireRole` and correct ownership-scoped
+  service calls (no IDOR gaps found — Milestones 3-9 already got this
+  right). Found and closed a real gap: gift creation, image upload, and
+  VIP checkout creation had no rate limit beyond the existing per-gift
+  image quota (Milestone 6) — a user could still create unlimited gifts
+  and rack up real R2/PayOS costs across many gifts. Added `RATE_LIMITS.
+  giftCreate` (30/hour), `mediaUpload` (30/hour), `vipCheckout` (10/hour),
+  all keyed by user id (more meaningful than IP for cost control on
+  authenticated routes), wired into their three routes.
+- **`npm audit` re-reviewed**: same 7 advisories as every prior milestone
+  (5 moderate, 1 high, 1 critical) — `esbuild` via Vitest's Vite
+  dependency, `postcss` bundled inside Next's own internal build tooling.
+  Confirmed the project is already on Next's newest non-breaking 15.x
+  patch (`15.5.20`, the `backport` dist-tag) — the only "fixes" `npm
+  audit fix --force` offers are a Next 16 major (real behavioral-
+  compatibility risk for a live app, not something to do silently in a
+  hardening pass) or a Vitest 4 major (breaking test-API changes). Both
+  vulnerable packages are dev-time/build-time-only — never bundled into
+  the deployed app or reachable by an end-user request — so left as-is,
+  same conclusion as Milestone 0.
+
+### Files
+`tests/integration/{setup,db-helpers,auth-flow,gifts-flow,
+payments-webhook-concurrency,admin-moderation}.test.ts`,
+`vitest.integration.config.ts`, `package.json` (+`test:integration`
+script), `.github/workflows/ci.yml` (postgres service container + new
+steps), `next.config.ts` (security headers), `src/modules/auth/
+rate-limit.ts` (+3 rules), `src/app/api/gifts/route.ts`, `src/app/api/
+gifts/[giftId]/media/route.ts`, `src/app/api/gifts/[giftId]/vip-checkout/
+route.ts` (rate-limit calls), `README.md`, `docs/SETUP.md`, `CLAUDE.md`.
+
+### Migrations
+None.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **172/172** (unchanged from Milestone 10; no
+  service-layer logic changed, only route-layer rate-limit calls and
+  config).
+- `npm run test:integration` — pass, **12/12**, against a real local
+  Postgres 16 — see "Completed" above for what each covers.
+- `npm run build` — pass, against the same real Postgres (no more
+  harmless-but-noisy `Can't reach database server` log lines during page-
+  data collection, since the DB is genuinely reachable this time).
+- Full real-browser flow via Playwright against `next start` + real
+  Postgres — see "Completed" above. Zero CSP violations, zero
+  unexpected console/page errors.
+- Ran the exact CI step sequence locally end-to-end (lint → typecheck →
+  migrate deploy → unit test → integration test → build) before trusting
+  the new GitHub Actions config.
+
+### Known issues / honestly-scoped gaps
+- **This session's local Postgres is a one-off convenience, not a
+  guaranteed feature of every future sandbox session** — if a future
+  session genuinely lacks a live Postgres again, `npm run test:
+  integration` simply can't run there (it fails loudly per `tests/
+  integration/setup.ts` rather than silently skipping). CI always has one
+  now regardless, via the new service container — that's the durable
+  fix, not this session's local install.
+- No Playwright tests were added to the repository itself (`tests/e2e/`
+  is still empty despite `@playwright/test` being configured since
+  Milestone 0) — the real-browser verification this milestone did was a
+  one-off manual check, not committed as a re-runnable E2E suite. Adding
+  a couple of real `tests/e2e/*.spec.ts` files (the same register→create→
+  publish→view flow, at minimum) is a reasonable next step but was left
+  out here to keep this milestone's scope to what was actually promised
+  in prior reports (the CI Postgres integration suite) plus the security
+  hardening pass, rather than open-ending into a full E2E buildout.
+- CSP uses `'unsafe-inline'` for `script-src`/`style-src` rather than a
+  strict nonce-based policy — a real (if secondary, given React's
+  automatic escaping is the primary XSS defense) hardening gap; upgrading
+  to nonces requires per-request middleware and is a reasonable follow-up
+  if the owner wants a stricter CSP later.
+- No automated dependency-update workflow (e.g. Dependabot/Renovate) —
+  `npm audit` was reviewed manually this milestone; worth adding for
+  ongoing maintenance once the app is live.
+- Rate-limit thresholds (30/hour gift-create, 30/hour media-upload,
+  10/hour vip-checkout) are judgment calls, not measured against real
+  usage patterns yet (there is none — pre-launch) — revisit once real
+  traffic exists if they turn out to be too tight or too loose.
+
+### Ready for Milestone 12: Beta
+Yes.

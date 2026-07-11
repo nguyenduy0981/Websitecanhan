@@ -13,6 +13,22 @@ here.
 3. Set it as `DATABASE_URL` in `.env` (local) and in Vercel Project Settings →
    Environment Variables (production/preview).
 
+### Local Postgres for `npm run test:integration`
+
+The Neon connection above is for the deployed app. To run the integration
+test suite locally (real constraints/transactions, not a mocked Prisma
+client), point `DATABASE_URL` at any disposable local Postgres 16+ instead
+— it does not need to be Neon:
+
+```bash
+createdb lovebox_test
+DATABASE_URL="postgresql://<user>@localhost:5432/lovebox_test" npx prisma migrate deploy
+DATABASE_URL="postgresql://<user>@localhost:5432/lovebox_test" npm run test:integration
+```
+
+The test suite truncates all tables between tests (`tests/integration/
+db-helpers.ts`) — never point it at a database with real data.
+
 ## Cloudflare R2 (media storage) — `R2_*`
 
 Required as of Milestone 6 for gift image uploads to actually work.

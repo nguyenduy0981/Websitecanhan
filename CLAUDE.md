@@ -273,3 +273,36 @@ passed without running them.
   aggregation inside the `analytics` module itself — each module keeps
   owning reads over its own tables, consistent with the existing
   `getGiftForAdmin`-style bypass pattern from Milestone 9.
+- Milestone 11 testing & hardening: every prior milestone's "no live
+  Postgres in this environment" caveat turned out to be specific to
+  earlier sessions, not a hard platform limit — this sandbox has Postgres
+  16 installable/startable locally. Added a genuine integration test
+  layer (`tests/integration/`, `npm run test:integration`, real Prisma
+  client against a real DB — no mocking) alongside the existing fast
+  mocked-Prisma unit suite, plus a `postgres:16` service container in CI
+  so it runs on every push. The highest-value addition: a real concurrent-
+  race test for `handlePaymentWebhook` (two literal `Promise.all` webhook
+  deliveries against the real DB) proving "activate exactly once" holds
+  under genuine Postgres row-level locking — the mocked unit test from
+  Milestone 8 could only ever prove the code *path* was right, never that
+  real concurrent access actually serializes the way the code assumes.
+  Security headers added site-wide in `next.config.ts` (CSP without a
+  nonce — `'unsafe-inline'` script/style, since a strict nonce-based CSP
+  needs per-request middleware, judged not worth the added complexity/
+  breakage-risk for V1 — plus X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, Permissions-Policy, HSTS); verified against a real
+  Postgres-backed `next start` via a full real user flow (register →
+  create gift → publish → view public page) with Playwright checking for
+  CSP console violations, not just a header-presence check. A route/
+  rate-limit audit found three unbounded-cost/abuse gaps — gift creation,
+  image upload, and VIP checkout creation had no rate limit beyond the
+  existing per-gift image quota — closed with new `RATE_LIMITS.giftCreate`
+  /`mediaUpload`/`vipCheckout` entries (keyed by user id, since these are
+  authenticated routes where per-user is more meaningful than per-IP for
+  cost control). `npm audit`'s remaining 7 advisories (esbuild via
+  Vitest's Vite dependency, postcss bundled inside Next's own internal
+  build tooling) are unchanged from every prior milestone's assessment —
+  already on the newest non-breaking Next 15.x patch; both are dev-time/
+  build-time-only dependencies never exposed to a live request from the
+  internet, so left as-is rather than forcing a major-version downgrade/
+  upgrade with real breakage risk.

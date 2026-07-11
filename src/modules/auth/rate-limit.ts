@@ -14,6 +14,14 @@ export const RATE_LIMITS = {
   register: { limit: 5, windowMs: 60 * 60 * 1000 },
   passwordReset: { limit: 3, windowMs: 60 * 60 * 1000 },
   report: { limit: 5, windowMs: 60 * 60 * 1000 },
+  // Milestone 11 hardening: uploads and checkout creation have real R2/
+  // PayOS costs behind them (see CLAUDE.md Cost rules), and gift creation
+  // is cheap but still worth bounding against scripted spam. Per-gift
+  // image quotas (Milestone 6) alone don't bound total uploads across
+  // many gifts, so this closes that gap.
+  mediaUpload: { limit: 30, windowMs: 60 * 60 * 1000 },
+  vipCheckout: { limit: 10, windowMs: 60 * 60 * 1000 },
+  giftCreate: { limit: 30, windowMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Pure decision helper (no I/O) so the limiting logic is unit-testable without a DB. */
