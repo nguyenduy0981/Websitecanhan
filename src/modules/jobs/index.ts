@@ -11,6 +11,8 @@ import {
 } from "./lifecycle";
 import { cleanupOrphanedMedia, cleanupOldAnalytics, cleanupOldRateLimitHits } from "./cleanup";
 
+export { listRecentJobRuns } from "./query";
+
 export interface LifecycleRunSummary {
   startedAt: string;
   finishedAt: string;

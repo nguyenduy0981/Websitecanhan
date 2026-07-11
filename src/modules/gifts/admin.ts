@@ -32,3 +32,26 @@ export async function setGiftStatusForAdmin(giftId: string, data: AdminStatusUpd
     data: { ...data, statusChangedAt: new Date() },
   });
 }
+
+const ALL_STATUSES: readonly GiftStatus[] = [
+  "DRAFT",
+  "ACTIVE",
+  "EXPIRED",
+  "RECOVERY",
+  "DELETION_PENDING",
+  "DELETED",
+  "SUSPENDED",
+];
+
+/** Gift counts broken down by status — for the admin monitoring overview. */
+export async function countGiftsByStatus(): Promise<Record<GiftStatus, number>> {
+  const grouped = await prisma.gift.groupBy({ by: ["status"], _count: { _all: true } });
+  const counts = Object.fromEntries(ALL_STATUSES.map((status) => [status, 0])) as Record<
+    GiftStatus,
+    number
+  >;
+  for (const row of grouped) {
+    counts[row.status] = row._count._all;
+  }
+  return counts;
+}

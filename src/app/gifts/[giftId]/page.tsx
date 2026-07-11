@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { getSessionUser } from "@/modules/auth";
 import { getGiftForOwner, listBlocks } from "@/modules/gifts";
 import { getMediaUrlsByIds } from "@/modules/media";
+import { getGiftViewStats } from "@/modules/analytics";
 import { NotFoundError } from "@/lib/errors";
 import { env } from "@/env";
 import { GiftEditor } from "./GiftEditor";
@@ -39,6 +40,9 @@ export default async function GiftEditorPage({
     .filter((id): id is string => Boolean(id));
   const mediaUrls = await getMediaUrlsByIds(imageMediaIds);
 
+  // No views are possible before a gift is ever published.
+  const viewStats = gift.status === "DRAFT" ? null : await getGiftViewStats(gift.id);
+
   return (
     <main className="mx-auto max-w-3xl p-6">
       <GiftEditor
@@ -67,6 +71,7 @@ export default async function GiftEditorPage({
         appUrl={env.APP_URL}
         shareQrDataUrl={shareQrDataUrl}
         vipPriceVnd={env.VIP_PRICE_VND}
+        viewStats={viewStats}
       />
     </main>
   );

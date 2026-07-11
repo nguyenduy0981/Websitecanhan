@@ -16,6 +16,7 @@ export {
   getGiftForAdmin,
   listBlocksForAdmin,
   setGiftStatusForAdmin,
+  countGiftsByStatus,
   type AdminStatusUpdate,
 } from "./admin";
 

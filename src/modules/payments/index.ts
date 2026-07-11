@@ -3,3 +3,5 @@
 // `src/modules/payments/*` internals directly.
 
 export { createVipCheckout, handlePaymentWebhook, type VipCheckout } from "./service";
+
+export { countActivatedPayments } from "./query";

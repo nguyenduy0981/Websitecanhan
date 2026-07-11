@@ -35,4 +35,4 @@ export {
 
 export { checkRateLimit, RATE_LIMITS, type RateLimitRule } from "./rate-limit";
 
-export { listUsersForAdmin, setUserRole, type AdminUserSummary } from "./admin";
+export { listUsersForAdmin, setUserRole, countUsers, type AdminUserSummary } from "./admin";

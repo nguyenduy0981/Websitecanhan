@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ConflictError, ValidationError } from "@/lib/errors";
 import { activeDurationDays } from "@/config/business-rules";
+import { recordAnalyticsEvent } from "@/modules/analytics";
 import { generateSlug } from "./slug";
 import { getGiftForOwner, assertEditable } from "./authorization";
 import type { CreateGiftInput, UpdateGiftInput } from "./schemas";
@@ -20,7 +21,7 @@ function isUniqueConstraintError(error: unknown): boolean {
 export async function createGift(ownerId: string, input: CreateGiftInput): Promise<Gift> {
   for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
     try {
-      return await prisma.gift.create({
+      const gift = await prisma.gift.create({
         data: {
           ownerId,
           slug: generateSlug(),
@@ -28,6 +29,8 @@ export async function createGift(ownerId: string, input: CreateGiftInput): Promi
           message: input.message,
         },
       });
+      await recordAnalyticsEvent("gift_created", { userId: ownerId, giftId: gift.id });
+      return gift;
     } catch (error) {
       // Slug collision is astronomically unlikely (72 bits of randomness)
       // but retrying on the DB's unique-constraint error is race-safe,
@@ -88,7 +91,7 @@ export async function publishGift(giftId: string, ownerId: string): Promise<Gift
     now.getTime() + activeDurationDays(gift.tier) * 24 * 60 * 60 * 1000,
   );
 
-  return prisma.gift.update({
+  const published = await prisma.gift.update({
     where: { id: gift.id },
     data: {
       status: "ACTIVE",
@@ -97,4 +100,10 @@ export async function publishGift(giftId: string, ownerId: string): Promise<Gift
       statusChangedAt: now,
     },
   });
+  await recordAnalyticsEvent("gift_published", {
+    userId: ownerId,
+    giftId: gift.id,
+    props: { tier: gift.tier },
+  });
+  return published;
 }

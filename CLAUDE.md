@@ -246,3 +246,30 @@ passed without running them.
   session that lacks the role, matching this codebase's existing
   "don't confirm what you can't prove" instinct (same as a DRAFT gift
   being treated as not-found rather than "exists but you can't see it").
+- Milestone 10 analytics & monitoring: the new `analytics` module owns
+  read-side aggregation only — `getGiftViewStats()` queries the existing
+  `GiftView` rows (Milestone 5) for total/7-day/30-day counts plus a
+  device breakdown, while writing a `GiftView` row on each real view stays
+  in the `gifts` module (`recordGiftView`, unchanged) since that's tightly
+  coupled to serving the public page. `recordAnalyticsEvent()` is
+  best-effort (never throws, same pattern as `recordGiftView`/
+  `writeAuditLog`) and is called from `gifts/service.ts`
+  (`gift_created`, `gift_published`) and `payments/service.ts`
+  (`vip_activated`, only on the winning claim in the webhook transaction,
+  never on a duplicate-delivery no-op) — a one-directional dependency on
+  `analytics`, same shape as the existing `payments → gifts` dependency,
+  so it doesn't create a cycle. `AnalyticsEvent` rows are pruned by the
+  Milestone 7 `analytics-retention` cron job, previously unused by any
+  writer. Gift owners see their own view stats (total/7d/30d/device) in
+  the editor once a gift has been published — never before, since no
+  views are possible pre-publish. The admin monitoring page
+  (`/admin/monitoring`, ADMIN+ — one rank above the MODERATOR+ the rest of
+  `/admin` requires, re-checked in the page itself same as `/admin/users`
+  being SUPER_ADMIN-only) composes small dedicated count functions owned
+  by each module (`auth.countUsers`, `gifts.countGiftsByStatus`,
+  `payments.countActivatedPayments`, `admin.countOpenReports`) plus
+  `jobs.listRecentJobRuns()` (cron health/history, reusing the existing
+  `JobRun` table from Milestone 7) rather than centralizing cross-module
+  aggregation inside the `analytics` module itself — each module keeps
+  owning reads over its own tables, consistent with the existing
+  `getGiftForAdmin`-style bypass pattern from Milestone 9.
