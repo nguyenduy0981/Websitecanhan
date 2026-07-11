@@ -52,7 +52,10 @@ npm run build
 - `src/app/{login,register,forgot-password,reset-password}/` — auth pages.
   `src/app/dashboard/` — gift list. `src/app/gifts/[giftId]/` — the gift
   editor (title/message autosave, block add/reorder/delete, preview,
-  publish).
+  publish, share-link QR code).
+- `src/app/g/[slug]/` — the public, unauthenticated gift viewer.
+  Unpublished/expired/suspended/deleted gifts never leak their real
+  content — see `classifyGiftForViewer` in `src/modules/gifts/public.ts`.
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.
