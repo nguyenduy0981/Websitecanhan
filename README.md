@@ -28,6 +28,12 @@ npm run test
 npm run build
 ```
 
+`npm run test` runs fast unit tests against a mocked Prisma client — no
+database needed. `npm run test:integration` runs a smaller suite against a
+*real* Postgres (set `DATABASE_URL` to a real, disposable database first —
+see `docs/SETUP.md`); CI provides one automatically via a `postgres:16`
+service container.
+
 ## Project layout
 
 - `src/app/` — Next.js App Router routes.
@@ -73,7 +79,10 @@ npm run build
   /api/payments/webhook/payos` (public, signature-verified).
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
-- `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.
+- `tests/unit/` — Vitest unit tests (mocked Prisma, no DB needed).
+  `tests/integration/` — Vitest tests against a real Postgres (real
+  constraints/transactions/concurrency — see `npm run test:integration`).
+  `tests/e2e/` — Playwright E2E tests.
 - `docs/SETUP.md` — provisioning Neon, Cloudflare R2, Resend, PayOS, Vercel.
 - `docs/MILESTONE_REPORTS.md` — report appended after every milestone.
 
