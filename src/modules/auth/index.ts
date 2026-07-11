@@ -32,3 +32,7 @@ export {
   getSessionToken,
   type CookieReader,
 } from "./session";
+
+export { checkRateLimit, RATE_LIMITS, type RateLimitRule } from "./rate-limit";
+
+export { listUsersForAdmin, setUserRole, type AdminUserSummary } from "./admin";

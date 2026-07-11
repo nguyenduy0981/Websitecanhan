@@ -64,6 +64,7 @@ export default async function PublicGiftPage({
 
   return (
     <GiftView
+      slug={gift.slug}
       title={gift.title}
       message={gift.message}
       themeId={gift.themeId}

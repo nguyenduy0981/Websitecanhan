@@ -56,6 +56,27 @@ Required as of Milestone 6 for gift image uploads to actually work.
    hasn't been possible to test against the live PayOS API from this
    environment.
 
+## First admin account — `SUPER_ADMIN_EMAIL`
+
+The owner has no direct database access, so this is the only way to get
+the first admin (moderator/report review) role:
+
+1. In Vercel Project Settings → Environment Variables, set
+   `SUPER_ADMIN_EMAIL` to the email of the LoveBox account you want to
+   manage reports/moderation from (this is your normal login email on the
+   site itself — it does not need to match any other account you have).
+2. Log in (or register, if you don't have an account yet) with that exact
+   email on the live site. You're promoted to `SUPER_ADMIN` automatically
+   on that login — no extra step, no DB access needed.
+3. A "Quản trị" (Admin) link then appears on your dashboard, linking to
+   `/admin/reports`.
+4. From `/admin/users` (SUPER_ADMIN only) you can then grant `MODERATOR`/
+   `ADMIN` to other accounts by email, without needing to change
+   `SUPER_ADMIN_EMAIL` again. That variable only needs to stay set for as
+   long as you might need to re-bootstrap (it's safe to leave it set
+   indefinitely — it self-heals that one account back to SUPER_ADMIN on
+   every login, but never touches any other account's role).
+
 ## Vercel (hosting)
 
 1. Import the repository into Vercel.

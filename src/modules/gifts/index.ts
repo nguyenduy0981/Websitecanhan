@@ -12,6 +12,13 @@ export {
 
 export { getGiftForOwner, assertEditable } from "./authorization";
 
+export {
+  getGiftForAdmin,
+  listBlocksForAdmin,
+  setGiftStatusForAdmin,
+  type AdminStatusUpdate,
+} from "./admin";
+
 export { listBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from "./blocks";
 
 export {

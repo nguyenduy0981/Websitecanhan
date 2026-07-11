@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUser } from "@/modules/auth";
 import { listGiftsForOwner } from "@/modules/gifts";
+import { hasRole } from "@/modules/admin";
 import { giftStatusLabel } from "@/lib/gift-status-label";
 import { LogoutButton } from "./LogoutButton";
 import { CreateGiftForm } from "./CreateGiftForm";
@@ -22,7 +23,14 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold">LoveBox</h1>
           <p className="text-sm text-muted-foreground">{user.displayName ?? user.email}</p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-3">
+          {hasRole(user, "MODERATOR") && (
+            <Link href="/admin/reports" className="text-sm underline">
+              Quản trị
+            </Link>
+          )}
+          <LogoutButton />
+        </div>
       </header>
 
       <div className="mb-6">
