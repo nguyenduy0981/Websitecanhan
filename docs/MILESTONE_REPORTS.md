@@ -602,3 +602,125 @@ Even with this fix, if the owner's Vercel project happens to have
 auto-detected value — recommend double-checking (or simply removing) any
 `APP_URL` override in Vercel project settings so the auto-detection can do
 its job, unless a real custom domain is configured.
+
+## Milestone 6: Media & Themes — 2026-07-11
+
+Confirmed before starting: owner hit a "forgot password" dead end (Resend
+not configured — expected, worked around by registering a fresh account)
+and confirmed the public gift viewer (Milestone 5) renders correctly on
+the real deploy. Both consistent with prior known gaps, not new bugs.
+
+### Completed
+- **`src/modules/media/image-processing.ts`**: real magic-byte detection
+  (`file-type` package — chose the v22 line specifically to dodge a known
+  moderate-severity infinite-loop advisory in v13–21) allowlisting only
+  `image/jpeg|png|webp|gif`; SVG is rejected by construction (not in the
+  allowlist) per CLAUDE.md's "reject SVG/scripts" rule. 10MB size cap
+  (reusing `QUOTAS.MAX_IMAGE_UPLOAD_MB` from Milestone 0's business-rules,
+  not a new constant). Re-encodes to WebP via `sharp`
+  (auto-orient, max 1600px wide, quality 82); metadata is stripped by
+  simply never calling `.withMetadata()`.
+- **`src/modules/media/storage.ts`**: Cloudflare R2 client
+  (`@aws-sdk/client-s3`, S3-compatible, no new paid service). Throws a new
+  `ServiceUnavailableError` (503) — added to `src/lib/errors.ts` — with a
+  clear client-facing message when R2 isn't configured, instead of a
+  confusing crash or silent no-op (unlike email, upload is a primary user
+  action, so it must give real feedback).
+- **`src/modules/media/service.ts`**: `uploadImageForGift` enforces the
+  per-tier image quota (`QUOTAS.FREE_MAX_IMAGES_PER_GIFT` = 5,
+  `VIP_MAX_IMAGES_PER_GIFT` = 20, both from Milestone 0) by counting
+  `READY` `MediaAsset` rows for the gift before processing/uploading.
+  Deliberately takes an already-validated `giftId`/`tier` rather than
+  looking the gift up itself, to avoid a circular module dependency:
+  `gifts/blocks.ts` needs `media` (to validate an IMAGE/GALLERY block's
+  `mediaAssetId` is owned by the caller), so `media` cannot depend on
+  `gifts` back. `assertMediaOwned`/`assertMediaListOwned` close the gap
+  flagged in Milestone 3 ("mediaAssetId only shape-validated, not checked
+  against a real row"). `deleteMediaAsset` is best-effort on the storage
+  delete (logs a warning, still removes the DB row) so a flaky R2 call
+  never blocks a block deletion the user asked for.
+- **`gifts/blocks.ts`** updated: `addBlock`/`updateBlock` now call the
+  above ownership checks for IMAGE/GALLERY content; `deleteBlock` cascades
+  to delete the block's underlying `MediaAsset`(s) immediately (storage
+  object + DB row), so a deliberate delete frees up quota right away
+  rather than waiting on Milestone 7's future orphan-cleanup job (which
+  targets *abandoned* uploads, a different problem).
+- **`POST /api/gifts/[giftId]/media`**: multipart upload route, auth +
+  ownership + editable-status checked before anything else.
+- **`src/config/themes.ts`** / **`src/config/effects.ts`**: 4 static
+  themes, 3 static effects (including "none") — free, no schema change
+  needed since `Gift.themeId`/`effectId` already existed as plain strings.
+  Effects render as a simple CSS keyframe animation
+  (`.lovebox-effect-particle` in `globals.css`) that's automatically
+  neutralized by the existing `prefers-reduced-motion` override from
+  Milestone 0 — no extra a11y code needed.
+- **Editor UI** (`GiftEditor.tsx`): file input uploads an image then
+  creates an `IMAGE` block referencing it; theme/effect `<select>` pickers
+  wired into the existing autosave debounce; preview panel now applies the
+  chosen theme's classes and renders `IMAGE` blocks inline.
+- **Public viewer** (`GiftView.tsx`): renders `IMAGE` blocks, applies the
+  gift's theme, and overlays the chosen effect (`EffectOverlay.tsx`) — all
+  purely decorative (`aria-hidden`, `pointer-events-none`).
+- Music selection UI intentionally **not** built — see CLAUDE.md's
+  Milestone 6 note: no real seed tracks and no admin panel yet to manage
+  them (Milestone 9), so a picker now would be non-functional.
+
+### Files
+`src/modules/media/{storage,image-processing,service,index}.ts`,
+`src/app/api/gifts/[giftId]/media/route.ts`,
+`src/modules/gifts/{blocks,index}.ts` (updated), `src/lib/errors.ts`
+(+`ServiceUnavailableError`), `src/config/{themes,effects}.ts`,
+`src/app/gifts/[giftId]/{GiftEditor,page}.tsx` (updated),
+`src/app/g/[slug]/{GiftView,page,EffectOverlay}.tsx`, `globals.css`
+(effect keyframes), `package.json` (+`@aws-sdk/client-s3`, `file-type`),
+`tests/unit/media-{image-processing,service}.test.ts`, `CLAUDE.md`,
+`README.md`, `docs/SETUP.md`.
+
+### Migrations
+None — uses the existing `MediaAsset`, `Gift.themeId`/`effectId` columns.
+
+### Verification (actually executed)
+- `npm run lint` / `npm run typecheck` — pass, 0 errors.
+- `npm run test` — pass, **110/110 tests** (22 new): magic-byte rejection
+  of SVG/non-image content, size-limit rejection, corrupted-but-magic-byte-
+  matching input rejection, a real PNG round-tripped to WebP with correct
+  dimensions asserted; quota enforcement (FREE vs VIP limits) against a
+  mocked Prisma client; ownership checks for single (`IMAGE`) and batched
+  (`GALLERY`) media references; delete-is-best-effort-on-storage-failure;
+  URL-map lookup silently omitting unresolvable ids.
+- `npm run build` — pass; new `/api/gifts/[giftId]/media` route registered.
+- **Actually ran the app**: started a real `next start` and confirmed
+  `/register` and `/login` still render 200 (regression check after the
+  editor/viewer refactor); could not exercise the actual upload → R2 →
+  MediaAsset flow end-to-end here, for the same two reasons as every prior
+  milestone (no live Postgres, and R2 credentials aren't configured in
+  this environment either).
+
+### Known issues / honestly-scoped gaps
+- **R2 has not been configured yet** (per the owner's setup progress so
+  far) — until `R2_ACCOUNT_ID`/`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/
+  `R2_BUCKET`/`R2_PUBLIC_URL` are all set in Vercel, image upload will
+  return a clear "not configured yet" error rather than fail silently or
+  fake success (per CLAUDE.md Honesty) — see `docs/SETUP.md` for the exact
+  steps.
+- **No live Postgres in this environment** — same caveat as every prior
+  milestone; the quota/ownership/upload logic is verified against a mocked
+  Prisma client, not real Neon.
+- Only single-image `IMAGE` blocks are creatable from the UI; `GALLERY`
+  (multi-image) blocks are schema/API-ready (ownership validation already
+  handles the array case) but have no "add gallery" UI yet — noted as a
+  follow-up, not a blocker.
+- Music selection has no UI (see "Completed" above) — needs real seed
+  tracks and Milestone 9's admin panel first.
+- Replacing an image on an existing block (update, not delete) doesn't yet
+  release the old `MediaAsset` — only block *deletion* cascades. Minor
+  quota-accounting edge case, worth tightening alongside Milestone 7's
+  cleanup jobs.
+- Same `npm audit` dev-tooling advisories as prior milestones, unchanged
+  (file-type's own advisory is now resolved by using v22).
+
+### Ready for Milestone 7: Lifecycle
+Yes — recommend the owner finish R2 setup (docs/SETUP.md) before relying
+on image upload in production; everything else in this milestone doesn't
+require it to keep working (TEXT blocks, themes, effects all function
+without R2).

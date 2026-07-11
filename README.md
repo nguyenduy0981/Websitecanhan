@@ -56,6 +56,11 @@ npm run build
 - `src/app/g/[slug]/` — the public, unauthenticated gift viewer.
   Unpublished/expired/suspended/deleted gifts never leak their real
   content — see `classifyGiftForViewer` in `src/modules/gifts/public.ts`.
+- `src/modules/media/` — image upload (magic-byte + size validation, WebP
+  re-encode via sharp, Cloudflare R2 storage), per-gift image quota. Route:
+  `src/app/api/gifts/[giftId]/media/route.ts`.
+- `src/config/themes.ts`, `src/config/effects.ts` — static, free theme/effect
+  catalogs applied via `Gift.themeId`/`effectId`.
 - `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
   applied migrations; run `prisma migrate dev` locally to add new ones.
 - `tests/unit/` — Vitest unit tests. `tests/e2e/` — Playwright E2E tests.

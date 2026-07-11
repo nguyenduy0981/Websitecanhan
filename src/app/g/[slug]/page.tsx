@@ -7,6 +7,7 @@ import {
   recordGiftView,
   classifyGiftForViewer,
 } from "@/modules/gifts";
+import { getMediaUrlsByIds } from "@/modules/media";
 import { classifyDevice } from "@/lib/device";
 import { GiftView } from "./GiftView";
 import { UnavailableView } from "./UnavailableView";
@@ -56,16 +57,28 @@ export default async function PublicGiftPage({
   await recordGiftView(gift.id, classifyDevice(userAgent));
 
   const blocks = await listBlocksPublic(gift.id);
+  const imageMediaIds = blocks
+    .map((block) => (block.content as { mediaAssetId?: string }).mediaAssetId)
+    .filter((id): id is string => Boolean(id));
+  const mediaUrls = await getMediaUrlsByIds(imageMediaIds);
 
   return (
     <GiftView
       title={gift.title}
       message={gift.message}
-      blocks={blocks.map((block) => ({
-        id: block.id,
-        type: block.type,
-        content: block.content as { text?: string },
-      }))}
+      themeId={gift.themeId}
+      effectId={gift.effectId}
+      blocks={blocks.map((block) => {
+        const content = block.content as { text?: string; mediaAssetId?: string };
+        return {
+          id: block.id,
+          type: block.type,
+          content: {
+            ...content,
+            url: content.mediaAssetId ? mediaUrls[content.mediaAssetId] : undefined,
+          },
+        };
+      })}
     />
   );
 }

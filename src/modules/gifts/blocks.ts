@@ -1,9 +1,46 @@
 import type { GiftBlock } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { ValidationError, NotFoundError } from "@/lib/errors";
+import { assertMediaOwned, assertMediaListOwned, deleteMediaAsset } from "@/modules/media";
 import { getGiftForOwner, assertEditable } from "./authorization";
 import { blockContentSchemas } from "./schemas";
 import type { CreateBlockInput, ReorderBlocksInput } from "./schemas";
+
+/** IMAGE/GALLERY block content already shape-validated by zod at this point. */
+async function assertBlockMediaOwned(
+  type: GiftBlock["type"],
+  content: CreateBlockInput["content"],
+  ownerId: string,
+): Promise<void> {
+  if (type === "IMAGE" && "mediaAssetId" in content) {
+    await assertMediaOwned(content.mediaAssetId, ownerId);
+  } else if (type === "GALLERY" && "items" in content) {
+    await assertMediaListOwned(
+      content.items.map((item) => item.mediaAssetId),
+      ownerId,
+    );
+  }
+}
+
+/** Best-effort: removes any MediaAsset(s) an IMAGE/GALLERY block referenced. */
+async function releaseBlockMedia(block: GiftBlock, ownerId: string): Promise<void> {
+  const content = block.content as { mediaAssetId?: string; items?: { mediaAssetId: string }[] };
+  const mediaAssetIds =
+    block.type === "IMAGE" && content.mediaAssetId
+      ? [content.mediaAssetId]
+      : block.type === "GALLERY" && content.items
+        ? content.items.map((item) => item.mediaAssetId)
+        : [];
+
+  for (const mediaAssetId of mediaAssetIds) {
+    try {
+      await deleteMediaAsset(mediaAssetId, ownerId);
+    } catch (error) {
+      logger.warn({ err: error, mediaAssetId }, "failed to release block media (non-fatal)");
+    }
+  }
+}
 
 // Keeps temporary reorder positions clear of any real position value —
 // see reorderBlocks for why this two-phase shift is needed.
@@ -21,6 +58,7 @@ export async function addBlock(
 ): Promise<GiftBlock> {
   const gift = await getGiftForOwner(giftId, ownerId);
   assertEditable(gift);
+  await assertBlockMediaOwned(input.type, input.content, ownerId);
 
   const lastBlock = await prisma.giftBlock.findFirst({
     where: { giftId },
@@ -61,6 +99,8 @@ export async function updateBlock(
     throw new ValidationError(`Invalid content for a ${block.type} block`);
   }
 
+  await assertBlockMediaOwned(block.type, parsed.data as CreateBlockInput["content"], ownerId);
+
   return prisma.giftBlock.update({ where: { id: block.id }, data: { content: parsed.data } });
 }
 
@@ -71,6 +111,7 @@ export async function deleteBlock(
 ): Promise<void> {
   const { gift, block } = await getBlockForOwner(giftId, blockId, ownerId);
   assertEditable(gift);
+  await releaseBlockMedia(block, ownerId);
   await prisma.giftBlock.delete({ where: { id: block.id } });
 }
 

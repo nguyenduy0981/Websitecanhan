@@ -12,3 +12,28 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Gift viewer effects (Milestone 6) — purely decorative; the
+   prefers-reduced-motion override above already neutralizes these for
+   anyone who asked for less motion. */
+@keyframes lovebox-rise {
+  from {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-110vh) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+.lovebox-effect-particle {
+  position: absolute;
+  bottom: -10%;
+  animation-name: lovebox-rise;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}

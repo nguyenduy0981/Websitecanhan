@@ -137,3 +137,26 @@ passed without running them.
   `APP_URL` from Vercel's own `VERCEL_PROJECT_PRODUCTION_URL`/`VERCEL_URL`
   env vars whenever it isn't explicitly set, so this can't silently
   regress; an explicit `APP_URL` (e.g. a real custom domain) always wins.
+- Milestone 6 media & themes: uploads validated by real magic bytes
+  (`file-type` package, allowlisting only JPEG/PNG/WebP/GIF — SVG is
+  rejected by construction since it's not in that allowlist, closing the
+  "reject SVG/scripts" rule), size-capped at `QUOTAS.MAX_IMAGE_UPLOAD_MB`,
+  then re-encoded to WebP via `sharp` (auto-oriented, capped at 1600px
+  wide, metadata stripped by not calling `.withMetadata()`). Per-gift image
+  quota (`QUOTAS.FREE_MAX_IMAGES_PER_GIFT`/`VIP_MAX_IMAGES_PER_GIFT`) is
+  enforced at upload time by counting `READY` `MediaAsset` rows for that
+  gift. The `media` module has zero dependency on the `gifts` module (the
+  route layer does the gift ownership/editable check and passes validated
+  `giftId`/`tier` in) specifically to avoid a circular import, since
+  `gifts/blocks.ts` depends on `media` to validate an IMAGE/GALLERY
+  block's `mediaAssetId` is owned by the same user; deleting such a block
+  cascades to delete its underlying `MediaAsset` (storage object + DB row)
+  immediately, so quota usage doesn't dangle — full orphan-cleanup for
+  *abandoned* uploads (never attached to any block) is still Milestone 7's
+  job. Themes/effects are small static free-tier catalogs
+  (`src/config/{themes,effects}.ts`) applied via the existing
+  `Gift.themeId`/`effectId` fields — no schema change needed. Music
+  selection is intentionally **not** in the editor UI yet: there's no real
+  royalty-free seed content and no admin panel (Milestone 9) to manage the
+  `MusicTrack` catalog, so building a picker now would be non-functional
+  theater rather than a real feature.

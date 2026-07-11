@@ -10,7 +10,7 @@ export {
   publishGift,
 } from "./service";
 
-export { getGiftForOwner } from "./authorization";
+export { getGiftForOwner, assertEditable } from "./authorization";
 
 export { listBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from "./blocks";
 
