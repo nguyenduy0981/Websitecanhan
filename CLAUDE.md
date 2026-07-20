@@ -1,418 +1,122 @@
-# CLAUDE.md — LoveBox Project Instructions
+# CLAUDE.md — VÔ TRI Project Instructions
 
-LoveBox is a REAL production web product, not a demo. Consolidated spec: specs/SPEC.md.
+VÔ TRI is a Vietnamese entertainment/community product — not a business dashboard,
+not a landing page. Users open it to relax, laugh, do silly things, collect
+achievements, and meet interesting people. Tone: hài hước, thông minh, châm biếm
+nhẹ — never toxic, never mocking the user, never generic "AI SaaS template."
 
-## Non-negotiable business rules (never change without explicit owner approval)
-- FREE_ACTIVE_DURATION_DAYS = 3 — Free gifts are ACTIVE exactly 3 days.
-- VIP_ACTIVE_DURATION_DAYS = 15 — VIP gifts are ACTIVE exactly 15 days.
-- VIP renewal while active: new_expires_at = current_expires_at + 15 days.
-- No lifetime storage. No auto-renewal in V1.
-- Lifecycle: DRAFT → ACTIVE → EXPIRED → RECOVERY → DELETION_PENDING → DELETED, plus SUSPENDED (moderation).
-- Gifts are unlisted + noindex by default. Marketing pages indexable; gift pages never.
-- Server time (DB now()) is authoritative for expiration.
-- After Recovery ends: permanently delete gift content AND all associated storage objects.
+This repo previously hosted an unrelated product (LoveBox, a gift-box app). Per
+explicit owner instruction, LoveBox's application code, backend, and docs have
+been removed (recoverable via git history if ever needed) — this repo is now
+VÔ TRI only. Nothing below should reference or resurrect LoveBox.
 
-## Security rules (P0 — a violation blocks merge)
-- Payment: NEVER activate VIP from a frontend success screen. Flow: webhook/server
-  verification → signature → transaction ID → exact amount → currency → product →
-  duplicate check → DB transaction → activate exactly once. Duplicate webhooks =
-  exactly one activation. Wrong amount/signature/replay = never activate.
-- Backend authorization for every private resource (no IDOR). Admin routes = server-side RBAC.
-- Uploads: validate magic bytes (not extension), size limits, strip metadata, process
-  via sharp, link ownership, reject SVG/scripts.
-- Auth: argon2id hashing, HTTP-only secure session cookies, rate limits on
-  login/register/reset, single-use reset tokens.
-- User-generated text renders on a public viewer → treat as hostile: escape/sanitize everywhere.
-- Secrets only via env vars validated in src/env.ts. Never log secrets or full PII.
-
-## Cost rules
-Free/low tiers only (Vercel, Neon, Cloudflare R2, Resend). No Kubernetes, Kafka,
-microservices, or paid infra before real usage. WebP compression, minimal image
-variants, CDN caching, cleanup jobs for orphaned/expired media, upload quotas,
-limited analytics retention.
+## Non-negotiable design rules (never change without explicit owner approval)
+- Dark-mode-first brand, not a toggle: deep warm-plum background (`--vt-bg`),
+  never pure black, never a cool blue-grey "SaaS dashboard" dark mode.
+- Brand hues: Primary = coral-pink "Riot" (`--vt-primary`), Secondary = acid
+  lime "Zap" (`--vt-secondary`). VIP violet (`--vt-vip`) is reserved
+  exclusively for VIP/premium moments — using it elsewhere dilutes the one
+  place scarcity gives it meaning.
+- Contrast rule (WCAG-verified, see `src/vo-tri/design-system/tokens.css`):
+  light text (`--vt-text-primary`) only sits on neutral dark surfaces
+  (bg/surface/card). Anything on a filled accent color (primary, secondary,
+  success, warning, danger, info, reward, vip) uses `--vt-on-accent` (dark)
+  instead — light text on an accent fill fails AA contrast, verified with a
+  real luminance-ratio script, not eyeballed.
+- Every animation touches only `transform`/`opacity`(/`box-shadow` for glow
+  rings) — never layout properties — so nothing in the motion system can
+  cause CLS. The global `prefers-reduced-motion: reduce` collapse in
+  `src/app/globals.css` is selector-agnostic and covers every `.vt-*` class
+  automatically; do not add a second reduced-motion branch per component.
+- No generic microcopy ("Submit", "Loading", "Success", "Hãy thử lại", "No
+  Data", "Empty", "Get Started", "Learn More"). All UI copy pulls from
+  `src/vo-tri/copy/microcopy.ts` (or extends it) so the brand voice stays
+  centralized instead of drifting per screen.
+- Never fabricate data (fake online-user counts, fake activity feed items,
+  fake social proof). Where real backend data doesn't exist yet, show the
+  correct empty/logged-out state instead of a placeholder number.
 
 ## Architecture
-Modular monolith. Next.js 15 App Router + TypeScript strict + Tailwind. PostgreSQL
-(Neon) + Prisma. Cloudflare R2 (S3 API) for media. Background jobs = idempotent cron
-routes protected by CRON_SECRET (Vercel Cron). Payments behind a PaymentProvider
-interface; first provider: PayOS (VietQR bank transfer — confirmed by owner).
-Modules in src/modules/*; each exposes a public API via its index.ts, never import
-another module's internals.
+Next.js 15 App Router + TypeScript strict + Tailwind. All VÔ TRI-specific code
+lives under `src/vo-tri/` (design tokens, motion, fonts, copy, `ui/`
+primitives) and is consumed by `src/app/*` routes/layout. `src/vo-tri/ui/index.ts`
+is the barrel — import primitives from there, not from individual files, so
+call sites don't need to know internal file layout.
 
-## Workflow (every milestone)
-READ → UNDERSTAND → PLAN → IMPLEMENT → TEST → VERIFY → DOCUMENT → REPORT.
-After each milestone: npm run lint && npm run typecheck && npm run test && npm run
-build (+ integration/E2E when relevant). Report: completed items, files, migrations,
-tests added, known issues, next milestone. Never proceed past failing
-auth/payment/build/migration issues.
+No backend yet (no DB/auth/API routes) — everything shipped so far is
+front-end design system + shell + Home. When a future milestone needs real
+accounts/XP/leaderboards/chat, add the backend then; don't scaffold it
+speculatively ahead of a milestone that needs it.
 
-Roadmap: 0 Setup · 1 Foundation · 2 Authentication · 3 Gift Core · 4 Editor ·
-5 Public Viewer · 6 Media & Themes · 7 Lifecycle · 8 VIP & Payments · 9 Admin &
-Moderation · 10 Analytics & Monitoring · 11 Testing & Hardening · 12 Beta ·
-13 Launch · 14 Growth.
+## Cost rules
+Free/low tiers only when infra is eventually added (Vercel, a free-tier
+Postgres, free-tier object storage). No paid infra before real usage.
+
+## Workflow
+READ → UNDERSTAND → PLAN → IMPLEMENT → TEST → VERIFY → REPORT. After each
+milestone: `npm run lint && npm run typecheck && npm run build` (+ visual
+verification via a real rendered page — typecheck passing is not the same
+as a component looking/working right). Never claim something was verified
+without actually running it.
 
 ## Honesty
-No fake completion. If credentials are missing, build the integration boundary +
-env vars + docs and mark the feature "awaiting credentials". Never claim tests
-passed without running them.
+No fake completion. Never claim a build/lint/visual check passed without
+running it. If a design decision required judgment (color, copy, motion
+timing) rather than being handed down, record the reasoning below so future
+sessions don't re-litigate it from scratch.
 
-## Recorded assumptions (owner may override)
-- VIP price: VIP_PRICE_VND env, placeholder 49000.
-- RECOVERY_DURATION_DAYS = 7 (centrally configurable).
-- Quotas: Free ≤ 5 images/gift, VIP ≤ 20; ≤ 10MB/image preprocessing.
-- Email: Resend. Music library: royalty-free seed tracks managed by admin.
-- Deployment note (owner works phone-only): Vercel build command must run
-  "prisma migrate deploy && next build" so migrations never require a local terminal.
-- Milestone 0 scaffold: 3 pre-existing unrelated static HTML files found at repo
-  root (personal portfolio pages, unrelated to LoveBox) were moved to archive/
-  rather than deleted, to keep the Next.js app root clean without destroying
-  prior work.
-- Milestone 1 foundation: structured logging via pino (JSON in prod, pretty in
-  dev), redacting password/token/secret/email fields anywhere in the log
-  payload. Standard API error shape: `{ error: { code, message } }` via an
-  `AppError` hierarchy (src/lib/errors.ts) + `withApiHandler` route wrapper
-  (src/lib/api-handler.ts) — unexpected errors always collapse to a generic
-  500 message server-side-logged in full, never leaking internals to the
-  client. Prisma client is a cached singleton (src/lib/prisma.ts).
-- Milestone 2 authentication: session duration 30 days from login/register;
-  password reset links valid 1 hour, single-use, invalidate ALL of the
-  user's sessions on successful reset. Password policy: min 8 / max 200
-  chars (upper bound guards against pathological argon2 hashing cost).
-  Rate limits (DB-backed via a `RateLimitHit` table on Neon, no new paid
-  infra): login 10/15min (by IP and by email independently), register
-  5/hour (by IP), password-reset 3/hour (by IP and by email). Login and
-  password-reset never reveal whether an email/account exists (generic
-  "Invalid email or password", and "if an account exists..." wording) to
-  avoid user enumeration; registration does say "email already registered"
-  (standard, expected UX for sign-up). Email verification (`emailVerified`)
-  is not yet enforced/sent in V1 — deferred past this milestone since the
-  spec only requires register/login/logout/reset.
-- Milestone 3 gift core: gift `id` (not `slug`) is used for all owner-facing
-  API routes; `slug` is reserved for the public viewer route in Milestone 5.
-  A gift is editable (fields, blocks, reorder) only while `DRAFT` or
-  `ACTIVE`; every other status is read-only via this API. Draft gifts can be
-  hard-deleted directly; once published, deletion must go through the
-  expire/recovery/purge lifecycle (Milestone 7) instead. Publishing requires
-  at least one block and is blocked outside `DRAFT`. Block reordering uses a
-  two-phase position update (temp offset, then final) to avoid tripping the
-  `@@unique([giftId, position])` constraint on swaps. `IMAGE`/`GALLERY`
-  block content only shape-validates `mediaAssetId` for now — it is not yet
-  checked against a real `MediaAsset` row or counted against the per-tier
-  image quota, since media upload doesn't exist until Milestone 6.
-- Milestone 4 editor: session reads (`getSessionUser`/`requireAuth`) now
-  take a generic `CookieReader` (satisfied by both `NextRequest.cookies`
-  and `next/headers` `cookies()`), so Server Components read their own
-  session directly instead of an internal HTTP round-trip. Page data on
-  first load (dashboard list, gift + blocks) is fetched by Server
-  Components calling the `gifts`/`auth` module service functions directly;
-  all mutations (create/update/delete/publish/reorder) go through the
-  existing API routes from the browser. Only `TEXT` blocks are creatable
-  from the editor UI in V1 — `IMAGE`/`GALLERY` block creation waits for
-  Milestone 6 media upload even though the API already accepts their
-  shape. Autosave debounces title/message edits 800ms after the last
-  keystroke. Block reordering UI uses up/down buttons, not drag-and-drop
-  (simpler, free, and keyboard-operable for accessibility). The public
-  share link (`/g/:slug`) is displayed after publish but does not resolve
-  to a real page until Milestone 5.
-- Milestone 5 public viewer: `/g/[slug]` is public (no auth). A `DRAFT`
-  gift is treated identically to "doesn't exist" (`notFound()`) so
-  unpublished content never leaks. `EXPIRED`/`SUSPENDED`/`RECOVERY`/
-  `DELETION_PENDING`/`DELETED` render a generic friendly message instead of
-  the real content or a raw 404 — `SUSPENDED` in particular never reveals
-  that moderation was involved. All gift text is rendered as JSX children
-  (never `dangerouslySetInnerHTML`), relying on React's automatic escaping
-  per the "treat as hostile" rule. Metadata (title/description/OG tags) on
-  the viewer page is static and generic — never derived from the gift's
-  real title/message — so a social-media link preview can't leak private
-  content to someone who hasn't opened the link; `X-Robots-Tag: noindex`
-  (next.config.ts) plus a matching `robots` meta tag both apply.
-  `GiftView` rows are recorded on each view of an `ACTIVE` gift via
-  `recordGiftView()`, which never throws — a failed analytics write must
-  never take down the gift content itself (graceful degradation). QR code
-  for the share link is generated server-side (the `qrcode` package, no
-  new paid service) in the editor page and passed down as a data URL.
-- Hotfix (found via real production testing after Milestone 5): share
-  links rendered as `localhost:3000/g/...` because `APP_URL` was never set
-  on Vercel and silently defaulted to localhost. `src/env.ts` now derives
-  `APP_URL` from Vercel's own `VERCEL_PROJECT_PRODUCTION_URL`/`VERCEL_URL`
-  env vars whenever it isn't explicitly set, so this can't silently
-  regress; an explicit `APP_URL` (e.g. a real custom domain) always wins.
-- Milestone 6 media & themes: uploads validated by real magic bytes
-  (`file-type` package, allowlisting only JPEG/PNG/WebP/GIF — SVG is
-  rejected by construction since it's not in that allowlist, closing the
-  "reject SVG/scripts" rule), size-capped at `QUOTAS.MAX_IMAGE_UPLOAD_MB`,
-  then re-encoded to WebP via `sharp` (auto-oriented, capped at 1600px
-  wide, metadata stripped by not calling `.withMetadata()`). Per-gift image
-  quota (`QUOTAS.FREE_MAX_IMAGES_PER_GIFT`/`VIP_MAX_IMAGES_PER_GIFT`) is
-  enforced at upload time by counting `READY` `MediaAsset` rows for that
-  gift. The `media` module has zero dependency on the `gifts` module (the
-  route layer does the gift ownership/editable check and passes validated
-  `giftId`/`tier` in) specifically to avoid a circular import, since
-  `gifts/blocks.ts` depends on `media` to validate an IMAGE/GALLERY
-  block's `mediaAssetId` is owned by the same user; deleting such a block
-  cascades to delete its underlying `MediaAsset` (storage object + DB row)
-  immediately, so quota usage doesn't dangle — full orphan-cleanup for
-  *abandoned* uploads (never attached to any block) is still Milestone 7's
-  job. Themes/effects are small static free-tier catalogs
-  (`src/config/{themes,effects}.ts`) applied via the existing
-  `Gift.themeId`/`effectId` fields — no schema change needed. Music
-  selection is intentionally **not** in the editor UI yet: there's no real
-  royalty-free seed content and no admin panel (Milestone 9) to manage the
-  `MusicTrack` catalog, so building a picker now would be non-functional
-  theater rather than a real feature.
-- Milestone 7 lifecycle: `EXPIRED`/`RECOVERY`/`DELETION_PENDING` are each
-  guaranteed to be a real, observable status for at least one full cron
-  interval — every promotion step only touches rows whose
-  `statusChangedAt` is older than the *current* run's start time, so a
-  gift can never skip two lifecycle states within the same cron
-  invocation. Concretely: `expire` (ACTIVE → EXPIRED at `activeExpiresAt`)
-  → `recovery-start` (EXPIRED → RECOVERY, sets `recoveryEndsAt = now +
-  RECOVERY_DURATION_DAYS`) → `recovery-end` (RECOVERY → DELETION_PENDING
-  at `recoveryEndsAt`) → `purge` (DELETION_PENDING → DELETED: deletes all
-  `GiftBlock` rows and every `MediaAsset` — DB row + R2 object — then
-  clears `title`/`message`/`themeId`/`effectId`/`musicId`; the `Gift` row
-  itself is kept, not hard-deleted, so `Payment`/`GiftView`/
-  `AnalyticsEvent` history referencing it stays intact). All 7 job steps
-  (the 4 above plus `orphan-cleanup`, `analytics-retention`,
-  `rate-limit-cleanup`) run from one combined cron route
-  (`/api/cron/lifecycle`, daily, `vercel.json`) rather than separate
-  schedules, since Vercel's Hobby/free plan caps both cron frequency (once
-  a day) and the number of cron schedules — see CLAUDE.md Cost rules. Each
-  step is wrapped independently (`runJob`, records a `JobRun` row) so one
-  step failing never blocks the rest. Orphaned-media cleanup gives
-  uploads a 1-day grace period before treating them as abandoned.
-- Milestone 8 VIP & payments: uses the official `@payos/node` SDK rather
-  than hand-rolled HMAC — `payos.webhooks.verify()` recomputes the
-  signature over the webhook's `data` object and throws on any mismatch,
-  so `handlePaymentWebhook` never even reaches the activation logic for a
-  forged/malformed webhook. `Payment.orderCode` (our DB uniqueness +
-  lookup key) is generated as `Date.now() * 1000 + random(0,999)`,
-  collision-retried the same way gift slugs are (Milestone 3).
-  `Payment.providerTransactionId` is left null until the webhook actually
-  arrives (it's the bank's transaction reference, not the pre-payment
-  `paymentLinkId`) — that reference is what the `@@unique([provider,
-  providerTransactionId])` constraint guards. Exactly-once activation:
-  fast-path skip if `status === 'ACTIVATED'`, then one interactive Prisma
-  transaction where an `updateMany({ where: { status: { notIn:
-  ['ACTIVATED'] } } })` claim and the `Gift.tier`/`activeExpiresAt` update
-  commit or roll back together — this closes a real gap an earlier
-  two-step version had (a crash between "mark verified" and "update gift"
-  could have double-applied the +15 days on webhook retry). VIP purchase
-  is only allowed for `DRAFT`/`ACTIVE` gifts (other statuses would need
-  unspecified "resurrection" semantics, out of scope for V1); on an
-  `ACTIVE` gift, `activeExpiresAt` extends via the existing
-  `renewedVipExpiry()` (current expiry + 15 days, from Milestone 0) — on a
-  still-`DRAFT` gift, only `tier` is set and `activeExpiresAt` stays null,
-  since the existing `publishGift()` (Milestone 3) already computes the
-  correct VIP duration at publish time. The frontend redirects to PayOS's
-  hosted checkout (`window.location.href = checkoutUrl`) and, on return,
-  explicitly never claims VIP is active — only the webhook can activate it
-  — the return page just says "confirming, refresh to check."
-- Milestone 9 admin & moderation: the owner has no DB access (phone-only),
-  so the first SUPER_ADMIN can only be bootstrapped via a new optional
-  `SUPER_ADMIN_EMAIL` env var — on every register/login/session-fetch, if
-  the account's email matches it and isn't already SUPER_ADMIN, it's
-  promoted. This is deliberately self-healing (checked on every session
-  fetch, not just at creation) so an accidental demotion of that one
-  account heals on its next login; it never touches any other user's
-  role. RBAC is a simple rank check (`CREATOR < MODERATOR < ADMIN <
-  SUPER_ADMIN`, `requireRole()` in the new `admin` module) enforced at the
-  route layer, the same place `requireAuth()` already runs — no service
-  function trusts its caller's role by itself. Content reporting
-  (`POST /api/reports`) is public/anonymous-friendly (rate-limited 5/hour
-  by IP, reusing the Milestone 2 rate-limit table) and reuses
-  `classifyGiftForViewer()` so a `DRAFT` gift is exactly as unreportable
-  as it is unviewable — the report endpoint can't be used to probe for
-  unpublished gifts by slug. `SUSPENDED` is confirmed orthogonal to the
-  normal `DRAFT→ACTIVE→EXPIRED→RECOVERY→DELETION_PENDING→DELETED` chain
-  (per the lifecycle rule already in this file): `suspendGift()` stores
-  whatever status the gift was actually in as `prevStatus` and
-  `unsuspendGift()` restores exactly that — including a status the
-  lifecycle cron itself had already transitioned it to (e.g. suspending an
-  `EXPIRED` gift and later unsuspending it returns it to `EXPIRED`, not
-  back to `ACTIVE`). Suspending is idempotent (two reports on the same
-  gift can both resolve to "suspend" without either erroring);
-  unsuspending a non-suspended gift is a real `ConflictError` since
-  there's nothing to restore. Suspension time is never compensated into
-  `activeExpiresAt` — server time stays the sole source of truth for
-  expiration even across a suspension. Every moderation action
-  (suspend/unsuspend/report-resolve/role-change) writes a best-effort
-  `AuditLog` row (never throws — same graceful-degradation pattern as
-  `recordGiftView`) via a shared `writeAuditLog()` helper. Admin content
-  review bypasses the normal ownership check on purpose
-  (`getGiftForAdmin`/`listBlocksForAdmin` in the `gifts` module, used only
-  by RBAC-gated `/api/admin/*` routes) so a moderator can actually see
-  what was reported. `/admin` pages `notFound()` (not a 403 page) for a
-  session that lacks the role, matching this codebase's existing
-  "don't confirm what you can't prove" instinct (same as a DRAFT gift
-  being treated as not-found rather than "exists but you can't see it").
-- Milestone 10 analytics & monitoring: the new `analytics` module owns
-  read-side aggregation only — `getGiftViewStats()` queries the existing
-  `GiftView` rows (Milestone 5) for total/7-day/30-day counts plus a
-  device breakdown, while writing a `GiftView` row on each real view stays
-  in the `gifts` module (`recordGiftView`, unchanged) since that's tightly
-  coupled to serving the public page. `recordAnalyticsEvent()` is
-  best-effort (never throws, same pattern as `recordGiftView`/
-  `writeAuditLog`) and is called from `gifts/service.ts`
-  (`gift_created`, `gift_published`) and `payments/service.ts`
-  (`vip_activated`, only on the winning claim in the webhook transaction,
-  never on a duplicate-delivery no-op) — a one-directional dependency on
-  `analytics`, same shape as the existing `payments → gifts` dependency,
-  so it doesn't create a cycle. `AnalyticsEvent` rows are pruned by the
-  Milestone 7 `analytics-retention` cron job, previously unused by any
-  writer. Gift owners see their own view stats (total/7d/30d/device) in
-  the editor once a gift has been published — never before, since no
-  views are possible pre-publish. The admin monitoring page
-  (`/admin/monitoring`, ADMIN+ — one rank above the MODERATOR+ the rest of
-  `/admin` requires, re-checked in the page itself same as `/admin/users`
-  being SUPER_ADMIN-only) composes small dedicated count functions owned
-  by each module (`auth.countUsers`, `gifts.countGiftsByStatus`,
-  `payments.countActivatedPayments`, `admin.countOpenReports`) plus
-  `jobs.listRecentJobRuns()` (cron health/history, reusing the existing
-  `JobRun` table from Milestone 7) rather than centralizing cross-module
-  aggregation inside the `analytics` module itself — each module keeps
-  owning reads over its own tables, consistent with the existing
-  `getGiftForAdmin`-style bypass pattern from Milestone 9.
-- Milestone 11 testing & hardening: every prior milestone's "no live
-  Postgres in this environment" caveat turned out to be specific to
-  earlier sessions, not a hard platform limit — this sandbox has Postgres
-  16 installable/startable locally. Added a genuine integration test
-  layer (`tests/integration/`, `npm run test:integration`, real Prisma
-  client against a real DB — no mocking) alongside the existing fast
-  mocked-Prisma unit suite, plus a `postgres:16` service container in CI
-  so it runs on every push. The highest-value addition: a real concurrent-
-  race test for `handlePaymentWebhook` (two literal `Promise.all` webhook
-  deliveries against the real DB) proving "activate exactly once" holds
-  under genuine Postgres row-level locking — the mocked unit test from
-  Milestone 8 could only ever prove the code *path* was right, never that
-  real concurrent access actually serializes the way the code assumes.
-  Security headers added site-wide in `next.config.ts` (CSP without a
-  nonce — `'unsafe-inline'` script/style, since a strict nonce-based CSP
-  needs per-request middleware, judged not worth the added complexity/
-  breakage-risk for V1 — plus X-Frame-Options, X-Content-Type-Options,
-  Referrer-Policy, Permissions-Policy, HSTS); verified against a real
-  Postgres-backed `next start` via a full real user flow (register →
-  create gift → publish → view public page) with Playwright checking for
-  CSP console violations, not just a header-presence check. A route/
-  rate-limit audit found three unbounded-cost/abuse gaps — gift creation,
-  image upload, and VIP checkout creation had no rate limit beyond the
-  existing per-gift image quota — closed with new `RATE_LIMITS.giftCreate`
-  /`mediaUpload`/`vipCheckout` entries (keyed by user id, since these are
-  authenticated routes where per-user is more meaningful than per-IP for
-  cost control). `npm audit`'s remaining 7 advisories (esbuild via
-  Vitest's Vite dependency, postcss bundled inside Next's own internal
-  build tooling) are unchanged from every prior milestone's assessment —
-  already on the newest non-breaking Next 15.x patch; both are dev-time/
-  build-time-only dependencies never exposed to a live request from the
-  internet, so left as-is rather than forcing a major-version downgrade/
-  upgrade with real breakage risk.
-- Milestone 12 beta: with all 11 feature/hardening milestones done, "Beta"
-  had no further code-feature scope in SPEC.md/CLAUDE.md — it's an
-  operational readiness milestone. Concretely: replaced the homepage's
-  leftover Milestone-0 "đang được xây dựng" (under construction) copy
-  with real landing content (3-step how-it-works, free/VIP duration
-  pulled from the actual `business-rules.ts` constants rather than
-  hardcoded numbers, so it can't drift out of sync); added `app/icon.tsx`
-  (generated via `next/og` `ImageResponse`, no static image asset needed)
-  + `app/robots.ts` + `app/sitemap.ts` (Next's file-based conventions —
-  robots.ts disallows `/g/`, `/dashboard`, `/gifts/`, `/admin` as
-  defense-in-depth on top of the existing per-page noindex header/meta
-  tag from Milestone 5); added a "Cấu hình hệ thống" section to
-  `/admin/monitoring` surfacing live ✓/✗ status for
-  R2/Resend/PayOS/`SUPER_ADMIN_EMAIL` (reusing the existing
-  `isR2Configured` etc. booleans from `src/env.ts`) so the non-technical
-  owner has one page to check "what's still blocking real usage" instead
-  of re-reading CLAUDE.md/SETUP.md each time. `docs/BETA_CHECKLIST.md`
-  consolidates all of the above plus a suggested small-cohort rollout
-  plan into one actionable, phone-readable document. No new business
-  logic, no schema changes — pure pre-launch polish + owner-facing
-  visibility.
-- Milestones 13-14 (Launch/Growth): like Milestone 12, neither
-  specs/SPEC.md nor CLAUDE.md define further code-feature scope for these
-  beyond the roadmap name — real "launch" is gated on the owner finishing
-  `docs/BETA_CHECKLIST.md` (real credentials, real beta users), which
-  isn't something code can do. Scoped this pass to genuinely useful,
-  low-risk pre-public-launch items: `/terms` and `/privacy` pages (a
-  good-faith, accurate draft describing what LoveBox actually does —
-  free/VIP lifecycle durations pulled from `business-rules.ts`, PayOS/R2/
-  Resend named as the actual third-party processors, argon2id/HTTP-only-
-  cookie security described accurately — **not lawyer-reviewed**; flagged
-  here, not on the public page itself, so the owner knows to get real
-  legal review before a wide public launch given PayOS handles real
-  payments), linked from a new shared `SiteFooter` component and from the
-  register page ("by registering you agree to...", no blocking checkbox
-  — kept lightweight for V1). Added `app/opengraph-image.tsx` (root-level,
-  same `next/og` `ImageResponse` pattern as Milestone 12's `icon.tsx`) so
-  sharing the homepage itself gets a real branded preview card; it's
-  deliberately generic and inherited by every page that doesn't set its
-  own `openGraph.images` — including gift pages, which is safe precisely
-  *because* it's generic and never derived from real gift content (same
-  "never leak gift content via social preview" rule from Milestone 5).
-  Added a small homepage social-proof counter ("X hộp quà đã được tạo",
-  reusing the existing `countGiftsByStatus()` from Milestone 10) that
-  only renders once the real total crosses 10 — an honest low number
-  undermines trust more than omitting the stat entirely, so it's hidden
-  below that threshold rather than shown early.
-- Visual Polish & Animation Pass (ad hoc, post-roadmap): the gift-opening
-  moment (`src/app/g/[slug]/OpeningSequence.tsx`) is a pure-CSS "checkbox
-  hack" — a real `<input type="checkbox">` (visually hidden via the
-  sr-only pattern, not `display:none`, so Tab+Space still works) gates a
-  `visibility:hidden`→`visible` + opacity/transform reveal via `~`
-  sibling selectors, with zero client JS/hydration needed for the core
-  interaction. Chosen over a client-state approach specifically so the
-  reveal still works if JS ever fails to load, and so it costs nothing on
-  the server-rendered path. The ambient particle effects
-  (`effect-engine.ts`) are a single `<canvas>` driven by
-  `requestAnimationFrame` rather than N looping DOM/CSS particles —
-  cheaper to recompute per frame, trivial to pause via
-  `visibilitychange`, and the particle count is scaled down (never up —
-  `deviceMemory`/`hardwareConcurrency` are only used as a "definitely
-  low-end" signal, never assumed absent-means-capable, since Safari/
-  Firefox don't expose `deviceMemory` at all) via one JS check at start.
-  The engine only starts once the checkbox's `change` event fires
-  (listened for by DOM id), so zero CPU/battery is spent animating a
-  screen the visitor hasn't reached yet. Every animation everywhere in
-  this pass only ever touches `transform`/`opacity` (the existing global
-  `prefers-reduced-motion` collapse in `globals.css`, unchanged, already
-  turns every one of them into a same-frame jump — no separate
-  reduced-motion branch was needed anywhere). Canvas effects specifically
-  render nothing at all under `prefers-reduced-motion` (checked once via
-  `matchMedia`) rather than trying to make a canvas loop "instant." Each
-  theme now pairs a default ambient effect + an optional heading font
-  (Playfair Display, self-hosted via `next/font/google` — zero extra
-  runtime request, Vietnamese subset verified) via
-  `Theme.defaultEffectId`/`headingFontClassName`; the editor auto-applies
-  the pairing on theme change only if the effect is still at the global
-  default, so it never silently overwrites an explicit user choice.
-  Verified end-to-end with real Playwright runs against a real Postgres
-  (not just typecheck/build): the full create→publish→open flow, the
-  reduced-motion path (near-instant reveal, canvas confirmed never
-  drawing a single pixel), and a full-page 390px screenshot pass across
-  every major page — zero console/page errors in any of them. Bundle
-  impact: `/g/[slug]`'s route JS grew from 1.39 kB to 3.53 kB (First Load
-  JS 107 kB → 109 kB); every other touched route grew by well under 1 kB.
-  No new npm dependencies were added — CSS + canvas + `next/font` only,
-  per the task's "no heavy animation library" constraint.
-- Full Animation Coverage Pass (ad hoc, post-roadmap): extended the prior
-  pass's ad hoc animation styling into a real shared system — duration/
-  easing CSS custom properties + a full reusable-keyframe set
-  (`fade-up`/`scale-in`/`shimmer`/`shake`/`pulse`/`pop`, plus `breathe`/
-  `float`/`page-enter`) in `globals.css`, `src/lib/ui-classes.ts` for
-  shared input/button/error class strings, and `src/app/ui/*` primitives
-  (`SubmitButton`, `PasswordToggleInput`, `CopyButton`, `Checkmark`,
-  `ConfirmModal`, `StatusBadge`, `ExpiryCountdown`) so every form/button/
-  status badge in the app draws from the same system instead of one-off
-  per-file styling. `src/app/template.tsx` (Next's per-navigation-remount
-  special file) gives every route a light global page transition.
-  Drag-and-drop block reordering — explicitly requested by this task —
-  was deliberately **not** implemented: it would reverse the Milestone-4
-  decision recorded above ("up/down buttons... keyboard-operable for
-  accessibility") and is a real feature addition (ghost element, drop
-  indicator, touch support, a keyboard-accessible equivalent), not an
-  animation-pass item; the existing buttons got the same shared
-  hover/press treatment as every other button instead. `ConfirmModal` is
-  the one real toast/modal primitive built (spring-in card over a
-  fading/blurred backdrop) and now backs the gift-deletion confirm flow,
-  replacing a native `window.confirm`; there is still no toast queue
-  system, same gap as the prior pass. Full report + inventory table:
-  `docs/MILESTONE_REPORTS.md`, "Full Animation Coverage Pass".
+## Recorded decisions (owner may override)
+
+- **Prompt 01 — Design Bible & brand foundation.** Full system documented in
+  `docs/VO_TRI_DESIGN_BIBLE.md`. Summary: dark warm-plum surfaces (`--vt-bg`
+  `#120E17` → `--vt-card` `#221A2A`), coral-pink primary + acid-lime
+  secondary (deliberately NOT the violet/fuchsia gradient LoveBox used —
+  that combination is the generic "AI SaaS" signature this brand explicitly
+  avoids), Unbounded (display) + Be Vietnam Pro (body, real Vietnamese
+  diacritic design, not a bolted-on subset) via `next/font/google`, both
+  self-hosted with the `vietnamese` subset verified at typecheck. Motion
+  vocabulary (`src/vo-tri/design-system/motion.css`) is punchier than a
+  typical SaaS app on purpose — spring overshoots, a signature `wiggle` —
+  to read as "mischievous" per the brand brief, while staying
+  transform/opacity-only for performance. Toast/Dialog/BottomSheet use real
+  Radix primitives + `vaul` (not hand-rolled) for genuine focus-trap/
+  swipe-gesture accessibility rather than reinventing them. Mascot
+  (`src/vo-tri/ui/Mascot.tsx`) is a placeholder geometric blob built around
+  a fixed 7-mood vocabulary (idle/happy/laughing/thinking/sleepy/mindblown/
+  celebrating) so real illustration can later replace only `MOOD_FACES`,
+  never call sites. Internal style guide at `/vo-tri-styleguide` (noindex)
+  is the living proof-of-work for every primitive — check it after any
+  token change.
+- **Prompt 02 — App Shell.** Full details in `docs/VO_TRI_DESIGN_BIBLE.md`
+  § 9. Summary: `AppShell` (`src/vo-tri/shell/`) wraps every route once, from
+  `src/app/layout.tsx` — Background (CSS-only drifting gradients, no
+  canvas), rAF-throttled scroll-aware Header, a floating-pill BottomNav
+  with raised center check-in FAB on mobile, a left-rail Sidebar at `md:`+
+  sharing the same `nav-items.ts` config. Real bug caught by Playwright
+  screenshots (not just typecheck): Sidebar originally duplicated the
+  "VÔ TRI" wordmark and used `inset-y-0`, ghosting/overlapping the Header's
+  own logo — fixed by starting the Sidebar at `top-20` and removing the
+  duplicate wordmark; Header is the single source of the logo everywhere.
+  `Container` (`app` max-w-6xl vs `prose` max-w-2xl) is the one place
+  content width is decided. Four Dialog presets (Confirm/Error/Success/
+  Reward) give those four moments distinct personality over one shared
+  Dialog base. `Toaster` mounts once in `AppShell`; `loading.tsx`/
+  `template.tsx` use Next's own file conventions for global loading/page
+  transition rather than custom plumbing.
+- **Prompt 03 — Home.** Full details in `docs/VO_TRI_DESIGN_BIBLE.md` § 10.
+  Tagline **"Ở đây, vô tri là một kỹ năng."** — chosen over several
+  brainstormed alternatives (a self-aware joke line, an edgier "leave your
+  sobriety at the door" line) for reclaiming the brand word as a skill
+  (ties naturally into XP/leveling) rather than being only a joke or a mood
+  statement. Daily message (`daily-messages.ts`) is day-of-year-seeded, not
+  random-per-render, so it's SSR/CSR-stable and genuinely reads as "today's"
+  line; swapping to a real DB/API source later only changes
+  `getDailyMessage()`. `HeroScene` composes scroll-shrink and pointer-
+  parallax as two independent rAF effects on nested refs so they don't
+  fight over one `transform`; both no-op under `prefers-reduced-motion`.
+  No session system exists yet, so Home always takes the logged-out branch
+  (no TodayCard) — but TodayCard/ActivitySpotlight/CommunityPulse are all
+  fully built against real prop shapes (`TodayStats`, `SpotlightItem`,
+  `CommunityStats`), not stubs; per CLAUDE.md's no-fabricated-data rule,
+  the feature-preview and social-proof sections show an honest on-brand
+  empty state today rather than fake activity/numbers.

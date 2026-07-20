@@ -1,0 +1,97 @@
+/* ==========================================================================
+   VÔ TRI — Design Tokens
+   ==========================================================================
+   Namespaced `--vt-*` throughout. This file is the single source of truth
+   for color, radius, shadow, blur and gradient.
+
+   Color values are stored as "R G B" triplets (no commas, no rgb()) so
+   Tailwind's `rgb(var(--vt-x) / <alpha-value>)` pattern can apply opacity
+   at the utility-class level (e.g. bg-vt-primary/40).
+
+   Contrast note (verified with a WCAG relative-luminance script, not
+   eyeballed): every `--vt-on-accent` pairing below is the ONLY text color
+   that clears AA against a filled accent surface (primary/secondary/
+   success/warning/danger/info/reward/vip all fail AA with light text —
+   they only pass with the dark `bg` color on top). Rule of thumb baked
+   into every component: light text (`--vt-text-primary`) lives on neutral
+   dark surfaces (bg/surface/card) only; anything sitting on a filled
+   accent color uses `--vt-on-accent`. `--vt-text-muted` cleared AA only
+   for large text (≥18px / 14px bold) — never use it for body copy or
+   small labels.
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------------
+     Color — surfaces (dark, warm-plum undertone; never pure black, never
+     the cool blue-grey of a typical dark-mode SaaS dashboard)
+     --------------------------------------------------------------------- */
+  --vt-bg: 18 14 23; /* #120E17 */
+  --vt-surface: 26 20 32; /* #1A1420 */
+  --vt-card: 34 26 42; /* #221A2A */
+  --vt-border: 54 43 66; /* #362B42 */
+  --vt-divider: 42 33 49; /* #2A2131 */
+
+  /* Color — text */
+  --vt-text-primary: 246 241 248; /* #F6F1F8 */
+  --vt-text-secondary: 169 155 181; /* #A99BB5 */
+  --vt-text-muted: 116 103 129; /* #746781 — large text only, see note above */
+  --vt-on-accent: 18 14 23; /* = --vt-bg. Text/icons on top of ANY filled accent color. */
+
+  /* Color — brand (the two hues that carry VÔ TRI's personality everywhere) */
+  --vt-primary: 255 77 141; /* #FF4D8D — "Riot" coral-pink: CTAs, brand accent, links */
+  --vt-secondary: 200 255 77; /* #C8FF4D — "Zap" acid lime: highlights, XP, energy */
+
+  /* Color — status semantics (used ONLY in their specific context, never decoratively) */
+  --vt-success: 61 220 132; /* #3DDC84 */
+  --vt-warning: 255 159 28; /* #FF9F1C */
+  --vt-danger: 255 77 77; /* #FF4D4D */
+  --vt-info: 77 200 255; /* #4DC8FF */
+
+  /* Color — value semantics (currency / progression / premium, kept out of
+     the general accent rotation so they stay meaningful) */
+  --vt-reward: 255 212 71; /* #FFD447 — points, coins, claimed rewards */
+  --vt-xp: 200 255 77; /* = --vt-secondary. Aliased on purpose: leveling up IS the brand energy color. */
+  --vt-vip: 201 166 255; /* #C9A6FF — the only place violet appears; exclusivity by scarcity */
+
+  /* ---------------------------------------------------------------------
+     Radius — generous enough to feel tactile/playful, capped short of
+     "bubbly kids app"
+     --------------------------------------------------------------------- */
+  --vt-radius-sm: 8px; /* chips, badges, small controls */
+  --vt-radius-md: 14px; /* inputs, buttons */
+  --vt-radius-lg: 20px; /* cards */
+  --vt-radius-xl: 28px; /* modals, bottom sheets, hero surfaces */
+  --vt-radius-full: 999px; /* pills, avatars, fab */
+
+  /* ---------------------------------------------------------------------
+     Elevation — dark backgrounds barely show a plain black drop-shadow,
+     so every level grounds with a crisp dark shadow AND a 1px border-tint
+     for edge definition. Glow variants layer brand-color light on top for
+     moments that should feel "alive" (primary CTA hover, mascot, VIP).
+     --------------------------------------------------------------------- */
+  --vt-shadow-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(var(--vt-border) / 0.6);
+  --vt-shadow-2: 0 4px 16px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(var(--vt-border) / 0.5);
+  --vt-shadow-3: 0 12px 32px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(var(--vt-border) / 0.4);
+  --vt-shadow-4: 0 24px 64px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(var(--vt-border) / 0.35);
+  --vt-glow-primary: 0 0 24px rgb(var(--vt-primary) / 0.45);
+  --vt-glow-secondary: 0 0 24px rgb(var(--vt-secondary) / 0.4);
+  --vt-glow-vip: 0 0 28px rgb(var(--vt-vip) / 0.4);
+
+  /* ---------------------------------------------------------------------
+     Blur / glass — ONE canonical recipe, used sparingly (nav bar, bottom
+     tab bar, sheet/dialog scrims) rather than on every surface.
+     --------------------------------------------------------------------- */
+  --vt-blur-sm: 8px;
+  --vt-blur-md: 16px;
+  --vt-blur-lg: 24px;
+  --vt-glass-bg: rgb(var(--vt-card) / 0.72);
+  --vt-glass-border: rgb(var(--vt-text-primary) / 0.08);
+
+  /* ---------------------------------------------------------------------
+     Gradient — one signature brand gradient. Reserved for hero accents,
+     the mascot's ambient glow, and VIP/high-emphasis moments — not a
+     default card background.
+     --------------------------------------------------------------------- */
+  --vt-gradient-brand: linear-gradient(135deg, rgb(var(--vt-primary)) 0%, rgb(var(--vt-secondary)) 100%);
+  --vt-gradient-vip: linear-gradient(135deg, rgb(var(--vt-vip)) 0%, rgb(var(--vt-reward)) 100%);
+}

@@ -1,98 +1,44 @@
-# LoveBox
+# VÔ TRI
 
-Hộp quà kỹ thuật số cảm xúc, mobile-first, thị trường Việt Nam. This is a real
-production web product — see [`CLAUDE.md`](./CLAUDE.md) for the binding rules
-and [`specs/SPEC.md`](./specs/SPEC.md) for the full product spec.
+Cộng đồng giải trí vui vẻ, tinh nghịch — nơi mọi người cười, xả stress, chơi
+game nhỏ và sưu tập thành tích cùng nhau. Xem [`CLAUDE.md`](./CLAUDE.md) cho
+các quy tắc thiết kế bắt buộc, và [`docs/VO_TRI_DESIGN_BIBLE.md`](./docs/VO_TRI_DESIGN_BIBLE.md)
+cho toàn bộ Design System.
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript (strict) · Tailwind CSS · PostgreSQL (Neon)
-+ Prisma · Cloudflare R2 · PayOS (VietQR) · Vitest · Playwright.
+Next.js 15 (App Router) · TypeScript (strict) · Tailwind CSS · Radix UI primitives
+(Dialog/Toast) · vaul (bottom sheet) · lucide-react.
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env   # fill in real values — see docs/SETUP.md
 npm run dev
 ```
 
 ## Verify commands
 
-Run before every commit and required to pass in CI:
-
 ```bash
 npm run lint
 npm run typecheck
-npm run test
 npm run build
 ```
 
-`npm run test` runs fast unit tests against a mocked Prisma client — no
-database needed. `npm run test:integration` runs a smaller suite against a
-*real* Postgres (set `DATABASE_URL` to a real, disposable database first —
-see `docs/SETUP.md`); CI provides one automatically via a `postgres:16`
-service container.
-
 ## Project layout
 
-- `src/app/` — Next.js App Router routes.
-- `src/modules/*` — modular monolith; each module exposes its public API via
-  `index.ts` only. Never import another module's internals.
-- `src/config/business-rules.ts` — non-negotiable business constants (gift
-  lifetimes, quotas). See `CLAUDE.md`.
-- `src/env.ts` — the only place environment variables are read and validated.
-- `src/lib/logger.ts` — structured (pino) logging; redacts secrets/PII fields.
-- `src/lib/errors.ts` + `src/lib/api-handler.ts` — standard `AppError`
-  hierarchy and route wrapper producing a uniform `{ error: { code, message } }`
-  response; unexpected errors are logged in full server-side but never leak
-  details to the client.
-- `src/lib/prisma.ts` — cached Prisma client singleton.
-- `src/lib/validation.ts` — `parseOrThrow(schema, data)` zod helper, throws `ValidationError`.
-- `src/lib/request.ts` — `getClientIp()` for rate limiting/audit logs.
-- `src/modules/auth/` — register/login/logout, password reset, session
-  cookies, DB-backed rate limiting, argon2id hashing. Routes under
-  `src/app/api/auth/*`.
-- `src/modules/gifts/` — gift + block CRUD, ownership/IDOR checks, publish
-  (DRAFT → ACTIVE), block reordering. Routes under `src/app/api/gifts/*`.
-- `src/app/{login,register,forgot-password,reset-password}/` — auth pages.
-  `src/app/dashboard/` — gift list. `src/app/gifts/[giftId]/` — the gift
-  editor (title/message autosave, block add/reorder/delete, preview,
-  publish, share-link QR code).
-- `src/app/g/[slug]/` — the public, unauthenticated gift viewer.
-  Unpublished/expired/suspended/deleted gifts never leak their real
-  content — see `classifyGiftForViewer` in `src/modules/gifts/public.ts`.
-- `src/modules/media/` — image upload (magic-byte + size validation, WebP
-  re-encode via sharp, Cloudflare R2 storage), per-gift image quota. Route:
-  `src/app/api/gifts/[giftId]/media/route.ts`.
-- `src/config/themes.ts`, `src/config/effects.ts` — static, free theme/effect
-  catalogs applied via `Gift.themeId`/`effectId`.
-- `src/modules/jobs/` — expire/recovery/purge lifecycle transitions +
-  orphaned-media/analytics-retention/rate-limit cleanup, all run from one
-  combined cron route: `src/app/api/cron/lifecycle/route.ts` (see
-  `vercel.json` for the schedule; requires the `Authorization: Bearer
-  $CRON_SECRET` header — this is how Vercel Cron calls it automatically).
-- `src/modules/payments/` — VIP checkout (PayOS/VietQR, via the official
-  `@payos/node` SDK) and the webhook that's the *only* path that can ever
-  activate VIP — see CLAUDE.md's P0 payment security rule. Routes: `POST
-  /api/gifts/[giftId]/vip-checkout` (authenticated) and `POST
-  /api/payments/webhook/payos` (public, signature-verified).
-- `prisma/schema.prisma` — database schema. `prisma/migrations/` holds
-  applied migrations; run `prisma migrate dev` locally to add new ones.
-- `tests/unit/` — Vitest unit tests (mocked Prisma, no DB needed).
-  `tests/integration/` — Vitest tests against a real Postgres (real
-  constraints/transactions/concurrency — see `npm run test:integration`).
-  `tests/e2e/` — Playwright E2E tests.
-- `docs/SETUP.md` — provisioning Neon, Cloudflare R2, Resend, PayOS, Vercel.
-- `docs/MILESTONE_REPORTS.md` — report appended after every milestone.
+- `src/vo-tri/design-system/` — `tokens.css` (color/radius/shadow/blur/gradient,
+  all `--vt-*`, WCAG-verified contrast) + `motion.css` (`--vt-*` durations/
+  easings/keyframes).
+- `src/vo-tri/fonts.ts` — self-hosted Unbounded (display) + Be Vietnam Pro (body).
+- `src/vo-tri/copy/microcopy.ts` — central Vietnamese microcopy dictionary
+  (loading/empty/error/success) in the VÔ TRI voice.
+- `src/vo-tri/ui/` — design system primitives (Button, Card, Input, Badge,
+  Toast, Dialog, BottomSheet, Mascot, Empty/Error/Success/Loading states).
+  Import from `src/vo-tri/ui/index.ts`.
+- `src/app/` — Next.js App Router routes/layout. `/vo-tri-styleguide` is an
+  internal (noindex) living reference for every primitive above.
+- `docs/VO_TRI_DESIGN_BIBLE.md` — the full brand + design system documentation.
 
-## Deployment
-
-Deployed on Vercel. The Vercel build command must be:
-
-```
-prisma migrate deploy && next build
-```
-
-so schema migrations run automatically on every deploy (the project owner
-works phone-only and cannot run a local terminal).
+No backend yet — this is front-end only (design system + shell + Home) until
+a future milestone actually needs accounts/data.

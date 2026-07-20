@@ -4,9 +4,8 @@ import type { NextConfig } from "next";
 // middleware) — a pragmatic, build-time policy that still meaningfully
 // shrinks the attack surface: no script/object loading from third-party
 // origins, no framing (clickjacking), no <base> tag hijacking, forms only
-// submit same-origin. XSS's primary defense is still React's automatic
-// JSX escaping (see CLAUDE.md: "User-generated text ... treat as
-// hostile") — this is defense-in-depth on top of that, not a replacement.
+// submit same-origin. React's automatic JSX escaping is the primary XSS
+// defense; this is defense-in-depth on top of that, not a replacement.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
@@ -35,18 +34,6 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: SECURITY_HEADERS,
-      },
-      {
-        // Gift pages are unlisted by default — never indexed, regardless of
-        // any per-page metadata. See CLAUDE.md: "Gifts are unlisted + noindex
-        // by default. Marketing pages indexable; gift pages never."
-        source: "/g/:slug*",
-        headers: [
-          {
-            key: "X-Robots-Tag",
-            value: "noindex, nofollow",
-          },
-        ],
       },
     ];
   },

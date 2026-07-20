@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { env } from "@/env";
+import { voTriFontVariables } from "@/vo-tri/fonts";
+import { AppShell } from "@/vo-tri/shell";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(env.APP_URL),
-  title: "LoveBox",
-  description: "Hộp quà kỹ thuật số cảm xúc — gửi yêu thương theo cách của bạn.",
+  title: "VÔ TRI",
+  description: "Nơi sự vô tri trở thành nghệ thuật.",
 };
 
 export default function RootLayout({
@@ -14,8 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body>{children}</body>
+    <html lang="vi" className={voTriFontVariables}>
+      <body className="font-vt-body">
+        {/* No auth yet — every visitor renders as guest until a real session exists. */}
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }

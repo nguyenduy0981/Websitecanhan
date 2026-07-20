@@ -1,0 +1,259 @@
+/* ==========================================================================
+   VÔ TRI — Motion System
+   ==========================================================================
+   The global `prefers-reduced-motion: reduce` collapse already declared at
+   the top of src/app/globals.css is selector-agnostic (`*, *::before,
+   *::after`), so every keyframe/transition below inherits that override
+   for free — no separate reduced-motion branch needed here, same
+   reasoning applies to every ambient/canvas-driven effect too.
+
+   Principle: every keyframe here only ever animates `transform`/`opacity`
+   (plus `box-shadow` for glow rings, which is layout-inert) — never
+   width/height/top/left/background-position — so nothing in this file can
+   trigger layout thrash or contribute to CLS.
+
+   VÔ TRI's motion is punchier than a typical SaaS app on purpose: the
+   brand brief calls for "vui vẻ, tinh nghịch, có chút điên" (fun,
+   mischievous, a little unhinged), so the spring overshoots here are
+   pronounced and there's a dedicated `wiggle` used for playful emphasis.
+   ========================================================================== */
+
+:root {
+  --vt-duration-instant: 100ms; /* press feedback */
+  --vt-duration-fast: 180ms; /* hover, small state changes */
+  --vt-duration-base: 280ms; /* default transitions */
+  --vt-duration-slow: 450ms; /* entrances */
+  --vt-duration-lazy: 700ms; /* celebratory / large reveals */
+
+  --vt-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vt-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --vt-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Deliberately sillier overshoot than --vt-ease-spring — reserved for
+     the "mischief" moments (wiggle, bounce-in, celebrate), never for
+     routine UI transitions like a card hover. */
+  --vt-ease-mischief: cubic-bezier(0.68, -0.55, 0.32, 1.55);
+}
+
+/* fade-up — default entrance for cards/sections/page content. */
+@keyframes vt-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.vt-fade-up {
+  animation: vt-fade-up var(--vt-duration-slow) var(--vt-ease-out) both;
+  animation-delay: var(--vt-delay, 0ms);
+}
+
+/* pop-in — toast/dialog/status entrance. */
+@keyframes vt-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.03) translateY(0);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+.vt-pop-in {
+  animation: vt-pop-in var(--vt-duration-slow) var(--vt-ease-spring) both;
+}
+
+/* scale-in — inline elements: badges, chips, checkmarks. */
+@keyframes vt-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.vt-scale-in {
+  animation: vt-scale-in var(--vt-duration-base) var(--vt-ease-spring) both;
+}
+
+/* bounce-in — reward/XP/achievement popups. Bigger overshoot than pop-in
+   on purpose: this is the "something good just happened" move. */
+@keyframes vt-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.vt-bounce-in {
+  animation: vt-bounce-in var(--vt-duration-lazy) var(--vt-ease-mischief) both;
+}
+
+/* wiggle — the signature "playful nudge": a tiny rotation, used sparingly
+   on icons/mascot/badges to draw the eye without a full re-entrance. */
+@keyframes vt-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-4deg);
+  }
+  40% {
+    transform: rotate(3deg);
+  }
+  60% {
+    transform: rotate(-2deg);
+  }
+  80% {
+    transform: rotate(1deg);
+  }
+}
+.vt-wiggle {
+  animation: vt-wiggle var(--vt-duration-lazy) var(--vt-ease-mischief);
+}
+
+/* shake — form validation errors. */
+@keyframes vt-shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+.vt-shake {
+  animation: vt-shake 500ms var(--vt-ease-in-out);
+}
+
+/* float — ambient idle bobbing, primarily for the mascot. */
+@keyframes vt-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.vt-float {
+  animation: vt-float 3.2s var(--vt-ease-in-out) infinite;
+}
+
+/* pulse-glow — ambient breathing glow ring for a primary CTA. Opacity +
+   box-shadow only (box-shadow is layout-inert, unlike width/height). */
+@keyframes vt-pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--vt-primary) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgb(var(--vt-primary) / 0);
+  }
+}
+.vt-pulse-glow {
+  animation: vt-pulse-glow 2.4s var(--vt-ease-in-out) infinite;
+}
+
+/* shimmer — skeleton loading sweep. */
+@keyframes vt-shimmer-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.vt-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(var(--vt-card));
+  border-radius: var(--vt-radius-md);
+}
+.vt-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(var(--vt-text-primary) / 0.08), transparent);
+  transform: translateX(-100%);
+  animation: vt-shimmer-sweep 1.6s var(--vt-ease-in-out) infinite;
+}
+
+/* celebrate — one-shot success pop (e.g. reward claimed, level up). */
+@keyframes vt-celebrate {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.15);
+  }
+  60% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.vt-celebrate {
+  animation: vt-celebrate var(--vt-duration-slow) var(--vt-ease-mischief);
+}
+
+/* page-enter — light global page transition, applied via src/app/template.tsx. */
+@keyframes vt-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.vt-page-enter {
+  animation: vt-page-enter var(--vt-duration-base) var(--vt-ease-out) both;
+}
+
+/* Shared interactive-surface feel — hover lift, press squash, smooth
+   focus. Applied via the cva variants in src/vo-tri/ui/Button.tsx etc. so
+   every interactive primitive is consistent by construction. */
+.vt-interactive {
+  transition:
+    transform var(--vt-duration-fast) var(--vt-ease-out),
+    box-shadow var(--vt-duration-fast) var(--vt-ease-out),
+    background-color var(--vt-duration-fast) var(--vt-ease-out),
+    border-color var(--vt-duration-fast) var(--vt-ease-out),
+    opacity var(--vt-duration-fast) var(--vt-ease-out);
+}
+.vt-interactive:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.vt-interactive:active:not(:disabled) {
+  transform: scale(0.96) translateY(0);
+}

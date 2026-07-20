@@ -1,27 +1,19 @@
 import Link from "next/link";
+import { Container } from "@/vo-tri/shell";
+import { Button, ErrorState } from "@/vo-tri/ui";
 
 export default function NotFound() {
   return (
-    <main className="lb-fade-in-up flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
-      <span className="lb-breathe text-6xl" aria-hidden="true" style={{ animationDuration: "3.4s" }}>
-        🔍
-      </span>
-      <h1 className="text-2xl font-bold">Không tìm thấy trang</h1>
-      <p className="max-w-sm text-muted-foreground">Trang bạn tìm không tồn tại hoặc đã bị xoá.</p>
-      <div className="mt-2 flex flex-wrap justify-center gap-3">
-        <Link
-          href="/"
-          className="lb-btn rounded-md border px-4 py-2 font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-        >
-          Về trang chủ
-        </Link>
-        <Link
-          href="/register"
-          className="lb-btn rounded-md border border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 font-medium text-white shadow-sm hover:from-violet-500 hover:to-fuchsia-500 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-        >
-          Tự tạo hộp quà
-        </Link>
-      </div>
-    </main>
+    <Container className="flex min-h-[70vh] items-center justify-center">
+      <ErrorState
+        title="Trang này đi lạc rồi"
+        description="Có thể nó chưa từng tồn tại, hoặc đã vô tri bay mất đâu đó."
+        action={
+          <Button asChild variant="primary">
+            <Link href="/">Về trang chủ</Link>
+          </Button>
+        }
+      />
+    </Container>
   );
 }

@@ -1,115 +1,67 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
-import type { Metadata } from "next";
-import { getSessionUser } from "@/modules/auth";
-import { countGiftsByStatus } from "@/modules/gifts";
-import { FREE_ACTIVE_DURATION_DAYS, VIP_ACTIVE_DURATION_DAYS } from "@/config/business-rules";
-import { SiteFooter } from "./SiteFooter";
-import { ScrollReveal } from "./ScrollReveal";
+import { getDailyMessage } from "@/vo-tri/copy/daily-messages";
+import { ActivitySpotlight } from "@/vo-tri/home/ActivitySpotlight";
+import { CommunityPulse } from "@/vo-tri/home/CommunityPulse";
+import { HeroScene } from "@/vo-tri/home/HeroScene";
+import { QuickAccess } from "@/vo-tri/home/QuickAccess";
+import { TodayCard, type TodayStats } from "@/vo-tri/home/TodayCard";
+import { Container } from "@/vo-tri/shell";
+import type { VoTriUser } from "@/vo-tri/shell/types";
+import { Badge, Button, Mascot } from "@/vo-tri/ui";
 
-// Only shown once there's a real number worth showing — an honest "0" or
-// "2 hộp quà đã được tạo" undermines trust more than just omitting it.
-const SOCIAL_PROOF_MIN_COUNT = 10;
+// No session yet — Home always renders the logged-out path (no TodayCard).
+// Swap this for a real session lookup once auth exists; nothing else here
+// needs to change since TodayCard/ActivitySpotlight/CommunityPulse already
+// accept real data as an optional prop.
+const currentUser: { user: VoTriUser; stats: TodayStats } | undefined = undefined;
 
-export const metadata: Metadata = {
-  title: "LoveBox — Hộp quà kỹ thuật số cảm xúc",
-  description:
-    "Tạo một hộp quà kỹ thuật số riêng cho người thân yêu: lời nhắn, hình ảnh, giao diện và hiệu ứng — rồi gửi qua một đường link.",
-};
-
-const STEPS = [
-  {
-    title: "1. Tạo quà",
-    body: "Viết lời nhắn, thêm ảnh, chọn giao diện và hiệu ứng bạn thích.",
-  },
-  {
-    title: "2. Xem trước",
-    body: "Xem quà sẽ trông như thế nào trước khi gửi đi.",
-  },
-  {
-    title: "3. Chia sẻ",
-    body: "Gửi đường link (hoặc mã QR) cho người nhận qua Zalo, Messenger, tin nhắn...",
-  },
-] as const;
-
-export default async function HomePage() {
-  const user = await getSessionUser(await cookies());
-  const giftsByStatus = await countGiftsByStatus();
-  const totalGifts = Object.values(giftsByStatus).reduce((sum, n) => sum + n, 0);
+export default function HomePage() {
+  const dailyMessage = getDailyMessage();
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center gap-16 p-8 pb-8 pt-16 text-center">
-        <section className="flex flex-col items-center gap-4">
-          <span
-            className="lb-fade-in-up lb-float select-none text-6xl"
-            style={{ "--lb-delay": "0ms" } as React.CSSProperties}
-            aria-hidden="true"
-          >
-            🎁
-          </span>
-          <h1 className="lb-fade-in-up text-4xl font-bold">LoveBox</h1>
-          <p
-            className="lb-fade-in-up max-w-md text-muted-foreground"
-            style={{ "--lb-delay": "80ms" } as React.CSSProperties}
-          >
-            Hộp quà kỹ thuật số cảm xúc — gửi yêu thương theo cách của bạn. Viết lời nhắn, thêm ảnh,
-            chọn giao diện, rồi chia sẻ bằng một đường link.
-          </p>
-          <div
-            className="lb-fade-in-up flex flex-wrap items-center justify-center gap-3"
-            style={{ "--lb-delay": "160ms" } as React.CSSProperties}
-          >
-            <Link
-              href={user ? "/dashboard" : "/register"}
-              className="lb-btn lb-pulse rounded-md border border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 font-medium text-white shadow-sm hover:from-violet-500 hover:to-fuchsia-500 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-            >
-              {user ? "Vào Dashboard" : "Tạo hộp quà đầu tiên"}
-            </Link>
-            {!user && (
-              <Link
-                href="/login"
-                className="lb-btn rounded-md px-5 py-2.5 text-sm underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              >
-                Đã có tài khoản? Đăng nhập
-              </Link>
-            )}
-          </div>
-          {totalGifts >= SOCIAL_PROOF_MIN_COUNT && (
-            <p
-              className="lb-fade-in-up text-sm text-muted-foreground"
-              style={{ "--lb-delay": "240ms" } as React.CSSProperties}
-            >
-              Đã có <span className="font-semibold">{totalGifts}</span> hộp quà được tạo trên
-              LoveBox.
+      <Container className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center gap-8 py-12 text-center">
+        <HeroScene>
+          <div className="flex flex-col items-center gap-6">
+            <Mascot mood="celebrating" size="xl" className="h-32 w-32 sm:h-40 sm:w-40" />
+
+            <Badge variant="secondary" className="vt-fade-up">
+              Hôm nay: {dailyMessage}
+            </Badge>
+
+            <h1 className="vt-fade-up max-w-2xl font-vt-display text-4xl font-extrabold leading-tight text-vt-text-primary sm:text-5xl">
+              Ở đây, vô tri là một kỹ năng.
+            </h1>
+            <p className="vt-fade-up max-w-md text-balance text-base text-vt-text-secondary" style={{ animationDelay: "80ms" }}>
+              Không deadline. Không nghiêm túc. Chỉ có bạn, vài trò vui, và một con mascot hơi lầy.
             </p>
-          )}
+
+            <div className="vt-fade-up flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "160ms" }}>
+              <Button asChild size="lg" variant="primary">
+                <a href="#quick-access">Bắt đầu vô tri</a>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/explore">Xem có gì đang hot</Link>
+              </Button>
+            </div>
+          </div>
+        </HeroScene>
+      </Container>
+
+      <Container className="flex flex-col gap-10 pb-16">
+        <QuickAccess />
+
+        {currentUser && <TodayCard stats={currentUser.stats} />}
+
+        <section className="flex flex-col gap-3">
+          <h2 className="px-1 font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">
+            Đang diễn ra
+          </h2>
+          <ActivitySpotlight />
         </section>
 
-        <ScrollReveal>
-          <section className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-            {STEPS.map((step) => (
-              <div key={step.title} className="lb-btn rounded-md border p-4">
-                <h2 className="font-semibold">{step.title}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{step.body}</p>
-              </div>
-            ))}
-          </section>
-        </ScrollReveal>
-
-        <ScrollReveal>
-          <section className="max-w-md text-sm text-muted-foreground">
-            <p>
-              Quà miễn phí hiển thị trong {FREE_ACTIVE_DURATION_DAYS} ngày. Nâng cấp VIP để quà
-              hiển thị {VIP_ACTIVE_DURATION_DAYS} ngày và có thêm nhiều lựa chọn giao diện/hiệu
-              ứng.
-            </p>
-          </section>
-        </ScrollReveal>
-      </main>
-      <ScrollReveal>
-        <SiteFooter />
-      </ScrollReveal>
+        <CommunityPulse />
+      </Container>
     </>
   );
 }
