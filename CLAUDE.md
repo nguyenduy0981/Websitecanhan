@@ -222,3 +222,27 @@ sessions don't re-litigate it from scratch.
   `ActivityDetailSheet` "Bắt đầu" now links to `/play/[id]` for every
   non-check-in activity (previously a placeholder toast, since no
   pre-game flow existed yet) — verified end-to-end, not just wired.
+- **Prompt 09 — Social Foundation.** `src/vo-tri/social/`. UI/architecture
+  only, no backend, per the prompt's own scope — every real integration
+  point that already existed stays honestly empty. Reaction system is 5
+  brand-flavored reactions (`reactions.ts`: Thích/Cười xỉu/Đỉnh/Bất ngờ/
+  **Vô Tri** — the signature one, a `Brain` icon for "this broke my brain
+  in the best way") deliberately not a Facebook-style Like/Haha/Wow/Sad/
+  Angry set; the set is a prop on `ReactionBar` (defaults to
+  `REACTION_KINDS`), not hardcoded, so adding a 6th reaction is a
+  one-line catalog change. Refactored first (no behavior change,
+  re-verified via screenshot): generalized Prompt 05's `ShareProfile`
+  into a reusable `ShareSheet` (`ShareProfile` is now a 3-line wrapper
+  passing profile-specific copy), and upgraded `NotificationBell`'s
+  hardcoded empty-only content to render the new categorized
+  `NotificationCenter` (achievement/reward/friend/system) with
+  `items={[]}` — the real Header bell renders byte-identical empty-state
+  copy to before, confirmed by screenshot diff. `UserPreviewCard` reuses
+  `ProfileAvatar`/`getRank` from Profile so a person's avatar ring/rank
+  label look identical everywhere they appear. `ActivityFeed` always
+  renders its honest empty state today (no real feed backend) — same
+  discipline as Explore's Continue Playing and Home's TodayCard.
+  `FollowButton` is fully controlled (`following` + `onToggle`) with real
+  visual states but zero persistence, per "không cần logic, chỉ chuẩn bị
+  giao diện." Every component demonstrated with fixture data on
+  `/vo-tri-styleguide`, same convention as every prior framework prompt.

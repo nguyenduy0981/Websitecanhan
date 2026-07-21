@@ -20,6 +20,20 @@ import {
   type LeaderboardPlayer,
 } from "@/vo-tri/leaderboard";
 import {
+  ActivityFeed,
+  CommentSection,
+  FollowButton,
+  NotificationCenter,
+  ReactionBar,
+  ShareSheet,
+  SocialCard,
+  UserPreviewCard,
+  type CommentData,
+  type FeedItem,
+  type NotificationItem,
+  type ReactionCounts,
+} from "@/vo-tri/social";
+import {
   AchievementSection,
   BadgeCollection,
   CollectionShowcase,
@@ -113,6 +127,30 @@ const DEMO_PLAYERS: LeaderboardPlayer[] = [
   { id: "p5", rank: 5, name: "Tân Binh Vui Vẻ", level: 8, points: 3650 },
 ];
 
+// Fixture data for the Social Foundation section — same fixture
+// convention as everywhere else on this page, not real social data.
+const DEMO_COMMENTS: CommentData[] = [
+  {
+    id: "c1",
+    author: { name: "Ông Kẹ" },
+    text: "Cái này vô tri thật sự đó =))",
+    createdAt: new Date(Date.now() - 25 * 60_000),
+    replies: [{ id: "c1-r1", author: { name: "Bé Vô Tri" }, text: "Chuẩn không cần chỉnh.", createdAt: new Date(Date.now() - 10 * 60_000) }],
+  },
+  { id: "c2", author: { name: "Chị Đại" }, text: "Làm sao để vô tri giỏi như vậy ạ", createdAt: new Date(Date.now() - 3 * 3_600_000) },
+];
+const DEMO_REACTION_COUNTS: ReactionCounts = { thich: 12, "cuoi-xiu": 5, "vo-tri": 3 };
+const DEMO_FEED: FeedItem[] = [
+  { id: "f1", actor: { name: "Bé Vô Tri" }, text: "vừa mở khóa huy hiệu Tân Binh Vô Tri", createdAt: new Date(Date.now() - 40 * 60_000), cardState: "featured" },
+  { id: "f2", actor: { name: "Ông Kẹ" }, text: "vừa lên Level 11", createdAt: new Date(Date.now() - 2 * 3_600_000) },
+];
+const DEMO_NOTIFICATIONS: NotificationItem[] = [
+  { id: "n1", type: "achievement", title: "Mở khóa huy hiệu mới", description: "Bạn vừa mở khóa \"Chuỗi 7 Ngày\"", createdAt: new Date(Date.now() - 30 * 60_000), read: false },
+  { id: "n2", type: "reward", title: "Nhận thưởng", description: "+30 điểm từ Vòng Quay Vô Tri", createdAt: new Date(Date.now() - 90 * 60_000), read: false },
+  { id: "n3", type: "friend", title: "Người theo dõi mới", description: "Chị Đại vừa theo dõi bạn", createdAt: new Date(Date.now() - 5 * 3_600_000), read: true },
+  { id: "n4", type: "system", title: "Cập nhật hệ thống", description: "VÔ TRI vừa có vài trò chơi mới", createdAt: new Date(Date.now() - 24 * 3_600_000), read: true },
+];
+
 const COLOR_SWATCHES: { name: string; className: string }[] = [
   { name: "bg", className: "bg-vt-bg" },
   { name: "surface", className: "bg-vt-surface" },
@@ -143,6 +181,9 @@ export default function VoTriStyleGuidePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [gameExitOpen, setGameExitOpen] = useState(false);
   const demoActivity = activities[0]!;
+  const [demoReaction, setDemoReaction] = useState<string | undefined>("thich");
+  const [demoFollowing, setDemoFollowing] = useState(false);
+  const [demoComments, setDemoComments] = useState(DEMO_COMMENTS);
 
   return (
     <div className={`${voTriFontVariables} min-h-screen bg-vt-bg font-vt-body text-vt-text-primary`}>
@@ -419,6 +460,90 @@ export default function VoTriStyleGuidePage() {
             <Card padding="none" className="overflow-hidden">
               <GameNotReadyState activityName="Đấu Trường Vô Tri" />
             </Card>
+          </div>
+        </Section>
+
+        <Section title="Social Foundation (Prompt 09 — fixture data, UI/architecture only)">
+          <div className="flex flex-col gap-6">
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Social Card — normal / featured / pinned / saved</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SocialCard state="normal">
+                  <p className="text-sm text-vt-text-primary">Card bình thường.</p>
+                </SocialCard>
+                <SocialCard state="featured">
+                  <p className="text-sm text-vt-text-primary">Card nổi bật — có badge + glow.</p>
+                </SocialCard>
+                <SocialCard state="pinned">
+                  <p className="text-sm text-vt-text-primary">Card đã ghim — có icon pin.</p>
+                </SocialCard>
+                <SocialCard state="saved">
+                  <p className="text-sm text-vt-text-primary">Card đã lưu — có icon bookmark.</p>
+                </SocialCard>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Reaction Bar</p>
+              <ReactionBar counts={DEMO_REACTION_COUNTS} activeReactionId={demoReaction} onReact={(id) => setDemoReaction(id === demoReaction ? undefined : id)} />
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Comment Experience</p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Card padding="sm">
+                  <CommentSection
+                    status="ready"
+                    comments={demoComments}
+                    onSubmitComment={(text, replyingTo) => {
+                      const newComment: CommentData = { id: crypto.randomUUID(), author: { name: "Bạn" }, text, createdAt: new Date() };
+                      if (replyingTo) {
+                        setDemoComments((prev) => prev.map((c) => (c.id === replyingTo.id ? { ...c, replies: [...(c.replies ?? []), newComment] } : c)));
+                      } else {
+                        setDemoComments((prev) => [...prev, newComment]);
+                      }
+                    }}
+                  />
+                </Card>
+                <Card padding="sm">
+                  <CommentSection status="loading" comments={[]} onSubmitComment={() => {}} />
+                </Card>
+                <Card padding="sm">
+                  <CommentSection status="error" comments={[]} onSubmitComment={() => {}} onRetry={() => toast({ variant: "info", title: "Đang thử lại..." })} />
+                </Card>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Share, User Preview & Follow</p>
+              <div className="flex flex-col gap-3">
+                <ShareSheet title="Chia sẻ hoạt động này" description="Rủ bạn bè cùng vô tri." url="https://vo-tri.example/explore/vong-quay-vo-tri" />
+                <UserPreviewCard
+                  user={{ name: "Bé Vô Tri", username: "bevotri", level: 7, badgeLabel: "Kỳ Cựu" }}
+                  cta={<FollowButton following={demoFollowing} onToggle={() => setDemoFollowing((v) => !v)} />}
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Activity Feed — with data / honest empty</p>
+              <div className="flex flex-col gap-4">
+                <ActivityFeed items={DEMO_FEED} />
+                <ActivityFeed items={[]} />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Notification Center — with data / honest empty</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Card padding="sm">
+                  <NotificationCenter items={DEMO_NOTIFICATIONS} />
+                </Card>
+                <Card padding="sm">
+                  <NotificationCenter items={[]} />
+                </Card>
+              </div>
+            </div>
           </div>
         </Section>
       </div>

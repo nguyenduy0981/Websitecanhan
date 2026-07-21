@@ -8,13 +8,20 @@ import {
   BottomSheetTitle,
   BottomSheetTrigger,
 } from "@/vo-tri/ui/BottomSheet";
-import { EmptyState } from "@/vo-tri/ui/StatePanel";
+import { NotificationCenter } from "@/vo-tri/social/NotificationCenter";
+import type { NotificationItem } from "@/vo-tri/social/types";
+
+// No backend notification feed yet — every real caller passes an empty
+// array, so NotificationCenter renders its honest empty state. Kept as a
+// module constant (not re-created per render) since it's always the same
+// empty reference.
+const notifications: NotificationItem[] = [];
 
 /**
- * Notification layer: architecture is real (trigger + sheet + list slot),
- * content is honest — there's no backend notification feed yet, so it
- * shows the empty state rather than fabricated items. Swap the body for a
- * real list once notifications exist; the trigger/shell stays the same.
+ * Notification layer: architecture is real (trigger + sheet + categorized
+ * list, see src/vo-tri/social/NotificationCenter.tsx), content is honest
+ * — swap `notifications` for a real fetch once a backend exists; the
+ * trigger/shell stays the same.
  */
 export function NotificationBell({ hasUnread = false }: { hasUnread?: boolean }) {
   return (
@@ -34,10 +41,9 @@ export function NotificationBell({ hasUnread = false }: { hasUnread?: boolean })
       <BottomSheetContent>
         <BottomSheetTitle>Thông báo</BottomSheetTitle>
         <BottomSheetDescription>Mọi thứ đáng chú ý sẽ xuất hiện ở đây.</BottomSheetDescription>
-        <EmptyState
-          title="Yên ắng quá..."
-          description="Đáng ngờ đấy. Nhưng thôi, tận hưởng sự yên bình đi — chưa có thông báo nào cả."
-        />
+        <div className="mt-4">
+          <NotificationCenter items={notifications} />
+        </div>
       </BottomSheetContent>
     </BottomSheet>
   );
