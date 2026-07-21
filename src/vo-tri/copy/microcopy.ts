@@ -61,6 +61,26 @@ export const errorCopy = {
   },
 };
 
+export const offlineCopy = {
+  title: "Bạn đang offline",
+  description: "Không thấy mạng đâu cả. Kết nối lại rồi VÔ TRI sẽ ở đây chờ bạn.",
+};
+
+export const retryCopy = {
+  title: "Chưa xong được...",
+  description: "Thử lại một lần nữa xem, đôi khi chỉ cần vậy thôi.",
+};
+
+export const permissionCopy = {
+  title: "Chỗ này chưa mở cho bạn",
+  description: "Có thể bạn cần đăng nhập, hoặc đây không phải khu vực dành cho bạn.",
+};
+
+export const maintenanceCopy = {
+  title: "VÔ TRI đang được tân trang",
+  description: "Bọn mình đang chỉnh sửa vài thứ phía sau hậu trường. Quay lại sau nhé.",
+};
+
 export const successCopy = {
   generic: {
     title: "Xong xuôi!",

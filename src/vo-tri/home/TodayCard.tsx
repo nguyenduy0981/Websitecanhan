@@ -1,6 +1,7 @@
 import { Flame, Sparkles, Trophy } from "lucide-react";
 import { Badge } from "@/vo-tri/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/vo-tri/ui/Card";
+import { ProgressBar } from "@/vo-tri/ui/ProgressBar";
 
 export interface TodayStats {
   pointsToday: number;
@@ -24,12 +25,7 @@ export function TodayCard({ stats }: { stats: TodayStats }) {
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <Badge variant="xp">Level {stats.level}</Badge>
-          <div className="h-2 flex-1 overflow-hidden rounded-vt-full bg-vt-surface">
-            <div
-              className="h-full rounded-vt-full bg-vt-gradient-brand transition-[width] duration-500 ease-out"
-              style={{ width: `${xpProgress}%` }}
-            />
-          </div>
+          <ProgressBar percent={xpProgress} className="flex-1" />
           <span className="text-xs text-vt-text-secondary">
             {stats.xp}/{stats.xpToNextLevel} XP
           </span>

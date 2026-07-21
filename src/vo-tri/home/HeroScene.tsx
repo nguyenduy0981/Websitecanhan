@@ -72,7 +72,7 @@ export function HeroScene({ children }: { children: React.ReactNode }) {
 
   return (
     <div ref={shrinkRef} style={{ willChange: "transform, opacity" }}>
-      <div ref={parallaxRef} style={{ willChange: "transform" }} className="transition-transform duration-200 ease-out">
+      <div ref={parallaxRef} style={{ willChange: "transform" }} className="transition-transform duration-vt-fast ease-vt-out">
         {children}
       </div>
     </div>

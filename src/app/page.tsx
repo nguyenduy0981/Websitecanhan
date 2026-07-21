@@ -7,7 +7,7 @@ import { QuickAccess } from "@/vo-tri/home/QuickAccess";
 import { TodayCard, type TodayStats } from "@/vo-tri/home/TodayCard";
 import { Container } from "@/vo-tri/shell";
 import type { VoTriUser } from "@/vo-tri/shell/types";
-import { Badge, Button, Mascot } from "@/vo-tri/ui";
+import { Badge, Button, Mascot, SmoothAnchorLink } from "@/vo-tri/ui";
 
 // No session yet — Home always renders the logged-out path (no TodayCard).
 // Swap this for a real session lookup once auth exists; nothing else here
@@ -38,7 +38,7 @@ export default function HomePage() {
 
             <div className="vt-fade-up flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "160ms" }}>
               <Button asChild size="lg" variant="primary">
-                <a href="#quick-access">Bắt đầu vô tri</a>
+                <SmoothAnchorLink href="#quick-access">Bắt đầu vô tri</SmoothAnchorLink>
               </Button>
               <Button asChild size="lg" variant="outline">
                 <Link href="/explore">Xem có gì đang hot</Link>

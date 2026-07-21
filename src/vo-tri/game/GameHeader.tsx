@@ -1,5 +1,6 @@
 import { Pause, Play, X } from "lucide-react";
 import { ProgressBar } from "@/vo-tri/ui/ProgressBar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/vo-tri/ui/Tooltip";
 
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -36,27 +37,37 @@ export function GameHeader({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onExit}
-          aria-label="Thoát"
-          className="vt-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-vt-full text-vt-text-secondary hover:bg-vt-surface hover:text-vt-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vt-primary"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onExit}
+              aria-label="Thoát"
+              className="vt-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-vt-full text-vt-text-secondary hover:bg-vt-surface hover:text-vt-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vt-primary"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Thoát</TooltipContent>
+        </Tooltip>
 
         <h1 className="min-w-0 flex-1 truncate text-center font-vt-display text-base font-semibold text-vt-text-primary">
           {title}
         </h1>
 
-        <button
-          type="button"
-          onClick={paused ? onResume : onPause}
-          aria-label={paused ? "Tiếp tục" : "Tạm dừng"}
-          className="vt-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-vt-full text-vt-text-secondary hover:bg-vt-surface hover:text-vt-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vt-primary"
-        >
-          {paused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={paused ? onResume : onPause}
+              aria-label={paused ? "Tiếp tục" : "Tạm dừng"}
+              className="vt-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-vt-full text-vt-text-secondary hover:bg-vt-surface hover:text-vt-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vt-primary"
+            >
+              {paused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{paused ? "Tiếp tục" : "Tạm dừng"}</TooltipContent>
+        </Tooltip>
       </div>
 
       {progress !== undefined && <ProgressBar percent={progress} />}

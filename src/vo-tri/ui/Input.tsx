@@ -1,41 +1,79 @@
+import { Check, Loader2 } from "lucide-react";
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { cn } from "@/vo-tri/lib/cn";
 
 const fieldBaseClass =
   "vt-interactive w-full rounded-vt-md border bg-vt-surface px-4 py-2.5 text-vt-text-primary placeholder:text-vt-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vt-primary focus-visible:ring-offset-2 focus-visible:ring-offset-vt-bg disabled:pointer-events-none disabled:opacity-40";
 
-function fieldStateClass(invalid?: boolean) {
-  return invalid
-    ? "border-vt-danger vt-shake"
-    : "border-vt-border hover:border-vt-text-secondary focus-visible:border-vt-primary";
+/** Standardized across every field in the product: invalid > success > readonly > default, so no form ever has to invent its own state colors. */
+function fieldStateClass(invalid?: boolean, success?: boolean, readOnly?: boolean) {
+  if (invalid) return "border-vt-danger vt-shake";
+  if (success) return "border-vt-success";
+  if (readOnly) return "border-vt-border bg-vt-card text-vt-text-secondary cursor-default";
+  return "border-vt-border hover:border-vt-text-secondary focus-visible:border-vt-primary";
 }
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;
+  /** e.g. a username check that just came back available — shows a check icon, doesn't disable the field. */
+  success?: boolean;
+  /** e.g. an async validation in flight — shows a spinner icon, doesn't disable the field. */
+  loading?: boolean;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, invalid, ...props }, ref) => (
-  <input
-    ref={ref}
-    aria-invalid={invalid || undefined}
-    className={cn(fieldBaseClass, fieldStateClass(invalid), className)}
-    {...props}
-  />
-));
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, invalid, success, loading, readOnly, ...props }, ref) => {
+    const hasTrailingIcon = loading || success;
+    const input = (
+      <input
+        ref={ref}
+        readOnly={readOnly}
+        aria-invalid={invalid || undefined}
+        aria-busy={loading || undefined}
+        className={cn(
+          fieldBaseClass,
+          fieldStateClass(invalid, success, readOnly),
+          hasTrailingIcon && "pr-10",
+          className,
+        )}
+        {...props}
+      />
+    );
+
+    if (!hasTrailingIcon) return input;
+
+    return (
+      <div className="relative">
+        {input}
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-vt-text-secondary" />
+          ) : (
+            <Check className="h-4 w-4 text-vt-success" />
+          )}
+        </span>
+      </div>
+    );
+  },
+);
 Input.displayName = "Input";
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   invalid?: boolean;
+  success?: boolean;
 }
 
-export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({ className, invalid, ...props }, ref) => (
-  <textarea
-    ref={ref}
-    aria-invalid={invalid || undefined}
-    className={cn(fieldBaseClass, fieldStateClass(invalid), "min-h-28 resize-y", className)}
-    {...props}
-  />
-));
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className, invalid, success, readOnly, ...props }, ref) => (
+    <textarea
+      ref={ref}
+      readOnly={readOnly}
+      aria-invalid={invalid || undefined}
+      className={cn(fieldBaseClass, fieldStateClass(invalid, success, readOnly), "min-h-28 resize-y", className)}
+      {...props}
+    />
+  ),
+);
 Textarea.displayName = "Textarea";
 
 /**

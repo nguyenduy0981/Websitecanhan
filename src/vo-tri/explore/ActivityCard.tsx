@@ -12,7 +12,7 @@ export function ActivityCard({ activity, onSelect }: { activity: Activity; onSel
       className="vt-interactive group flex flex-col gap-3 rounded-vt-lg border border-vt-border bg-vt-card p-4 text-left shadow-vt-1 hover:shadow-vt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vt-primary"
     >
       <div className="flex items-start justify-between">
-        <span className="flex h-11 w-11 items-center justify-center rounded-vt-md bg-vt-primary/15 text-vt-primary transition-transform duration-150 group-hover:scale-105">
+        <span className="flex h-11 w-11 items-center justify-center rounded-vt-md bg-vt-primary/15 text-vt-primary transition-transform duration-vt-fast group-hover:scale-105">
           <Icon className="h-5 w-5" />
         </span>
         <span className={cn("rounded-vt-full px-2 py-0.5 text-[11px] font-medium", DIFFICULTY_TONE[activity.difficulty])}>

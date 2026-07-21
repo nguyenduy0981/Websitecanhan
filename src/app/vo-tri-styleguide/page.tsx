@@ -69,17 +69,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
   EmptyState,
   ErrorState,
   Field,
   Input,
   LoadingState,
+  MaintenanceState,
   Mascot,
   type MascotMood,
+  OfflineState,
+  PermissionState,
+  RetryState,
   Skeleton,
   SuccessState,
   toast,
   Toaster,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@/vo-tri/ui";
 
 const MOODS: MascotMood[] = ["idle", "happy", "laughing", "thinking", "sleepy", "mindblown", "celebrating"];
@@ -306,6 +318,21 @@ export default function VoTriStyleGuidePage() {
               {(fieldProps) => <Input {...fieldProps} placeholder="Thử để trống rồi submit" />}
             </Field>
           </div>
+          <div className="max-w-sm">
+            <Field label="Đang kiểm tra" helper="Ví dụ: kiểm tra username còn trống không.">
+              {(fieldProps) => <Input {...fieldProps} loading defaultValue="dangkiemtra" />}
+            </Field>
+          </div>
+          <div className="max-w-sm">
+            <Field label="Hợp lệ rồi" helper="Ví dụ: username này dùng được.">
+              {(fieldProps) => <Input {...fieldProps} success defaultValue="hople" />}
+            </Field>
+          </div>
+          <div className="max-w-sm">
+            <Field label="Chỉ đọc" helper="Ví dụ: email không cho sửa.">
+              {(fieldProps) => <Input {...fieldProps} readOnly defaultValue="bevotri@vitri.gg" />}
+            </Field>
+          </div>
         </Section>
 
         <Section title="Toast">
@@ -374,6 +401,56 @@ export default function VoTriStyleGuidePage() {
             <Card padding="none" className="overflow-hidden">
               <SuccessState />
             </Card>
+          </div>
+        </Section>
+
+        <Section title="Global States — Offline / Retry / Permission / Maintenance (Prompt 10 — fixture data)">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card padding="none" className="overflow-hidden">
+              <OfflineState />
+            </Card>
+            <Card padding="none" className="overflow-hidden">
+              <RetryState onRetry={() => toast({ variant: "info", title: "Đang thử lại...", description: "Giả lập một hành động retry." })} />
+            </Card>
+            <Card padding="none" className="overflow-hidden">
+              <PermissionState action={<Button size="sm">Đăng nhập</Button>} />
+            </Card>
+            <Card padding="none" className="overflow-hidden">
+              <MaintenanceState />
+            </Card>
+          </div>
+        </Section>
+
+        <Section title="Tooltip & Context Menu (Prompt 10)">
+          <div className="flex flex-wrap items-center gap-6">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Di chuột vào đây
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Đây là một Tooltip.</TooltipContent>
+            </Tooltip>
+
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <Card className="flex w-56 cursor-context-menu items-center justify-center py-6 text-sm text-vt-text-secondary">
+                  Chuột phải vào đây
+                </Card>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onSelect={() => toast({ variant: "success", title: "Đã sao chép!" })}>
+                  Sao chép liên kết
+                </ContextMenuItem>
+                <ContextMenuItem onSelect={() => toast({ variant: "info", title: "Đã ẩn khỏi bảng tin" })}>
+                  Ẩn bài này
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem danger onSelect={() => toast({ variant: "danger", title: "Đã báo cáo" })}>
+                  Báo cáo
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           </div>
         </Section>
 

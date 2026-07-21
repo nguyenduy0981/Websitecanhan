@@ -1,5 +1,6 @@
 import { Bell, Gift, Trophy, Users } from "lucide-react";
 import { cn } from "@/vo-tri/lib/cn";
+import { timeAgo } from "@/vo-tri/lib/time";
 import { EmptyState } from "@/vo-tri/ui/StatePanel";
 import type { NotificationItem, NotificationType } from "./types";
 
@@ -9,14 +10,6 @@ const TYPE_CONFIG: Record<NotificationType, { icon: typeof Bell; tone: string }>
   friend: { icon: Users, tone: "bg-vt-info/15 text-vt-info" },
   system: { icon: Bell, tone: "bg-vt-text-secondary/15 text-vt-text-secondary" },
 };
-
-function timeAgo(date: Date): string {
-  const minutes = Math.max(1, Math.round((Date.now() - date.getTime()) / 60_000));
-  if (minutes < 60) return `${minutes} phút trước`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} giờ trước`;
-  return `${Math.round(hours / 24)} ngày trước`;
-}
 
 /**
  * Categorized (achievement/reward/friend/system) so a real notification

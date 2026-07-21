@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { Avatar } from "@/vo-tri/ui/Avatar";
 import { Badge } from "@/vo-tri/ui/Badge";
 import { getRankChange, type LeaderboardPlayer } from "./types";
 import { RankChangeIcon } from "./RankChangeIcon";
@@ -26,14 +27,7 @@ export const LeaderboardRow = memo(function LeaderboardRow({ player }: { player:
         <RankChangeIcon change={change} />
       </div>
 
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-vt-full bg-vt-surface text-sm font-semibold text-vt-text-primary">
-        {player.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.avatarUrl} alt={player.name} className="h-full w-full object-cover" />
-        ) : (
-          player.name.charAt(0).toUpperCase()
-        )}
-      </div>
+      <Avatar name={player.name} avatarUrl={player.avatarUrl} />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-vt-text-primary">{player.name}</p>

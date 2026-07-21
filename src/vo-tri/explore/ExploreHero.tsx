@@ -1,5 +1,6 @@
 import { Mascot } from "@/vo-tri/ui/Mascot";
 import { Button } from "@/vo-tri/ui/Button";
+import { SmoothAnchorLink } from "@/vo-tri/ui/SmoothAnchorLink";
 
 /** Deliberately smaller than Home's hero — Explore's hero is a doorway into the grid below, not the main event. */
 export function ExploreHero() {
@@ -11,7 +12,7 @@ export function ExploreHero() {
           Một góc nhỏ toàn trò vô nghĩa nhưng vui. Chọn đại một cái, xem chuyện gì xảy ra.
         </p>
         <Button asChild size="sm" variant="primary">
-          <a href="#activity-grid">Chọn liều một cái</a>
+          <SmoothAnchorLink href="#activity-grid">Chọn liều một cái</SmoothAnchorLink>
         </Button>
       </div>
       <Mascot mood="laughing" size="lg" className="shrink-0" />

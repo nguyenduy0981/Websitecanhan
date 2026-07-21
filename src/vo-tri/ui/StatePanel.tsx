@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { emptyCopy, errorCopy, successCopy } from "@/vo-tri/copy/microcopy";
+import { emptyCopy, errorCopy, maintenanceCopy, offlineCopy, permissionCopy, retryCopy, successCopy } from "@/vo-tri/copy/microcopy";
 import { cn } from "@/vo-tri/lib/cn";
+import { Button } from "./Button";
 import { Mascot, type MascotMood } from "./Mascot";
 
 /**
@@ -83,4 +84,72 @@ export function SuccessState({
       className={cn("vt-celebrate", className)}
     />
   );
+}
+
+export function OfflineState({
+  title = offlineCopy.title,
+  description = offlineCopy.description,
+  action,
+  className,
+}: {
+  title?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return <StatePanel mood="sleepy" title={title} description={description} action={action} className={className} />;
+}
+
+/** Unlike ErrorState (broad/unknown failure), this is specifically "one action failed, try it again" — always ships its own retry button so the wording is never left to drift per call site. */
+export function RetryState({
+  title = retryCopy.title,
+  description = retryCopy.description,
+  onRetry,
+  className,
+}: {
+  title?: ReactNode;
+  description?: ReactNode;
+  onRetry: () => void;
+  className?: string;
+}) {
+  return (
+    <StatePanel
+      mood="thinking"
+      title={title}
+      description={description}
+      action={
+        <Button variant="outline" onClick={onRetry}>
+          Thử lại xem
+        </Button>
+      }
+      className={className}
+    />
+  );
+}
+
+export function PermissionState({
+  title = permissionCopy.title,
+  description = permissionCopy.description,
+  action,
+  className,
+}: {
+  title?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return <StatePanel mood="idle" title={title} description={description} action={action} className={className} />;
+}
+
+/** No fake ETA — same honesty rule as Explore's Coming Soon cards; "quay lại sau" is the whole promise, not a made-up return time. */
+export function MaintenanceState({
+  title = maintenanceCopy.title,
+  description = maintenanceCopy.description,
+  className,
+}: {
+  title?: ReactNode;
+  description?: ReactNode;
+  className?: string;
+}) {
+  return <StatePanel mood="idle" title={title} description={description} className={className} />;
 }

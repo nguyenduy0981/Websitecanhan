@@ -1,0 +1,149 @@
+# VÔ TRI — Architecture, Component Inventory & Routing
+
+Companion to `docs/VO_TRI_DESIGN_BIBLE.md` (that file explains brand/visual
+*why*; this file is the map of *where things live* for a newcomer). Kept
+deliberately short — it's an index, not a tutorial.
+
+## 1. Folder structure
+
+```
+src/app/                 Next.js App Router routes only. Every page composes
+                          components from src/vo-tri/*, never owns its own
+                          business logic or hand-rolled styles.
+src/vo-tri/design-system/ tokens.css (color/radius/shadow/blur/gradient) +
+                          motion.css (durations/easings/keyframes). Source of
+                          truth for every visual constant in the app.
+src/vo-tri/ui/            Generic, domain-agnostic primitives (Button, Card,
+                          Dialog, Toast, Tooltip, Avatar, StatePanel, ...).
+                          Import from the barrel `@/vo-tri/ui`, not individual
+                          files — call sites shouldn't know internal layout.
+src/vo-tri/shell/          AppShell + Header/Sidebar/BottomNav/Container — the
+                          one wrapper every route mounts inside.
+src/vo-tri/{home,explore,profile,leaderboard,game,social}/
+                          One folder per feature domain. Each has its own
+                          `types.ts` and an `index.ts` barrel (game/social/
+                          explore/profile/leaderboard; home has no barrel yet
+                          since Home is the only consumer of its parts).
+src/vo-tri/copy/           Central Vietnamese microcopy (never hand-write UI
+                          strings per screen — extend microcopy.ts instead).
+src/vo-tri/lib/            Small framework-agnostic helpers/hooks (cn, date,
+                          time, sound, check-in, use-media-query,
+                          use-online-status). Anything reused by 2+ domains
+                          belongs here, not duplicated per-folder.
+```
+
+Rule of thumb for "where does new code go": generic + reusable across
+domains → `ui/` or `lib/`; specific to one feature → that feature's own
+folder; brand-wide constant (color, spacing, motion timing) → `design-system/`
++ `tailwind.config.ts`, never hardcoded in a component.
+
+## 2. Routing map
+
+| Route | Purpose | Data today |
+|---|---|---|
+| `/` | Home — hero, daily message, quick access, activity spotlight, community pulse | No session yet → always logged-out branch |
+| `/explore` | Activity catalog — search/filter/detail sheet | Real static catalog (`explore/activities.ts`) |
+| `/profile` | Own profile | No auth yet → honest logged-out state only |
+| `/leaderboard` | Rankings | No backend yet → honest empty state |
+| `/play/[activityId]` | Real per-activity gameplay flow (`generateStaticParams` over the Explore catalog) | Real catalog lookup, no persisted results |
+| `/vo-tri-styleguide` | Internal, `noindex` — every component demoed with clearly-commented FIXTURE data | Fixture only, never real |
+
+All routes are plain path segments (no route groups, no parallel/intercepting
+routes) — every one is a real, deep-linkable URL today.
+
+## 3. Component inventory
+
+**`ui/` (generic primitives)** — Avatar, Background, Badge, BottomSheet,
+Button, Card, ChipGroup, ContextMenu, Dialog + DialogPresets (Confirm/Error/
+Success/Reward), Input/Textarea/Field, LoadingState, Mascot, ProgressBar,
+Skeleton, SmoothAnchorLink, StatePanel presets (Empty/Error/Success/Offline/
+Retry/Permission/Maintenance), Tooltip, Toast/Toaster.
+
+**`shell/`** — AppShell (mounts once from `src/app/layout.tsx`), Header,
+Sidebar, BottomNav, Container, NotificationBell, OfflineWatcher.
+
+**`home/`** — HeroScene, QuickAccess, TodayCard, ActivitySpotlight,
+CommunityPulse.
+
+**`explore/`** — ExploreHero, FeaturedActivity, CategoryChips, ActivityCard,
+ActivityStatGrid, ComingSoonCard/Strip, DailyPicks, ContinuePlaying,
+ActivityDetailSheet, ExploreInteractive, ExploreFooter.
+
+**`profile/`** — ProfileHero, ProfileAvatar, LevelCard, StatCards,
+AchievementSection, BadgeCollection, JourneyTimeline, CollectionShowcase,
+EditProfileSheet, ShareProfile (wraps `social/ShareSheet`).
+
+**`leaderboard/`** — LeaderboardHero, TopThreePodium, LeaderboardRow/List,
+MyPositionCard, RankChangeIcon, ScopeFilter (built on `ui/ChipGroup`).
+
+**`game/`** — GameFrame (the state machine: pre-game → playing ⇄ paused →
+result, driven by a render-prop), GameHeader, PreGameScreen, PausedOverlay,
+ExitConfirmDialog, ResultScreen, RewardReveal, LevelUpBanner,
+AchievementUnlockCard, GameNotReadyState.
+
+**`social/`** — SocialCard, ReactionBar, CommentSection/Item/Composer,
+ShareSheet, UserPreviewCard, FollowButton, FeedItemCard, ActivityFeed,
+NotificationCenter.
+
+Every component above is demonstrated on `/vo-tri-styleguide` with fixture
+data — that page is the living proof a component renders correctly, check it
+after any token or props change.
+
+## 4. Motion guideline
+
+- Use the Tailwind theme extensions, not raw values: `duration-vt-instant/
+  fast/base/slow/lazy` and `ease-vt-out/in-out/spring/mischief` (mapped to
+  `--vt-duration-*`/`--vt-ease-*` in `design-system/motion.css`). Never
+  `duration-150`/`ease-out` (Tailwind's built-in curve, not the brand's).
+- Use the `.vt-*` animation classes for entrances/emphasis (`vt-fade-up`,
+  `vt-pop-in`, `vt-scale-in`, `vt-bounce-in`, `vt-wiggle`, `vt-shake`,
+  `vt-float`, `vt-pulse-glow`, `vt-celebrate`) instead of writing new
+  `@keyframes` per component.
+- Every animation touches only `transform`/`opacity`(/`box-shadow` for glow)
+  — never layout properties, so nothing can cause CLS.
+- `prefers-reduced-motion: reduce` is handled once, globally, in
+  `src/app/globals.css` (collapses all animation/transition durations) —
+  don't add a second reduced-motion branch per component. The one exception
+  is JS-driven motion that isn't a CSS transition/animation (e.g.
+  `RewardReveal`'s `requestAnimationFrame` count-up, `SmoothAnchorLink`'s
+  `scrollIntoView`) — those check `matchMedia("(prefers-reduced-motion:
+  reduce)")` directly and skip straight to the end state.
+- No global `html { scroll-behavior: smooth }` — it would also
+  smooth-animate Next's own scroll-to-top on every route navigation. The two
+  in-page "jump down" CTAs use `ui/SmoothAnchorLink` instead, which scrolls
+  smoothly only on that specific click.
+
+## 5. Responsive guideline
+
+- Breakpoints are Tailwind's stock `sm`/`md`/`lg`/`xl` — no custom breakpoint
+  scale.
+- `md:` is the mobile/desktop shell split: BottomNav is mobile-only, Sidebar
+  appears at `md:`+, `main` gets `md:pl-60` to clear the Sidebar.
+- Content width is decided in exactly one place: `shell/Container` (`app`
+  variant `max-w-6xl`, `prose` variant `max-w-2xl`) — don't hardcode a
+  max-width in a feature component.
+- Desktop-vs-mobile *component* swaps (not just layout reflow) go through
+  `lib/use-media-query.ts` (SSR-safe: starts false, syncs on mount) — e.g.
+  `EditProfileSheet` picks Dialog on desktop vs BottomSheet on mobile from
+  one hook rather than maintaining two components.
+- Fixed-position overlays that must survive long scrollable lists use
+  `position: fixed`, not `sticky` (`sticky` only holds within its own
+  containing block and will scroll away — see `MyPositionCard`).
+
+## 6. Feedback system — Toast vs. "Snackbar"
+
+VÔ TRI has one transient-feedback primitive: `ui/toast` (`Toaster` mounted
+once in `AppShell`, `toast()` callable from anywhere). There is no separate
+"Snackbar" component — that's the same UI concept under a different name
+(brief transient message, auto-dismiss, optional action), so a second
+component would just be a duplicate to keep in sync. Anywhere a spec calls
+for a "snackbar," use `toast()`.
+
+## 7. What's still frontend-only (no backend)
+
+No DB/auth/API routes exist yet. Every route that would need real user data
+shows an honest empty/logged-out state (see each route's row in §2) rather
+than fabricated numbers — this is a CLAUDE.md rule, not an oversight. Rich
+components are still fully built against real prop shapes and demonstrated
+with fixture data on `/vo-tri-styleguide`, so wiring a real backend later is
+a matter of passing real data into existing components, not building new UI.

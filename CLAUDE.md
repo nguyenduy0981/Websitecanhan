@@ -246,3 +246,34 @@ sessions don't re-litigate it from scratch.
   visual states but zero persistence, per "không cần logic, chỉ chuẩn bị
   giao diện." Every component demonstrated with fixture data on
   `/vo-tri-styleguide`, same convention as every prior framework prompt.
+- **Prompt 10 — Platform Foundation (audit/hardening pass, no new
+  screens).** Full map in `docs/VO_TRI_ARCHITECTURE.md` (new — component
+  inventory, routing table, motion/responsive guideline in one place for
+  a newcomer). No Supabase/Auth/payments/API added, per the prompt's own
+  scope. Real, grep-confirmed duplication found and consolidated: 4 copies
+  of check-in toast logic → `lib/check-in.ts`, 3 copies of `timeAgo()` →
+  `lib/time.ts`, 6 copies of avatar-with-fallback markup → `ui/Avatar.tsx`,
+  `TodayCard`'s inline progress bar → the already-extracted `ProgressBar`,
+  and 8 files using Tailwind's stock `duration-*`/`ease-out` instead of
+  the brand's `--vt-duration-*`/`--vt-ease-*` tokens → new
+  `duration-vt-*`/`ease-vt-*` Tailwind theme extensions. Missing global
+  states built: `OfflineState`/`RetryState`/`PermissionState`/
+  `MaintenanceState` (new `StatePanel` presets) plus a real, functional
+  `useOnlineStatus` hook + `OfflineWatcher` (mounted once in `AppShell`)
+  that fires a toast on actual `online`/`offline` browser events — chose
+  toast over a persistent banner to avoid new layout math against the
+  fixed Header. `Input`/`Textarea` gained `success`/`loading`/`readOnly`
+  visual states (spinner/check icon, muted readonly styling) without
+  changing `Field`'s render-prop contract, so no existing form call site
+  needed changes. New Radix-based `Tooltip` and `ContextMenu` primitives
+  (`ui/Tooltip.tsx`, `ui/ContextMenu.tsx`); `TooltipProvider` mounts once
+  in `AppShell`. There is deliberately no separate "Snackbar" component —
+  it's the same concept as the already-built `Toast`, documented in
+  `VO_TRI_ARCHITECTURE.md` §6 instead of building a duplicate. Navigation
+  audit found one real bug: a global `html { scroll-behavior: smooth }`
+  meant to power two in-page "jump down" CTAs was also smooth-animating
+  Next.js's own scroll-to-top on every route navigation — fixed by
+  removing the global rule and adding `ui/SmoothAnchorLink` (scrolls
+  smoothly only on that specific click, falls back to instant under
+  `prefers-reduced-motion`). Radix/vaul's automatic focus-return-to-trigger
+  on Dialog/BottomSheet close needed no new code, only verification.

@@ -7,7 +7,7 @@ import {
   BottomSheetTitle,
 } from "@/vo-tri/ui/BottomSheet";
 import { Button } from "@/vo-tri/ui/Button";
-import { toast } from "@/vo-tri/ui/toast";
+import { fireCheckInToast } from "@/vo-tri/lib/check-in";
 import { ActivityStatGrid } from "./ActivityStatGrid";
 import type { Activity } from "./types";
 
@@ -15,7 +15,7 @@ export function ActivityDetailSheet({ activity, onOpenChange }: { activity: Acti
   function handleStart() {
     if (!activity) return;
     if (activity.action === "check-in") {
-      toast({ variant: "success", title: "+15 Điểm Vô Tri", description: "Điểm danh hôm nay thành công. Mai quay lại nhé!" });
+      fireCheckInToast();
       onOpenChange(false);
     }
     // Every other activity now has a real pre-game/gameplay-framework
