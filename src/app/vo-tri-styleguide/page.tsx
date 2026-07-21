@@ -2,7 +2,15 @@
 
 import { Crown, Medal, Palette, Shirt, Sparkles as SparklesIcon, Star, Target, Trophy } from "lucide-react";
 import { useState } from "react";
+import { activities } from "@/vo-tri/explore/activities";
 import { voTriFontVariables } from "@/vo-tri/fonts";
+import {
+  ExitConfirmDialog,
+  GameHeader,
+  GameNotReadyState,
+  PreGameScreen,
+  ResultScreen,
+} from "@/vo-tri/game";
 import {
   LeaderboardHero,
   LeaderboardList,
@@ -133,6 +141,8 @@ export default function VoTriStyleGuidePage() {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [gameExitOpen, setGameExitOpen] = useState(false);
+  const demoActivity = activities[0]!;
 
   return (
     <div className={`${voTriFontVariables} min-h-screen bg-vt-bg font-vt-body text-vt-text-primary`}>
@@ -367,6 +377,50 @@ export default function VoTriStyleGuidePage() {
             <MyPositionCard myPosition={{ rank: 14, points: 2100, gapToNext: 340 }} />
           </div>
         </Section>
+
+        <Section title="Gameplay Framework (Prompt 08 — fixture data, real flow at /play/[activityId])">
+          <div className="flex flex-col gap-6">
+            <Card padding="none" className="overflow-hidden p-6">
+              <PreGameScreen activity={demoActivity} onStart={() => toast({ variant: "info", title: "Đây là bản demo — xem thật tại /play" })} />
+            </Card>
+
+            <Card padding="none" className="overflow-hidden p-4">
+              <GameHeader
+                title={demoActivity.name}
+                paused={false}
+                onPause={() => {}}
+                onResume={() => {}}
+                onExit={() => setGameExitOpen(true)}
+                elapsedSeconds={47}
+                score={60}
+                progress={60}
+              />
+            </Card>
+            <Button variant="outline" size="sm" className="w-fit" onClick={() => setGameExitOpen(true)}>
+              Mở Exit Confirm Dialog
+            </Button>
+
+            <Card padding="none" className="overflow-hidden p-6">
+              <ResultScreen
+                activityName={demoActivity.name}
+                outcome={{
+                  points: demoActivity.reward,
+                  xp: demoActivity.xp,
+                  coins: 5,
+                  questCompleted: { name: "Chơi 3 hoạt động trong ngày" },
+                  leveledUp: { newLevel: 8 },
+                  achievementUnlocked: { name: "Tân Binh Vô Tri", description: "Hoàn thành hoạt động đầu tiên", icon: Star, rarity: "rare" },
+                }}
+                onPlayAgain={() => {}}
+                onExit={() => {}}
+              />
+            </Card>
+
+            <Card padding="none" className="overflow-hidden">
+              <GameNotReadyState activityName="Đấu Trường Vô Tri" />
+            </Card>
+          </div>
+        </Section>
       </div>
       <Toaster />
       <EditProfileSheet
@@ -374,6 +428,7 @@ export default function VoTriStyleGuidePage() {
         onOpenChange={setEditOpen}
         initial={{ displayName: DEMO_IDENTITY.displayName, tagline: DEMO_IDENTITY.tagline }}
       />
+      <ExitConfirmDialog open={gameExitOpen} onOpenChange={setGameExitOpen} onConfirmExit={() => setGameExitOpen(false)} />
     </div>
   );
 }

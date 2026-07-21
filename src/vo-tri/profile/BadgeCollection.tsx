@@ -1,12 +1,7 @@
 import { Lock } from "lucide-react";
 import { cn } from "@/vo-tri/lib/cn";
-import type { BadgeRarity, ProfileBadge } from "./types";
-
-const RARITY_RING: Record<BadgeRarity, string> = {
-  common: "border-vt-border",
-  rare: "border-vt-secondary shadow-vt-glow-secondary",
-  special: "border-vt-vip shadow-vt-glow-vip",
-};
+import { RARITY_RING } from "./badge-rarity";
+import type { ProfileBadge } from "./types";
 
 export function BadgeCollection({ badges }: { badges: ProfileBadge[] }) {
   return (

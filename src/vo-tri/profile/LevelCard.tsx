@@ -1,9 +1,9 @@
 import { Card, CardContent } from "@/vo-tri/ui/Card";
+import { ProgressBar } from "@/vo-tri/ui/ProgressBar";
 import type { LevelProgress } from "./types";
 
-/** Custom progress bar (gradient fill + glowing leading dot), not a default <progress>/browser bar — level-up is the single most "core game loop" moment on this page. */
 export function LevelCard({ progress }: { progress: LevelProgress }) {
-  const percent = Math.min(100, Math.round((progress.xp / progress.xpToNext) * 100));
+  const percent = Math.round((progress.xp / progress.xpToNext) * 100);
   const remaining = Math.max(0, progress.xpToNext - progress.xp);
 
   return (
@@ -19,14 +19,7 @@ export function LevelCard({ progress }: { progress: LevelProgress }) {
           </p>
         </div>
 
-        <div className="relative h-3 overflow-hidden rounded-vt-full bg-vt-surface">
-          <div
-            className="relative h-full rounded-vt-full bg-vt-gradient-brand transition-[width] duration-700 ease-out"
-            style={{ width: `${percent}%` }}
-          >
-            <span className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-vt-full bg-vt-secondary shadow-vt-glow-secondary" />
-          </div>
-        </div>
+        <ProgressBar percent={percent} />
 
         <p className="text-xs text-vt-text-secondary">
           Còn <span className="font-semibold text-vt-text-primary">{remaining} XP</span> nữa để lên Level {progress.level + 1}.

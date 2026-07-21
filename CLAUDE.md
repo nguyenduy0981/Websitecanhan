@@ -191,3 +191,34 @@ sessions don't re-litigate it from scratch.
   list with thousands of rows — fixed to `position: fixed`, offset to
   clear the mobile BottomNav and centered over the desktop content column
   (accounting for the Sidebar's width) rather than the full viewport.
+- **Prompt 08 — Gameplay Framework.** `src/vo-tri/game/`. The reusable
+  state machine (`GameFrame`: pre-game → playing ⇄ paused → result) every
+  future Activity's real minigame will plug into via a render-prop
+  (`children: (ctx: GameplayContext) => ReactNode`) — no specific
+  gameplay is implemented, per the prompt's own scope. Refactored first
+  (no behavior change, re-verified): extracted `ActivityStatGrid` out of
+  Explore's `ActivityDetailSheet` and `RARITY_RING` out of Profile's
+  `BadgeCollection` into shared modules, plus a generic `ProgressBar` out
+  of `LevelCard` — all three now reused by the new framework instead of
+  being reimplemented. Real route `/play/[activityId]` uses the actual
+  Explore catalog + `generateStaticParams`; a real RSC bug caught by
+  `next build` (not just typecheck): passing the full `Activity` object
+  (which carries a `LucideIcon` component reference) from the Server
+  Component page to the Client Component failed serialization — fixed by
+  passing only `activityId` and looking the activity up client-side from
+  the same catalog module. Same honest-data discipline as every prior
+  prompt: the real route's "Hoàn thành" outcome only ever uses the
+  Activity's own real `reward`/`xp` — never the coins/level-up/
+  achievement/quest extras, since nothing real computed those for an
+  actual session yet. The full rich `ResultScreen` (with all of those
+  extras) is demonstrated with fixture data on `/vo-tri-styleguide`,
+  alongside `GameHeader`, `ExitConfirmDialog`, and `GameNotReadyState`.
+  `RewardReveal` count-up is `requestAnimationFrame`-driven (the
+  displayed text itself changes, so CSS alone can't do it) and jumps
+  straight to the final value under `prefers-reduced-motion` instead of
+  animating. `playSound()` (`src/vo-tri/lib/sound.ts`) is a no-op today,
+  called from every reward/level-up/achievement/game-state-change moment
+  — wiring real audio later is a one-file change. Explore's
+  `ActivityDetailSheet` "Bắt đầu" now links to `/play/[id]` for every
+  non-check-in activity (previously a placeholder toast, since no
+  pre-game flow existed yet) — verified end-to-end, not just wired.

@@ -14,6 +14,13 @@ const eslintConfig = [
   {
     ignores: ["archive/**", ".next/**", "node_modules/**", "next-env.d.ts"],
   },
+  {
+    // Leading underscore is the standard "intentionally unused" signal
+    // (e.g. a stub function whose param exists only for its type).
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+    },
+  },
 ];
 
 export default eslintConfig;

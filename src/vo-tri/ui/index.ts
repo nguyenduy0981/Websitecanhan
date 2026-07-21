@@ -10,5 +10,6 @@ export { EmptyState, ErrorState, SuccessState } from "./StatePanel";
 export { Field, Input, Textarea, type InputProps, type TextareaProps } from "./Input";
 export { LoadingState } from "./LoadingState";
 export { Mascot, type MascotMood, type MascotSize } from "./Mascot";
+export { ProgressBar } from "./ProgressBar";
 export { Skeleton } from "./Skeleton";
 export { toast, Toaster, useToasts, type ToastData, type ToastVariant } from "./toast";
