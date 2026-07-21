@@ -1,4 +1,5 @@
 export { Badge, type BadgeProps } from "./Badge";
+export { ChipGroup, type ChipOption } from "./ChipGroup";
 export { BottomSheet, BottomSheetClose, BottomSheetContent, BottomSheetDescription, BottomSheetTitle, BottomSheetTrigger } from "./BottomSheet";
 export { Button, type ButtonProps } from "./Button";
 export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, type CardProps } from "./Card";

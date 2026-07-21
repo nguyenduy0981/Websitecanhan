@@ -168,3 +168,26 @@ sessions don't re-litigate it from scratch.
   disabled — an honest "not built yet," not a fake integration. lucide-
   react has no Facebook/X brand icons (dropped upstream), so those slots
   use generic share-shaped icons instead.
+- **Prompt 06 — Leaderboard.** `src/vo-tri/leaderboard/`. Refactored
+  Explore's `CategoryChips` into a generic `ChipGroup` (`src/vo-tri/ui/`)
+  reused by Leaderboard's `ScopeFilter` — same visual/behavioral output
+  for Explore, verified by re-running its full test pass, not just
+  eyeballed. Same honest-empty-state judgment as Profile: a real ranked
+  list is inherently multi-user data, so `/leaderboard` shows the genuine
+  "no one's played yet" state (a legitimate real product state, unlike
+  Profile — a leaderboard *can* honestly be empty), while
+  TopThreePodium/LeaderboardList/MyPositionCard/RankChangeIcon are fully
+  built and demonstrated with fixture data on `/vo-tri-styleguide`. Scope
+  filter (Toàn cầu/Bạn bè/Tuần/Tháng/Mùa giải) is fully real/interactive
+  today even though every scope currently resolves to the same empty
+  state — the architecture is real, only the backend behind it is
+  missing. `LeaderboardRow` has a fixed, memoized height
+  (`ROW_HEIGHT_PX`) specifically so a virtualized list (react-window/
+  virtua) can be dropped in later as a `LeaderboardList`-only change —
+  not added now since there's no real large dataset yet to justify the
+  dependency. Real bug caught by screenshot (not assumed): `MyPositionCard`
+  first used `position: sticky`, which only stays put within its own
+  containing block and would scroll away long before the bottom of a
+  list with thousands of rows — fixed to `position: fixed`, offset to
+  clear the mobile BottomNav and centered over the desktop content column
+  (accounting for the Sidebar's width) rather than the full viewport.

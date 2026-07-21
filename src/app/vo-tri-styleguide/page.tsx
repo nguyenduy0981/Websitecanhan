@@ -4,6 +4,14 @@ import { Crown, Medal, Palette, Shirt, Sparkles as SparklesIcon, Star, Target, T
 import { useState } from "react";
 import { voTriFontVariables } from "@/vo-tri/fonts";
 import {
+  LeaderboardHero,
+  LeaderboardList,
+  MyPositionCard,
+  RankChangeIcon,
+  TopThreePodium,
+  type LeaderboardPlayer,
+} from "@/vo-tri/leaderboard";
+import {
   AchievementSection,
   BadgeCollection,
   CollectionShowcase,
@@ -85,6 +93,16 @@ const DEMO_COLLECTION: CollectionItem[] = [
   { id: "c1", name: "Áo Vô Tri", kind: "skin", icon: Shirt, unlocked: true },
   { id: "c2", name: "Người Vô Tri Nhất", kind: "title", icon: SparklesIcon, unlocked: true },
   { id: "c3", name: "Bảng Màu Bí Ẩn", kind: "item", icon: Palette, unlocked: false },
+];
+
+// Fixture data for the Leaderboard Preview section — same fixture
+// convention as Profile above, not a real ranked player list.
+const DEMO_PLAYERS: LeaderboardPlayer[] = [
+  { id: "p1", rank: 1, previousRank: 2, name: "Bé Vô Tri", level: 12, points: 4820, badgeLabel: "Huyền thoại" },
+  { id: "p2", rank: 2, previousRank: 1, name: "Ông Kẹ", level: 11, points: 4510 },
+  { id: "p3", rank: 3, previousRank: 3, name: "Chị Đại", level: 10, points: 4200 },
+  { id: "p4", rank: 4, previousRank: 6, name: "Người Vô Danh", level: 9, points: 3890 },
+  { id: "p5", rank: 5, name: "Tân Binh Vui Vẻ", level: 8, points: 3650 },
 ];
 
 const COLOR_SWATCHES: { name: string; className: string }[] = [
@@ -323,6 +341,30 @@ export default function VoTriStyleGuidePage() {
             <JourneyTimeline events={[]} />
             <CollectionShowcase items={DEMO_COLLECTION} />
             <ShareProfile profileUrl="https://vo-tri.example/u/bevotri" />
+          </div>
+        </Section>
+
+        <Section title="Leaderboard (Prompt 06 — fixture data, not a real ranking)">
+          <div className="flex flex-col gap-6">
+            <LeaderboardHero myPosition={{ rank: 14, points: 2100, gapToNext: 340 }} />
+            <TopThreePodium players={DEMO_PLAYERS} />
+            <LeaderboardList players={DEMO_PLAYERS} />
+            <LeaderboardList players={[]} />
+            <div className="flex flex-wrap items-center gap-4 rounded-vt-lg border border-vt-border bg-vt-card p-4 text-sm text-vt-text-secondary">
+              <span className="flex items-center gap-1.5">
+                <RankChangeIcon change="up" /> Tăng hạng
+              </span>
+              <span className="flex items-center gap-1.5">
+                <RankChangeIcon change="down" /> Giảm hạng
+              </span>
+              <span className="flex items-center gap-1.5">
+                <RankChangeIcon change="same" /> Giữ nguyên
+              </span>
+              <span className="flex items-center gap-1.5">
+                <RankChangeIcon change="new" /> Mới lên bảng
+              </span>
+            </div>
+            <MyPositionCard myPosition={{ rank: 14, points: 2100, gapToNext: 340 }} />
           </div>
         </Section>
       </div>
