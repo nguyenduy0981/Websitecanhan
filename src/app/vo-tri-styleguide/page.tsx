@@ -1,7 +1,23 @@
 "use client";
 
+import { Crown, Medal, Palette, Shirt, Sparkles as SparklesIcon, Star, Target, Trophy } from "lucide-react";
 import { useState } from "react";
 import { voTriFontVariables } from "@/vo-tri/fonts";
+import {
+  AchievementSection,
+  BadgeCollection,
+  CollectionShowcase,
+  EditProfileSheet,
+  JourneyTimeline,
+  LevelCard,
+  ProfileHero,
+  ShareProfile,
+  StatCards,
+  type Achievement,
+  type CollectionItem,
+  type JourneyEvent,
+  type ProfileBadge,
+} from "@/vo-tri/profile";
 import {
   Badge,
   BottomSheet,
@@ -38,6 +54,39 @@ import {
 
 const MOODS: MascotMood[] = ["idle", "happy", "laughing", "thinking", "sleepy", "mindblown", "celebrating"];
 
+// Fixture data for the Profile Preview section below — component
+// reference fixtures (same role as every other example on this page),
+// not real user data. The actual /profile route never renders these;
+// it shows the honest logged-out state until real auth exists.
+const DEMO_IDENTITY = {
+  displayName: "Bé Vô Tri",
+  username: "bevotri",
+  tagline: "Chuyên gia làm việc không đâu vào đâu.",
+  joinedAt: new Date("2026-03-14"),
+  online: true,
+};
+const DEMO_ACHIEVEMENTS: Achievement[] = [
+  { id: "a1", name: "Tân Binh Vô Tri", description: "Hoàn thành hoạt động đầu tiên", icon: Star, unlockedAt: new Date() },
+  { id: "a2", name: "Chuỗi 7 Ngày", description: "Điểm danh 7 ngày liên tiếp", icon: Medal, unlockedAt: new Date() },
+];
+const DEMO_BADGES: ProfileBadge[] = [
+  { id: "b1", name: "Khởi Đầu", description: "Badge đầu tiên", icon: Star, rarity: "common", unlocked: true },
+  { id: "b2", name: "May Mắn", description: "Trúng thưởng lớn", icon: Trophy, rarity: "rare", unlocked: true },
+  { id: "b3", name: "Huyền Thoại", description: "Badge cực hiếm", icon: Crown, rarity: "special", unlocked: true },
+  { id: "b4", name: "Bí Ẩn", description: "Chưa mở khóa", icon: Target, rarity: "rare", unlocked: false },
+];
+const DEMO_JOURNEY: JourneyEvent[] = [
+  { id: "j1", type: "joined", label: "Gia nhập VÔ TRI", date: new Date("2026-03-14") },
+  { id: "j2", type: "level-up", label: "Lên Level 2", date: new Date("2026-03-16") },
+  { id: "j3", type: "achievement", label: "Mở khóa \"Chuỗi 7 Ngày\"", date: new Date("2026-03-21") },
+  { id: "j4", type: "reward", label: "Nhận phần thưởng Vòng Quay", date: new Date("2026-03-22") },
+];
+const DEMO_COLLECTION: CollectionItem[] = [
+  { id: "c1", name: "Áo Vô Tri", kind: "skin", icon: Shirt, unlocked: true },
+  { id: "c2", name: "Người Vô Tri Nhất", kind: "title", icon: SparklesIcon, unlocked: true },
+  { id: "c3", name: "Bảng Màu Bí Ẩn", kind: "item", icon: Palette, unlocked: false },
+];
+
 const COLOR_SWATCHES: { name: string; className: string }[] = [
   { name: "bg", className: "bg-vt-bg" },
   { name: "surface", className: "bg-vt-surface" },
@@ -65,6 +114,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function VoTriStyleGuidePage() {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   return (
     <div className={`${voTriFontVariables} min-h-screen bg-vt-bg font-vt-body text-vt-text-primary`}>
@@ -257,8 +307,31 @@ export default function VoTriStyleGuidePage() {
             </Card>
           </div>
         </Section>
+
+        <Section title="Profile (Prompt 05 — fixture data, not a real account)">
+          <div className="flex flex-col gap-6">
+            <ProfileHero identity={DEMO_IDENTITY} level={7} editable onEditAvatar={() => setEditOpen(true)} />
+            <Button variant="outline" size="sm" className="w-fit" onClick={() => setEditOpen(true)}>
+              Chỉnh sửa hồ sơ (Bottom Sheet trên mobile / Dialog trên desktop)
+            </Button>
+            <StatCards stats={{ points: 1240, level: 7, xp: 320, streakDays: 5, activeDays: 18, activitiesPlayed: 42 }} />
+            <LevelCard progress={{ level: 7, xp: 320, xpToNext: 500 }} />
+            <AchievementSection achievements={DEMO_ACHIEVEMENTS} />
+            <AchievementSection achievements={[]} />
+            <BadgeCollection badges={DEMO_BADGES} />
+            <JourneyTimeline events={DEMO_JOURNEY} />
+            <JourneyTimeline events={[]} />
+            <CollectionShowcase items={DEMO_COLLECTION} />
+            <ShareProfile profileUrl="https://vo-tri.example/u/bevotri" />
+          </div>
+        </Section>
       </div>
       <Toaster />
+      <EditProfileSheet
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        initial={{ displayName: DEMO_IDENTITY.displayName, tagline: DEMO_IDENTITY.tagline }}
+      />
     </div>
   );
 }

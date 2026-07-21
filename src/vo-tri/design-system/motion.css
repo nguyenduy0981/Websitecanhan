@@ -167,6 +167,16 @@
   animation: vt-float 3.2s var(--vt-ease-in-out) infinite;
 }
 
+/* spin-slow — ambient rotation for a decorative ring (e.g. avatar border). Transform-only, so it's exempt from CLS the same as everything else here. */
+@keyframes vt-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.vt-spin-slow {
+  animation: vt-spin-slow 6s linear infinite;
+}
+
 /* pulse-glow — ambient breathing glow ring for a primary CTA. Opacity +
    box-shadow only (box-shadow is layout-inert, unlike width/height). */
 @keyframes vt-pulse-glow {

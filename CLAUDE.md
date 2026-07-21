@@ -138,3 +138,33 @@ sessions don't re-litigate it from scratch.
   Playwright keyboard-tab test, not assumed. Search/filter are pure
   client-side state over the local catalog (no backend needed yet, per
   the prompt's own scope).
+- **Prompt 05 — Profile.** `src/vo-tri/profile/`. Judgment call worth
+  recording: Profile is fundamentally per-user data (avatar/level/
+  achievements/timeline all belong to one specific person), unlike
+  Home/Explore where individual sections could just hide when logged out.
+  There is no honest "browse Profile as guest" version — showing *any*
+  specific stats without a real logged-in user would be exactly the
+  fabricated data CLAUDE.md's rule forbids. Resolution: `/profile` (the
+  real route) shows the honest logged-out state only (mascot + "Đăng
+  nhập" CTA, same pattern as Header). Every rich component (ProfileHero,
+  ProfileAvatar, LevelCard, StatCards, AchievementSection, BadgeCollection,
+  JourneyTimeline, CollectionShowcase, EditProfileSheet, ShareProfile) is
+  fully built against real prop shapes and demonstrated live on
+  `/vo-tri-styleguide` with fixture data clearly commented as such — the
+  same fixture-data convention already used for every other styleguide
+  example, not a claim that a "Bé Vô Tri" account is real. Rank ladder
+  (`ranks.ts`, level → "Tân Binh"/"Kỳ Cựu"/"Cao Thủ"/"Huyền Thoại Vô Tri")
+  is a game-design rule like Explore's difficulty labels, safe to hardcode.
+  Badge rarity (`common`/`rare`/`special`) gets escalating visual treatment
+  (plain border → secondary glow → VIP-color glow) — the one deliberate,
+  narrow reuse of the VIP violet outside literal VIP/premium context,
+  because "special" *is* a premium/exclusive rarity tier by definition.
+  `EditProfileSheet` picks Dialog (desktop) vs BottomSheet (mobile) from
+  one `useMediaQuery` hook rather than maintaining two components, with a
+  live-updating preview and real validation (empty-name error), verified
+  interactively via Playwright (not just visually). `ShareProfile`'s
+  copy-link button is genuinely functional today (`navigator.clipboard`,
+  no backend needed); the social-platform buttons are visibly present but
+  disabled — an honest "not built yet," not a fake integration. lucide-
+  react has no Facebook/X brand icons (dropped upstream), so those slots
+  use generic share-shaped icons instead.
