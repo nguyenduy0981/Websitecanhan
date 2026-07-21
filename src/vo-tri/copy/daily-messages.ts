@@ -5,6 +5,8 @@
  * this for a real DB/API-backed daily message later only means changing
  * the body of `getDailyMessage`; every call site stays the same.
  */
+import { dayOfYear } from "@/vo-tri/lib/date";
+
 const DAILY_MESSAGES = [
   "Hôm nay là một ngày tốt để không làm gì có ích.",
   "Cảnh báo: mức độ nghiêm túc trong này rất thấp.",
@@ -19,12 +21,6 @@ const DAILY_MESSAGES = [
   "Hôm nay thích hợp để thử một trò gì đó mới.",
   "Không ai bắt bạn phải nghiêm túc ở đây.",
 ] as const;
-
-function dayOfYear(date: Date): number {
-  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
-  const diff = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) - start;
-  return Math.floor(diff / 86_400_000);
-}
 
 export function getDailyMessage(date: Date = new Date()): string {
   const index = dayOfYear(date) % DAILY_MESSAGES.length;

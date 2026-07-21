@@ -120,3 +120,21 @@ sessions don't re-litigate it from scratch.
   `CommunityStats`), not stubs; per CLAUDE.md's no-fabricated-data rule,
   the feature-preview and social-proof sections show an honest on-brand
   empty state today rather than fake activity/numbers.
+- **Prompt 04 — Explore.** `src/vo-tri/explore/`. Key judgment call: the
+  activity catalog (`activities.ts` — name/reward/XP/difficulty/time/
+  limits) is real authored product content, not the "fabricated data"
+  CLAUDE.md's rule targets — that rule is about fake *social/usage*
+  signals (fake online counts, fake "X just did Y" feed items), and
+  nothing on an activity card claims a real play count or another user's
+  real action. Featured Activity + Daily Picks reuse Home's day-seed
+  pattern over this real catalog (an honest "editorial rotation" today,
+  swappable for real engagement ranking later) — see the comment atop
+  `activities.ts`. Continue Playing renders nothing given `items={[]}`
+  (no play-history backend yet), same pattern as Home's TodayCard. Coming
+  Soon cards never show a fake ship date — tapping one just reiterates
+  "đang xây dựng" via toast. Category chips are plain buttons in normal
+  tab order rather than a hand-rolled ARIA `tablist`/roving-tabindex —
+  correct native Tab/Enter behavior for free, verified by an actual
+  Playwright keyboard-tab test, not assumed. Search/filter are pure
+  client-side state over the local catalog (no backend needed yet, per
+  the prompt's own scope).
