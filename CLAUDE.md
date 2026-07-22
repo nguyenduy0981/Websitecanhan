@@ -317,3 +317,28 @@ sessions don't re-litigate it from scratch.
   sweep (390/1024/1440 across all 5 real routes) found zero horizontal
   overflow; full keyboard Tab-order walk on Home confirmed logical order
   (skip link → logo → notification → login → sidebar nav → hero CTA).
+- **Autonomous audit round — CI was completely broken; added real E2E
+  tests.** The single highest-impact finding of any audit round so far:
+  `.github/workflows/ci.yml` was still a 100%-unmodified LoveBox relic —
+  it spun up a live Postgres service, ran `npx prisma migrate deploy`
+  (Prisma was deleted with LoveBox), and called `npm run test`/`npm run
+  test:integration`, neither of which exist in this package.json. CI has
+  been failing on every single push since the LoveBox purge; nobody
+  would have noticed from the repo alone since GitHub Actions status
+  isn't visible in a local session unless checked. Rewritten to what
+  this project actually is: install → lint → typecheck → build → E2E.
+  Also used the opportunity to actually stand up the E2E suite: `npm i
+  @playwright/test` had *already* been sitting in `package.json` since
+  the LoveBox era with zero config/tests — dead weight, not a new cost
+  decision. Added `playwright.config.ts` (points at the sandbox's
+  pre-installed Chromium only when that path exists, so it's a no-op
+  override in real CI) and `tests/e2e/{navigation,accessibility,explore,
+  play-flow}.spec.ts` covering exactly the golden paths this project has
+  been manually re-verifying every round via throwaway scratch scripts:
+  responsive overflow across breakpoints, the skip-link + dialog-focus-
+  return a11y checks, Explore search/filter, and the one real gameplay
+  completion flow — including a permanent regression test for the dead-
+  login-button bug from the prior round. `npm run test:e2e` builds+serves
+  a real production build before testing (not `next dev`), so CI tests
+  the same artifact that would actually ship. Also removed a matching
+  dead `# prisma` / `/prisma/dev.db` line from `.gitignore`.

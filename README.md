@@ -24,6 +24,7 @@ npm run dev
 npm run lint
 npm run typecheck
 npm run build
+npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
 ```
 
 ## Environment variables
@@ -55,6 +56,9 @@ npm run build
 - `docs/VO_TRI_DESIGN_BIBLE.md` — brand + design system documentation.
 - `docs/VO_TRI_ARCHITECTURE.md` — folder structure, component inventory,
   routing map, motion/responsive guidelines.
+- `tests/e2e/` — Playwright E2E suite (navigation, accessibility, Explore
+  search/filter, the real gameplay flow). Runs in CI (`.github/workflows/ci.yml`)
+  on every push against a real production build.
 
 No backend yet — this is front-end only (design system, shell, Home,
 Explore, Profile, Leaderboard, Gameplay Framework, Social Foundation) until
