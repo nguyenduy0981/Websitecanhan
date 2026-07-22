@@ -4,6 +4,7 @@ import { Crown, Medal, Palette, Shirt, Sparkles as SparklesIcon, Star, Target, T
 import { useState } from "react";
 import { activities } from "@/vo-tri/explore/activities";
 import { voTriFontVariables } from "@/vo-tri/fonts";
+import { TodayCard } from "@/vo-tri/home/TodayCard";
 import {
   ExitConfirmDialog,
   GameHeader,
@@ -48,6 +49,20 @@ import {
   type JourneyEvent,
   type ProfileBadge,
 } from "@/vo-tri/profile";
+import {
+  ClaimRewardDialog,
+  getDailyQuests,
+  getMilestonesForMetric,
+  milestones,
+  MilestoneTrack,
+  QuestList,
+  StreakTracker,
+  weeklyGoals,
+  type ClaimResult,
+  type QuestDefinition,
+  type QuestProgress,
+  type StreakData,
+} from "@/vo-tri/retention";
 import {
   Badge,
   BottomSheet,
@@ -122,12 +137,38 @@ const DEMO_JOURNEY: JourneyEvent[] = [
   { id: "j2", type: "level-up", label: "Lên Level 2", date: new Date("2026-03-16") },
   { id: "j3", type: "achievement", label: "Mở khóa \"Chuỗi 7 Ngày\"", date: new Date("2026-03-21") },
   { id: "j4", type: "reward", label: "Nhận phần thưởng Vòng Quay", date: new Date("2026-03-22") },
+  { id: "j5", type: "quest", label: "Hoàn thành nhiệm vụ \"Chơi 2 hoạt động\"", date: new Date("2026-03-23") },
+  { id: "j6", type: "streak", label: "Streak lên 5 ngày liên tiếp", date: new Date("2026-03-24") },
+  { id: "j7", type: "milestone", label: "Đạt cột mốc \"Kiên Trì\" (streak 7 ngày)", date: new Date("2026-03-26") },
 ];
 const DEMO_COLLECTION: CollectionItem[] = [
   { id: "c1", name: "Áo Vô Tri", kind: "skin", icon: Shirt, unlocked: true },
   { id: "c2", name: "Người Vô Tri Nhất", kind: "title", icon: SparklesIcon, unlocked: true },
   { id: "c3", name: "Bảng Màu Bí Ẩn", kind: "item", icon: Palette, unlocked: false },
 ];
+
+// Fixture data for the Retention System section — same fixture
+// convention as everywhere else on this page, not real per-user progress.
+const DEMO_STREAK: StreakData = {
+  currentStreak: 5,
+  longestStreak: 12,
+  last7Days: [true, true, false, true, true, true, true],
+};
+// Covers both constant dailies + every bonus-pool id, since which bonus
+// shows up is day-seeded (see retention/quests.ts) — this way the demo
+// looks complete regardless of which day it's viewed on.
+const DEMO_DAILY_PROGRESS: Record<string, QuestProgress> = {
+  "daily-check-in": { questId: "daily-check-in", current: 1, claimed: true },
+  "daily-play-two": { questId: "daily-play-two", current: 2, claimed: false },
+  "daily-earn-points": { questId: "daily-earn-points", current: 30, claimed: false },
+  "daily-try-new": { questId: "daily-try-new", current: 0, claimed: false },
+  "daily-react": { questId: "daily-react", current: 1, claimed: false },
+};
+const DEMO_WEEKLY_PROGRESS: Record<string, QuestProgress> = {
+  "weekly-play-ten": { questId: "weekly-play-ten", current: 6, claimed: false },
+  "weekly-streak": { questId: "weekly-streak", current: 7, claimed: false },
+  "weekly-earn-points": { questId: "weekly-earn-points", current: 180, claimed: false },
+};
 
 // Fixture data for the Leaderboard Preview section — same fixture
 // convention as Profile above, not a real ranked player list.
@@ -196,6 +237,22 @@ export default function VoTriStyleGuidePage() {
   const [demoReaction, setDemoReaction] = useState<string | undefined>("thich");
   const [demoFollowing, setDemoFollowing] = useState(false);
   const [demoComments, setDemoComments] = useState(DEMO_COMMENTS);
+  const [demoQuestProgress, setDemoQuestProgress] = useState(DEMO_DAILY_PROGRESS);
+  const [claimState, setClaimState] = useState<{ quest: QuestDefinition; result: ClaimResult } | null>(null);
+
+  function handleClaimQuest(quest: QuestDefinition) {
+    // Demonstrated on "daily-play-two" specifically so the full
+    // celebration composition (level-up + milestone together) shows at
+    // least once, same as every other "show every branch" demo on this page.
+    const result: ClaimResult = {
+      points: quest.reward,
+      xp: quest.xp,
+      leveledUp: quest.id === "daily-play-two" ? { newLevel: 8 } : undefined,
+      milestoneReached: quest.id === "daily-play-two" ? milestones.find((m) => m.id === "streak-7") : undefined,
+    };
+    setClaimState({ quest, result });
+    setDemoQuestProgress((prev) => ({ ...prev, [quest.id]: { questId: quest.id, current: quest.target, claimed: true } }));
+  }
 
   return (
     <div className={`${voTriFontVariables} min-h-screen bg-vt-bg font-vt-body text-vt-text-primary`}>
@@ -470,6 +527,56 @@ export default function VoTriStyleGuidePage() {
             <CollectionShowcase items={DEMO_COLLECTION} />
             <ShareProfile profileUrl="https://vo-tri.example/u/bevotri" />
           </div>
+        </Section>
+
+        <Section title="Retention System (fixture data — Daily Quest/Weekly Goal/Streak/Milestone/Claim flow)">
+          <div className="flex flex-col gap-6">
+            <div>
+              <h3 className="mb-3 font-vt-display text-sm font-semibold text-vt-text-primary">
+                TodayCard — Home&apos;s compact glance card (streak embedded)
+              </h3>
+              <TodayCard
+                stats={{ pointsToday: 45, level: 7, xp: 320, xpToNextLevel: 500, streak: DEMO_STREAK, questTitle: "3 nhiệm vụ đang chờ bên dưới" }}
+              />
+            </div>
+
+            <div>
+              <h3 className="mb-3 font-vt-display text-sm font-semibold text-vt-text-primary">
+                Nhiệm vụ hằng ngày — có tiến độ thật (đăng nhập)
+              </h3>
+              <QuestList quests={getDailyQuests()} progressByQuestId={demoQuestProgress} onClaim={handleClaimQuest} />
+            </div>
+
+            <div>
+              <h3 className="mb-3 font-vt-display text-sm font-semibold text-vt-text-primary">
+                Nhiệm vụ hằng ngày — chưa đăng nhập (honest, không giả lập tiến độ)
+              </h3>
+              <QuestList quests={getDailyQuests()} />
+            </div>
+
+            <div>
+              <h3 className="mb-3 font-vt-display text-sm font-semibold text-vt-text-primary">Mục tiêu trong tuần</h3>
+              <QuestList quests={weeklyGoals} progressByQuestId={DEMO_WEEKLY_PROGRESS} />
+            </div>
+
+            <div>
+              <h3 className="mb-3 font-vt-display text-sm font-semibold text-vt-text-primary">Chuỗi ngày (Streak)</h3>
+              <StreakTracker streak={DEMO_STREAK} />
+            </div>
+
+            <MilestoneTrack title="Cột mốc Streak" milestones={getMilestonesForMetric("streak")} current={DEMO_STREAK.currentStreak} />
+            <MilestoneTrack title="Cột mốc Hoạt động đã chơi" milestones={getMilestonesForMetric("activitiesPlayed")} current={42} />
+            <MilestoneTrack title="Cột mốc (chưa đăng nhập)" milestones={getMilestonesForMetric("streak")} />
+          </div>
+
+          {claimState && (
+            <ClaimRewardDialog
+              open={!!claimState}
+              onOpenChange={(open) => !open && setClaimState(null)}
+              quest={claimState.quest}
+              result={claimState.result}
+            />
+          )}
         </Section>
 
         <Section title="Leaderboard (Prompt 06 — fixture data, not a real ranking)">

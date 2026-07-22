@@ -4,7 +4,12 @@ import { TrendingUp } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { playSound } from "@/vo-tri/lib/sound";
 
-/** "Animation nhẹ, không phô trương" — a compact banner (vt-scale-in), not a full-screen takeover. */
+/**
+ * "Animation nhẹ, không phô trương" — a compact banner (vt-scale-in), not
+ * a full-screen takeover. Generic celebration primitive: used by the
+ * Gameplay Framework's ResultScreen and the Retention System's claim
+ * moment, hence living in ui/ rather than game/.
+ */
 export function LevelUpBanner({ newLevel }: { newLevel: number }) {
   const played = useRef(false);
   useEffect(() => {

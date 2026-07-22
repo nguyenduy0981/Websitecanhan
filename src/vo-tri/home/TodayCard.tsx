@@ -1,14 +1,16 @@
-import { Flame, Sparkles, Trophy } from "lucide-react";
+import { Sparkles, Trophy } from "lucide-react";
 import { Badge } from "@/vo-tri/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/vo-tri/ui/Card";
 import { ProgressBar } from "@/vo-tri/ui/ProgressBar";
+import { StreakTracker } from "@/vo-tri/retention/StreakTracker";
+import type { StreakData } from "@/vo-tri/retention/types";
 
 export interface TodayStats {
   pointsToday: number;
   level: number;
   xp: number;
   xpToNextLevel: number;
-  streakDays: number;
+  streak: StreakData;
   questTitle?: string;
 }
 
@@ -31,10 +33,7 @@ export function TodayCard({ stats }: { stats: TodayStats }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-vt-text-secondary">
-          <Flame className="h-4 w-4 text-vt-warning" />
-          Streak {stats.streakDays} ngày liên tiếp
-        </div>
+        <StreakTracker streak={stats.streak} compact />
 
         {stats.questTitle && (
           <div className="flex items-center gap-2 rounded-vt-md border border-vt-border bg-vt-surface p-3 text-sm">

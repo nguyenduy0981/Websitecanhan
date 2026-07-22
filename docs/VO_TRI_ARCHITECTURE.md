@@ -19,11 +19,12 @@ src/vo-tri/ui/            Generic, domain-agnostic primitives (Button, Card,
                           files — call sites shouldn't know internal layout.
 src/vo-tri/shell/          AppShell + Header/Sidebar/BottomNav/Container — the
                           one wrapper every route mounts inside.
-src/vo-tri/{home,explore,profile,leaderboard,game,social}/
+src/vo-tri/{home,explore,profile,leaderboard,game,social,retention}/
                           One folder per feature domain. Each has its own
                           `types.ts` and an `index.ts` barrel (game/social/
-                          explore/profile/leaderboard; home has no barrel yet
-                          since Home is the only consumer of its parts).
+                          explore/profile/leaderboard/retention; home has no
+                          barrel yet since Home is the only consumer of its
+                          parts).
 src/vo-tri/copy/           Central Vietnamese microcopy (never hand-write UI
                           strings per screen — extend microcopy.ts instead).
 src/vo-tri/lib/            Small framework-agnostic helpers/hooks (cn, date,
@@ -37,11 +38,19 @@ domains → `ui/` or `lib/`; specific to one feature → that feature's own
 folder; brand-wide constant (color, spacing, motion timing) → `design-system/`
 + `tailwind.config.ts`, never hardcoded in a component.
 
+**Recurring RSC gotcha** (hit twice now — `/play/[activityId]` in Prompt 08,
+`retention/DailyQuestPreview` in Prompt 11): any catalog item carrying a
+`LucideIcon` component reference (`Activity.icon`, `QuestDefinition.icon`,
+...) cannot cross the Server→Client boundary, even wrapped in a Client
+Component's props. The fix is always the same — don't compute the catalog
+server-side and pass it down; give the Client Component zero props and have
+it `import` the same catalog module and look the data up itself.
+
 ## 2. Routing map
 
 | Route | Purpose | Data today |
 |---|---|---|
-| `/` | Home — hero, daily message, quick access, activity spotlight, community pulse | No session yet → always logged-out branch |
+| `/` | Home — hero, daily message, quick access, daily quest preview, activity spotlight, community pulse | No session yet → always logged-out branch. Daily Quest catalog is real and always visible (like Explore's Daily Picks); per-user progress stays honestly absent |
 | `/explore` | Activity catalog — search/filter/detail sheet | Real static catalog (`explore/activities.ts`) |
 | `/profile` | Own profile | No auth yet → honest logged-out state only |
 | `/leaderboard` | Rankings | No backend yet → honest empty state |
@@ -60,11 +69,15 @@ Explore activity). All four read the real activity catalog or
 
 ## 3. Component inventory
 
-**`ui/` (generic primitives)** — Avatar, Background, Badge, BottomSheet,
-Button, Card, ChipGroup, ContextMenu, Dialog + DialogPresets (Confirm/Error/
-Success/Reward), Input/Textarea/Field, LoadingState, Mascot, ProgressBar,
-Skeleton, SmoothAnchorLink, StatePanel presets (Empty/Error/Success/Offline/
-Retry/Permission/Maintenance), Tooltip, Toast/Toaster.
+**`ui/` (generic primitives)** — AchievementUnlockCard, Avatar, Background,
+Badge, BottomSheet, Button, Card, ChipGroup, ContextMenu, Dialog +
+DialogPresets (Confirm/Error/Success/Reward), Input/Textarea/Field,
+LevelUpBanner, LoadingState, Mascot, ProgressBar, RewardReveal, Skeleton,
+SmoothAnchorLink, StatePanel presets (Empty/Error/Success/Offline/Retry/
+Permission/Maintenance), Tooltip, Toast/Toaster. `RewardReveal`/
+`LevelUpBanner`/`AchievementUnlockCard` moved here from `game/` (Prompt 11) —
+domain-agnostic celebration primitives now shared by `game/ResultScreen` and
+`retention/ClaimRewardDialog`.
 
 **`shell/`** — AppShell (mounts once from `src/app/layout.tsx`), Header,
 Sidebar, BottomNav, Container, NotificationBell, OfflineWatcher.
@@ -85,12 +98,22 @@ MyPositionCard, RankChangeIcon, ScopeFilter (built on `ui/ChipGroup`).
 
 **`game/`** — GameFrame (the state machine: pre-game → playing ⇄ paused →
 result, driven by a render-prop), GameHeader, PreGameScreen, PausedOverlay,
-ExitConfirmDialog, ResultScreen, RewardReveal, LevelUpBanner,
-AchievementUnlockCard, GameNotReadyState.
+ExitConfirmDialog, ResultScreen, GameNotReadyState.
 
 **`social/`** — SocialCard, ReactionBar, CommentSection/Item/Composer,
 ShareSheet, UserPreviewCard, FollowButton, FeedItemCard, ActivityFeed,
 NotificationCenter.
+
+**`retention/`** — QuestCard/QuestList (Daily Quest + Weekly Goal, same
+component parameterized by `cadence` rather than two near-duplicates),
+DailyQuestPreview (client wrapper Home uses — see the RSC note below),
+StreakTracker (flame + 7-day dot strip, `compact` mode embeds inside
+`home/TodayCard`), MilestoneTrack (ordered ladder over one metric —
+`streak` or `activitiesPlayed`; deliberately not `level`, since
+`profile/ranks.ts` already covers that), MilestoneBanner + ClaimRewardDialog
+(the reward-claim/celebration moment, composing `ui/RewardReveal` +
+`ui/LevelUpBanner` + `MilestoneBanner` in one Dialog — the same celebration
+vocabulary `game/ResultScreen` uses for finishing an Activity).
 
 Every component above is demonstrated on `/vo-tri-styleguide` with fixture
 data — that page is the living proof a component renders correctly, check it

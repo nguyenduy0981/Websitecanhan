@@ -58,6 +58,12 @@ function RewardPill({
   );
 }
 
+/**
+ * Generic "you just earned X" reveal — used by the Gameplay Framework's
+ * ResultScreen AND the Retention System's quest/goal claim moment. Lives
+ * in ui/ (not game/) because it's a domain-agnostic celebration
+ * primitive, not something specific to gameplay.
+ */
 export function RewardReveal({ points, xp, coins }: { points: number; xp: number; coins?: number }) {
   const played = useRef(false);
   useEffect(() => {

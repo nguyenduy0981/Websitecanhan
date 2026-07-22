@@ -1,9 +1,9 @@
 import { RotateCcw } from "lucide-react";
-import { Mascot } from "@/vo-tri/ui/Mascot";
+import { AchievementUnlockCard } from "@/vo-tri/ui/AchievementUnlockCard";
 import { Button } from "@/vo-tri/ui/Button";
-import { AchievementUnlockCard } from "./AchievementUnlockCard";
-import { LevelUpBanner } from "./LevelUpBanner";
-import { RewardReveal } from "./RewardReveal";
+import { LevelUpBanner } from "@/vo-tri/ui/LevelUpBanner";
+import { Mascot } from "@/vo-tri/ui/Mascot";
+import { RewardReveal } from "@/vo-tri/ui/RewardReveal";
 import type { GameOutcome } from "./types";
 
 /**

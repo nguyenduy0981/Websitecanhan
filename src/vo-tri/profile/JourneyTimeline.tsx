@@ -1,4 +1,4 @@
-import { Gift, LogIn, Trophy, TrendingUp } from "lucide-react";
+import { Flag, Flame, Gift, LogIn, Target, Trophy, TrendingUp } from "lucide-react";
 import { Mascot } from "@/vo-tri/ui/Mascot";
 import { cn } from "@/vo-tri/lib/cn";
 import type { JourneyEvent, JourneyEventType } from "./types";
@@ -8,6 +8,9 @@ const EVENT_ICON: Record<JourneyEventType, typeof LogIn> = {
   "level-up": TrendingUp,
   achievement: Trophy,
   reward: Gift,
+  quest: Target,
+  milestone: Flag,
+  streak: Flame,
 };
 
 const EVENT_TONE: Record<JourneyEventType, string> = {
@@ -15,6 +18,9 @@ const EVENT_TONE: Record<JourneyEventType, string> = {
   "level-up": "bg-vt-xp/15 text-vt-xp",
   achievement: "bg-vt-reward/15 text-vt-reward",
   reward: "bg-vt-primary/15 text-vt-primary",
+  quest: "bg-vt-secondary/15 text-vt-secondary",
+  milestone: "bg-vt-reward/15 text-vt-reward",
+  streak: "bg-vt-warning/15 text-vt-warning",
 };
 
 export function JourneyTimeline({ events }: { events: JourneyEvent[] }) {

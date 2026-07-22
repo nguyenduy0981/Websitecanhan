@@ -43,7 +43,7 @@ export interface ProfileBadge {
   unlocked: boolean;
 }
 
-export type JourneyEventType = "joined" | "level-up" | "achievement" | "reward";
+export type JourneyEventType = "joined" | "level-up" | "achievement" | "reward" | "quest" | "milestone" | "streak";
 
 export interface JourneyEvent {
   id: string;

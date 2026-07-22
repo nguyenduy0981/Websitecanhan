@@ -13,7 +13,13 @@ export interface UnlockedAchievement {
   rarity: BadgeRarity;
 }
 
-/** Same rarity → visual-treatment mapping as Profile's BadgeCollection (common/rare/special) — reused, not reinvented, so a badge looks the same whether you see it unlock here or browse it later on your profile. */
+/**
+ * Same rarity → visual-treatment mapping as Profile's BadgeCollection
+ * (common/rare/special) — reused, not reinvented, so a badge looks the
+ * same whether you see it unlock here or browse it later on your
+ * profile. Generic celebration primitive (Gameplay Framework +
+ * Retention System both use it), hence living in ui/ rather than game/.
+ */
 export function AchievementUnlockCard({ achievement }: { achievement: UnlockedAchievement }) {
   const played = useRef(false);
   useEffect(() => {

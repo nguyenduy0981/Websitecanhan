@@ -1,3 +1,4 @@
+export { AchievementUnlockCard, type UnlockedAchievement } from "./AchievementUnlockCard";
 export { Avatar } from "./Avatar";
 export { Badge, type BadgeProps } from "./Badge";
 export { ChipGroup, type ChipOption } from "./ChipGroup";
@@ -22,9 +23,11 @@ export {
 } from "./ContextMenu";
 export { EmptyState, ErrorState, MaintenanceState, OfflineState, PermissionState, RetryState, SuccessState } from "./StatePanel";
 export { Field, Input, Textarea, type InputProps, type TextareaProps } from "./Input";
+export { LevelUpBanner } from "./LevelUpBanner";
 export { LoadingState } from "./LoadingState";
 export { Mascot, type MascotMood, type MascotSize } from "./Mascot";
 export { ProgressBar } from "./ProgressBar";
+export { RewardReveal } from "./RewardReveal";
 export { Skeleton } from "./Skeleton";
 export { SmoothAnchorLink } from "./SmoothAnchorLink";
 export { toast, Toaster, useToasts, type ToastData, type ToastVariant } from "./toast";

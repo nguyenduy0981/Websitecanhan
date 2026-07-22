@@ -5,6 +5,7 @@ import { CommunityPulse } from "@/vo-tri/home/CommunityPulse";
 import { HeroScene } from "@/vo-tri/home/HeroScene";
 import { QuickAccess } from "@/vo-tri/home/QuickAccess";
 import { TodayCard, type TodayStats } from "@/vo-tri/home/TodayCard";
+import { DailyQuestPreview } from "@/vo-tri/retention";
 import { Container } from "@/vo-tri/shell";
 import type { VoTriUser } from "@/vo-tri/shell/types";
 import { Badge, Button, Mascot, SmoothAnchorLink } from "@/vo-tri/ui";
@@ -52,6 +53,16 @@ export default function HomePage() {
         <QuickAccess />
 
         {currentUser && <TodayCard stats={currentUser.stats} />}
+
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">
+              Nhiệm vụ hôm nay
+            </h2>
+            <p className="mt-0.5 text-sm text-vt-text-secondary">Ghé làm vài nhiệm vụ, kiếm điểm dễ như ăn kẹo.</p>
+          </div>
+          <DailyQuestPreview />
+        </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="px-1 font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">

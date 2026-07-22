@@ -342,3 +342,51 @@ sessions don't re-litigate it from scratch.
   a real production build before testing (not `next dev`), so CI tests
   the same artifact that would actually ship. Also removed a matching
   dead `# prisma` / `/prisma/dev.db` line from `.gitignore`.
+- **Prompt 11 — Retention System.** `src/vo-tri/retention/`. Full audit
+  before building: `game/` already had `RewardReveal`/`LevelUpBanner`/
+  `AchievementUnlockCard` (generic celebration primitives) and
+  `GameOutcome.questCompleted` (a quest hook that was never built out),
+  and `profile/` already had `LevelCard`/`JourneyTimeline`/
+  `CollectionShowcase`/`StatCards.streakDays` — so this prompt's real job
+  was filling the gap between them (Daily Quest, Weekly Goal, Streak
+  tracker, Milestone ladder, the claim/celebration flow), not rebuilding
+  what already existed. Refactored first, no behavior change: moved
+  `RewardReveal`/`LevelUpBanner`/`AchievementUnlockCard` from `game/` to
+  `ui/`, since they're domain-agnostic and now used by both `game/`
+  (ResultScreen, unchanged) and the new `retention/` (claim dialog) —
+  re-verified `next build` + the full E2E suite pass identically after
+  the move. Milestones deliberately track only `streak`/`activitiesPlayed`
+  metrics, not level — Profile's rank ladder (`ranks.ts`) already covers
+  level thresholds, and a second level-based ladder under a different
+  name would just be the same information twice. Two real RSC bugs
+  caught by `next build` (not typecheck), same class of bug as
+  `/play/[activityId]`'s from Prompt 08: (1) `QuestCard`'s claim button
+  needed `"use client"` since Home (a Server Component) renders it; (2)
+  `QuestDefinition.icon` is a `LucideIcon` reference that still can't
+  cross the Server→Client boundary even through a Client Component, so
+  `DailyQuestPreview` (new, `"use client"`, zero props) looks up
+  `getDailyQuests()` itself instead of Home computing it and passing the
+  result down — exact same "look it up client-side from the same
+  importable module" fix as `PlayClient`. Quest/milestone *definitions*
+  are real authored game-design catalog content (`quests.ts`,
+  `milestones.ts`), same status as Explore's activity catalog — not the
+  fabricated *data* CLAUDE.md's rule targets. Real *progress* on them is
+  a different story: Home's new "Nhiệm vụ hôm nay" section is always
+  visible (the catalog itself is safe to show anyone, like Explore's
+  Daily Picks) but every `QuestCard` renders an honest "Đăng nhập để theo
+  dõi tiến độ" line instead of a fabricated progress bar whenever
+  `progress` is absent — which is always, today. `TodayCard`'s old plain
+  "Streak N ngày" text line was refactored to embed the new
+  `StreakTracker` in compact mode — still gated behind the same
+  `currentUser &&` check as before (never renders on the real route
+  today), but the fixture demo on `/vo-tri-styleguide` is now the richer
+  version. `ClaimRewardDialog` composes `RewardReveal` + optional
+  `LevelUpBanner` + the new `MilestoneBanner` in one Dialog — claiming a
+  quest is deliberately built from the exact same celebration vocabulary
+  as finishing an Activity in `ResultScreen`, not a second unrelated
+  pattern. `JourneyEventType` gained `quest`/`milestone`/`streak` variants
+  (icons/tones added to `JourneyTimeline`) and `SoundEvent` gained
+  `quest-claim`/`milestone-reached` — both additive, no existing call
+  site needed changes. Added `tests/e2e/retention.spec.ts` (Home's
+  honest logged-out quest state + the full claim-dialog flow) to the
+  Prompt-10 E2E suite; full suite (13 tests) passes.
