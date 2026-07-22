@@ -277,3 +277,23 @@ sessions don't re-litigate it from scratch.
   smoothly only on that specific click, falls back to instant under
   `prefers-reduced-motion`). Radix/vaul's automatic focus-return-to-trigger
   on Dialog/BottomSheet close needed no new code, only verification.
+- **Autonomous audit round — SEO/production-readiness.** No new prompt
+  number; a self-directed audit (per the standing "find weaknesses,
+  prioritize, execute" operating mode) found and fixed a real bug:
+  `/vo-tri-styleguide` had been documented everywhere as "noindex" since
+  Prompt 01, but nothing actually enforced it — the page is a Client
+  Component and can't export `metadata`, so no `noindex` tag ever
+  rendered. Fixed with a co-located `layout.tsx` (Server Component,
+  `robots: { index: false }`) plus a real `robots.ts` disallowing the
+  route as a second layer. Added the other file-convention SEO routes
+  that were simply missing: `icon.tsx`/`apple-icon.tsx` (generated via
+  `next/og` `ImageResponse`, redrawing the real Mascot's gradient+eyes
+  language rather than an unrelated placeholder), `opengraph-image.tsx`
+  (shared social card — brand background/gradient/wordmark/tagline, no
+  fabricated stats), `sitemap.ts` (static routes + one entry per real
+  Explore activity). `/play/[activityId]` gained its own
+  `generateMetadata` using the real activity's name/description instead
+  of inheriting the generic root title. `lib/site.ts` centralizes
+  `SITE_URL` from `NEXT_PUBLIC_SITE_URL` with a `localhost` fallback —
+  deliberately not a guessed production domain, since none exists yet;
+  documented in README's new "Environment variables" section.

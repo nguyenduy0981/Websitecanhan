@@ -45,11 +45,18 @@ folder; brand-wide constant (color, spacing, motion timing) → `design-system/`
 | `/explore` | Activity catalog — search/filter/detail sheet | Real static catalog (`explore/activities.ts`) |
 | `/profile` | Own profile | No auth yet → honest logged-out state only |
 | `/leaderboard` | Rankings | No backend yet → honest empty state |
-| `/play/[activityId]` | Real per-activity gameplay flow (`generateStaticParams` over the Explore catalog) | Real catalog lookup, no persisted results |
-| `/vo-tri-styleguide` | Internal, `noindex` — every component demoed with clearly-commented FIXTURE data | Fixture only, never real |
+| `/play/[activityId]` | Real per-activity gameplay flow (`generateStaticParams` over the Explore catalog) | Real catalog lookup, no persisted results — has its own `generateMetadata` (real activity name/description) |
+| `/vo-tri-styleguide` | Internal, `noindex` — every component demoed with clearly-commented FIXTURE data | Fixture only, never real. Noindex is enforced by its own `layout.tsx` (the page itself is a Client Component and can't export `metadata`) plus `robots.ts` |
 
 All routes are plain path segments (no route groups, no parallel/intercepting
 routes) — every one is a real, deep-linkable URL today.
+
+File-convention routes (no manual wiring needed): `icon.tsx`/`apple-icon.tsx`
+(on-brand generated favicon, matches the real Mascot's gradient + eyes),
+`opengraph-image.tsx` (shared social-share card, no fabricated stats on
+it), `robots.ts`, `sitemap.ts` (static routes + one entry per real
+Explore activity). All four read the real activity catalog or
+`lib/site.ts`'s `SITE_URL` — nothing hardcoded or guessed.
 
 ## 3. Component inventory
 
