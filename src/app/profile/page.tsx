@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Container } from "@/vo-tri/shell";
-import { Button, Mascot } from "@/vo-tri/ui";
+import { Container, LoginButton } from "@/vo-tri/shell";
+import { Mascot } from "@/vo-tri/ui";
 
 export const metadata: Metadata = {
   title: "Hồ Sơ — VÔ TRI",
@@ -26,9 +26,7 @@ export default function ProfilePage() {
           Đăng nhập để có avatar, level, huy hiệu và cả một hành trình vô tri của riêng bạn.
         </p>
       </div>
-      <Button variant="primary" size="lg">
-        Đăng nhập
-      </Button>
+      <LoginButton size="lg" />
     </Container>
   );
 }

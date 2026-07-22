@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import { notReadyCopy } from "@/vo-tri/copy/microcopy";
 import { toast } from "@/vo-tri/ui/toast";
 import type { ComingSoonActivity } from "./types";
 
@@ -9,9 +10,7 @@ export function ComingSoonCard({ activity }: { activity: ComingSoonActivity }) {
   return (
     <button
       type="button"
-      onClick={() =>
-        toast({ variant: "info", title: "Đang được xây dựng...", description: "Ghé lại sau nhé, sắp có rồi." })
-      }
+      onClick={() => toast({ variant: "info", ...notReadyCopy.comingSoon })}
       className="vt-interactive group relative flex w-full flex-col gap-3 overflow-hidden rounded-vt-lg border border-dashed border-vt-border bg-vt-surface/60 p-4 text-left"
     >
       <div className="flex items-start justify-between">

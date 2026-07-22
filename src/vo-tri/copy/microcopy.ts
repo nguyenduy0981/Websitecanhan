@@ -81,6 +81,18 @@ export const maintenanceCopy = {
   description: "Bọn mình đang chỉnh sửa vài thứ phía sau hậu trường. Quay lại sau nhé.",
 };
 
+// Shared "this doesn't exist yet, and here's an honest reason" toast copy —
+// used anywhere a real feature (auth, a not-yet-built activity, ...) is
+// tapped before its backend exists, so the wording stays consistent
+// instead of each call site inventing its own.
+export const notReadyCopy = {
+  comingSoon: { title: "Đang được xây dựng...", description: "Ghé lại sau nhé, sắp có rồi." },
+  auth: {
+    title: "Đăng nhập chưa có ở đây",
+    description: "Bọn mình đang xây hệ thống tài khoản thật. Quay lại sau nhé.",
+  },
+};
+
 export const successCopy = {
   generic: {
     title: "Xong xuôi!",

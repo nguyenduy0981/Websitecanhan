@@ -6,6 +6,7 @@ import { BottomNav } from "./BottomNav";
 import { Header } from "./Header";
 import { OfflineWatcher } from "./OfflineWatcher";
 import { Sidebar } from "./Sidebar";
+import { SkipLink } from "./SkipLink";
 import type { VoTriUser } from "./types";
 
 /**
@@ -18,10 +19,13 @@ import type { VoTriUser } from "./types";
 export function AppShell({ children, user }: { children: ReactNode; user?: VoTriUser }) {
   return (
     <TooltipProvider delayDuration={200}>
+      <SkipLink />
       <Background />
       <Header user={user} />
       <Sidebar />
-      <main className="min-h-screen pb-28 pt-20 md:pl-60 md:pb-10">{children}</main>
+      <main id="main-content" tabIndex={-1} className="min-h-screen pb-28 pt-20 outline-none md:pl-60 md:pb-10">
+        {children}
+      </main>
       <BottomNav />
       <Toaster />
       <OfflineWatcher />

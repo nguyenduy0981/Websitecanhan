@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/vo-tri/ui/Avatar";
 import { Badge } from "@/vo-tri/ui/Badge";
-import { Button } from "@/vo-tri/ui/Button";
 import { Mascot } from "@/vo-tri/ui/Mascot";
 import { cn } from "@/vo-tri/lib/cn";
 import type { VoTriUser } from "./types";
+import { LoginButton } from "./LoginButton";
 import { NotificationBell } from "./NotificationBell";
 
 const SCROLL_THRESHOLD = 24;
@@ -61,9 +61,7 @@ export function Header({ user }: { user?: VoTriUser }) {
         ) : (
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <Button size="sm" variant="primary">
-              Đăng nhập
-            </Button>
+            <LoginButton size="sm" />
           </div>
         )}
       </div>

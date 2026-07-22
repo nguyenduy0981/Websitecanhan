@@ -297,3 +297,23 @@ sessions don't re-litigate it from scratch.
   `SITE_URL` from `NEXT_PUBLIC_SITE_URL` with a `localhost` fallback —
   deliberately not a guessed production domain, since none exists yet;
   documented in README's new "Environment variables" section.
+- **Autonomous audit round — a11y + dead-CTA fixes.** No new prompt
+  number. Two more real bugs found and fixed: (1) no skip-to-content
+  link existed anywhere (WCAG 2.4.1 Bypass Blocks) — a keyboard/
+  screen-reader user had to tab through the entire Header + Sidebar on
+  every single page before reaching content; fixed with `shell/
+  SkipLink.tsx` (first Tab stop, visually hidden until focused) + `main
+  id="main-content" tabIndex={-1}` in `AppShell`, verified via Playwright
+  keyboard test (Tab → Enter lands focus on `#main-content`). (2) the
+  "Đăng nhập" button in both `Header` and `/profile` had no `onClick` at
+  all — the two most prominent CTAs a logged-out visitor sees did
+  literally nothing when clicked, worse than Explore's honest "Coming
+  Soon" pattern. Fixed by extracting a shared `shell/LoginButton.tsx`
+  (the two instances were >80% identical, consolidated per the "hai
+  component giống nhau thì hợp nhất" rule) that fires an honest "chưa
+  xây auth thật" toast, reusing `ComingSoonCard`'s same pattern —
+  centralized both into a new `notReadyCopy` block in `microcopy.ts`
+  instead of each call site inventing its own string. Full responsive
+  sweep (390/1024/1440 across all 5 real routes) found zero horizontal
+  overflow; full keyboard Tab-order walk on Home confirmed logical order
+  (skip link → logo → notification → login → sidebar nav → hero CTA).
