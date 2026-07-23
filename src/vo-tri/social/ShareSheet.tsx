@@ -44,9 +44,10 @@ export function ShareSheet({ title, description, url }: { title: string; descrip
             type="button"
             disabled
             title={`${c.label} — sắp có`}
+            aria-label={`Chia sẻ qua ${c.label} — sắp có`}
             className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-vt-full border border-vt-border text-vt-text-secondary opacity-40"
           >
-            <c.icon className="h-4 w-4" />
+            <c.icon className="h-4 w-4" aria-hidden />
           </button>
         ))}
         <Button variant="outline" onClick={handleCopy}>
