@@ -1,4 +1,5 @@
-import { Pause, Play, X } from "lucide-react";
+import { Flame, Pause, Play, X } from "lucide-react";
+import { cn } from "@/vo-tri/lib/cn";
 import { ProgressBar } from "@/vo-tri/ui/ProgressBar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/vo-tri/ui/Tooltip";
 
@@ -10,10 +11,13 @@ function formatTime(totalSeconds: number): string {
 
 /**
  * The one in-game HUD every future Activity shares — title, exit, pause,
- * progress, timer, score. Timer/score/progress are each independently
- * optional (`undefined` hides the row) since not every Activity needs
- * all three — a memory-card game might not need a running score, a
- * reflex game might not need a progress bar.
+ * progress, timer, combo, score. All of the stat row entries are
+ * independently optional (`undefined` hides that one) since not every
+ * Activity needs all of them — a memory-card game might not need a
+ * running score, a reflex game might not need a progress bar.
+ * `remainingSeconds` (countdown) takes over the timer slot from
+ * `elapsedSeconds` (count-up) when the Engine's `rules.timeLimitSeconds`
+ * is set — GameFrame only ever passes one of the two.
  */
 export function GameHeader({
   title,
@@ -22,6 +26,8 @@ export function GameHeader({
   onResume,
   onExit,
   elapsedSeconds,
+  remainingSeconds,
+  combo,
   score,
   progress,
 }: {
@@ -31,9 +37,14 @@ export function GameHeader({
   onResume: () => void;
   onExit: () => void;
   elapsedSeconds?: number;
+  remainingSeconds?: number;
+  combo?: number;
   score?: number;
   progress?: number;
 }) {
+  const timeValue = remainingSeconds ?? elapsedSeconds;
+  const isLowTime = remainingSeconds !== undefined && remainingSeconds <= 10;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
@@ -72,9 +83,16 @@ export function GameHeader({
 
       {progress !== undefined && <ProgressBar percent={progress} />}
 
-      {(elapsedSeconds !== undefined || score !== undefined) && (
+      {(timeValue !== undefined || combo !== undefined || score !== undefined) && (
         <div className="flex items-center justify-between text-sm text-vt-text-secondary">
-          {elapsedSeconds !== undefined && <span>⏱ {formatTime(elapsedSeconds)}</span>}
+          {timeValue !== undefined && (
+            <span className={cn(isLowTime && "font-semibold text-vt-danger")}>⏱ {formatTime(timeValue)}</span>
+          )}
+          {combo !== undefined && combo > 0 && (
+            <span className="flex items-center gap-1 font-semibold text-vt-warning">
+              <Flame className="h-4 w-4" /> Combo x{combo}
+            </span>
+          )}
           {score !== undefined && (
             <span>
               Điểm: <span className="font-semibold text-vt-text-primary">{score}</span>

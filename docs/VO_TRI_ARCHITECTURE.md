@@ -1,8 +1,10 @@
 # VÔ TRI — Architecture, Component Inventory & Routing
 
 Companion to `docs/VO_TRI_DESIGN_BIBLE.md` (that file explains brand/visual
-*why*; this file is the map of *where things live* for a newcomer). Kept
-deliberately short — it's an index, not a tutorial.
+*why*; this file is the map of *where things live* for a newcomer) and
+`docs/VO_TRI_GAMEPLAY_ENGINE.md` (the full lifecycle/state-flow/extension-point
+reference for `src/vo-tri/game/` specifically). Kept deliberately short —
+it's an index, not a tutorial.
 
 ## 1. Folder structure
 
@@ -96,9 +98,12 @@ EditProfileSheet, ShareProfile (wraps `social/ShareSheet`).
 **`leaderboard/`** — LeaderboardHero, TopThreePodium, LeaderboardRow/List,
 MyPositionCard, RankChangeIcon, ScopeFilter (built on `ui/ChipGroup`).
 
-**`game/`** — GameFrame (the state machine: pre-game → playing ⇄ paused →
-result, driven by a render-prop), GameHeader, PreGameScreen, PausedOverlay,
-ExitConfirmDialog, ResultScreen, GameNotReadyState.
+**`game/`** — the Gameplay Engine. Full reference: `docs/VO_TRI_GAMEPLAY_ENGINE.md`.
+GameFrame (the engine: pre-game → countdown(opt-in) → playing ⇄ paused →
+result, driven by a render-prop + optional `ActivityRules`), CountdownOverlay,
+GameHeader, PreGameScreen, PausedOverlay, ExitConfirmDialog, ResultScreen
+(kind-aware: win/lose/complete/timeout/abandoned), GameNotReadyState,
+scoring.ts (DEFAULT_SCORING — difficulty + combo multiplier formula).
 
 **`social/`** — SocialCard, ReactionBar, CommentSection/Item/Composer,
 ShareSheet, UserPreviewCard, FollowButton, FeedItemCard, ActivityFeed,

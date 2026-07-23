@@ -6,6 +6,7 @@ import { activities } from "@/vo-tri/explore/activities";
 import { voTriFontVariables } from "@/vo-tri/fonts";
 import { TodayCard } from "@/vo-tri/home/TodayCard";
 import {
+  CountdownOverlay,
   ExitConfirmDialog,
   GameHeader,
   GameNotReadyState,
@@ -233,6 +234,7 @@ export default function VoTriStyleGuidePage() {
   const [loading, setLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [gameExitOpen, setGameExitOpen] = useState(false);
+  const [showCountdownDemo, setShowCountdownDemo] = useState(true);
   const demoActivity = activities[0]!;
   const [demoReaction, setDemoReaction] = useState<string | undefined>("thich");
   const [demoFollowing, setDemoFollowing] = useState(false);
@@ -621,24 +623,79 @@ export default function VoTriStyleGuidePage() {
                 progress={60}
               />
             </Card>
+            <p className="text-xs text-vt-text-secondary">Timer đếm xuống (còn 8s — chuyển màu cảnh báo) + combo (Engine mới)</p>
+            <Card padding="none" className="overflow-hidden p-4">
+              <GameHeader
+                title={demoActivity.name}
+                paused={false}
+                onPause={() => {}}
+                onResume={() => {}}
+                onExit={() => setGameExitOpen(true)}
+                remainingSeconds={8}
+                combo={5}
+                score={140}
+                progress={80}
+              />
+            </Card>
             <Button variant="outline" size="sm" className="w-fit" onClick={() => setGameExitOpen(true)}>
               Mở Exit Confirm Dialog
             </Button>
 
+            <p className="text-xs text-vt-text-secondary">Countdown Overlay (Engine mới — nhấn để bỏ qua)</p>
+            {showCountdownDemo ? (
+              <div className="relative h-40 overflow-hidden rounded-vt-xl border border-vt-border bg-vt-card">
+                <CountdownOverlay seconds={3} onFinish={() => setShowCountdownDemo(false)} />
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="w-fit" onClick={() => setShowCountdownDemo(true)}>
+                Xem lại Countdown
+              </Button>
+            )}
+
+            <p className="text-xs text-vt-text-secondary">Result Pipeline — 5 ResultKind, cùng một ngôn ngữ thiết kế</p>
             <Card padding="none" className="overflow-hidden p-6">
               <ResultScreen
                 activityName={demoActivity.name}
                 outcome={{
+                  kind: "win",
                   points: demoActivity.reward,
                   xp: demoActivity.xp,
                   coins: 5,
+                  comboMax: 8,
                   questCompleted: { name: "Chơi 3 hoạt động trong ngày" },
                   leveledUp: { newLevel: 8 },
                   achievementUnlocked: { name: "Tân Binh Vô Tri", description: "Hoàn thành hoạt động đầu tiên", icon: Star, rarity: "rare" },
+                  stats: { attempts: 3, bestScore: 140, durationSeconds: 52 },
                 }}
                 onPlayAgain={() => {}}
                 onExit={() => {}}
               />
+            </Card>
+            <Card padding="none" className="overflow-hidden p-6">
+              <ResultScreen
+                activityName={demoActivity.name}
+                outcome={{ kind: "complete", points: demoActivity.reward, xp: demoActivity.xp }}
+                onExit={() => {}}
+              />
+            </Card>
+            <Card padding="none" className="overflow-hidden p-6">
+              <ResultScreen
+                activityName={demoActivity.name}
+                outcome={{ kind: "lose", points: 20, xp: 5, stats: { attempts: 2, bestScore: 45, durationSeconds: 30 } }}
+                onPlayAgain={() => {}}
+                onExit={() => {}}
+              />
+            </Card>
+            <Card padding="none" className="overflow-hidden p-6">
+              <ResultScreen
+                activityName={demoActivity.name}
+                outcome={{ kind: "timeout", points: 35, xp: 8 }}
+                onPlayAgain={() => {}}
+                onExit={() => {}}
+              />
+            </Card>
+            <Card padding="none" className="overflow-hidden p-6">
+              <ResultScreen activityName={demoActivity.name} outcome={{ kind: "abandoned", points: 0, xp: 0 }} onExit={() => {}} />
             </Card>
 
             <Card padding="none" className="overflow-hidden">

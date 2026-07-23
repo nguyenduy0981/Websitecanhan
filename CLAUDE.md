@@ -390,3 +390,47 @@ sessions don't re-litigate it from scratch.
   site needed changes. Added `tests/e2e/retention.spec.ts` (Home's
   honest logged-out quest state + the full claim-dialog flow) to the
   Prompt-10 E2E suite; full suite (13 tests) passes.
+- **Prompt 12 — Gameplay Engine.** `src/vo-tri/game/`. Full reference:
+  `docs/VO_TRI_GAMEPLAY_ENGINE.md`. Turned the Prompt-08 framework (a
+  bare pre-game→playing⇄paused→result state machine) into a real engine:
+  Timer Engine (count-up unchanged by default; declaring
+  `rules.timeLimitSeconds` switches the same clock to count down and
+  auto-fires a `"timeout"` result at 0 — no second interval, just
+  `remainingSeconds = timeLimitSeconds - elapsedSeconds`), Scoring +
+  Combo (`scoring.ts`'s `DEFAULT_SCORING` = basePoints × difficulty
+  multiplier × combo multiplier — the first real behavior tied to the
+  Activity catalog's `difficulty` field, previously cosmetic only),
+  auto-win on `rules.targetScore`, an opt-in Countdown stage
+  (`CountdownOverlay`, skippable, reduced-motion-aware), a Statistics
+  Pipeline (`SessionStats`: attempts/bestScore/duration, client-only,
+  resets on reload — honest, not fabricated), and an analytics no-op
+  hook (`lib/analytics.ts`, same pattern as `lib/sound.ts`). Result
+  Pipeline standardized: `GameOutcome` gained a `kind` discriminant
+  (`win`/`lose`/`complete`/`timeout`/`abandoned`); `ResultScreen` renders
+  all five through the *same* composition (mood/heading/copy from the
+  new `resultCopy` in `microcopy.ts`, CTA emphasis flips to "Chơi lại"
+  for the two retry-worthy kinds: `lose`/`timeout`) rather than five
+  different screens. Refactored first, no behavior change: the
+  Retention-System-era move of `RewardReveal`/`LevelUpBanner`/
+  `AchievementUnlockCard` into `ui/` is exactly what let `ResultScreen`
+  and the new Engine share one celebration vocabulary without a new
+  dependency direction. Every `ActivityRules` field defaults to *off* —
+  the one real Activity today (`/play/[activityId]`'s placeholder body)
+  declares none of the timer/countdown/target-score rules, so its
+  already-tested flow (`tests/e2e/play-flow.spec.ts`) is byte-identical
+  post-rewrite; it does opt into `comboEnabled: true` and now uses
+  `ctx.addScore`/`ctx.registerHit`/`ctx.lose` for real, provable
+  end-to-end (not just a styleguide fixture) — verified via a new
+  `tests/e2e/play-flow.spec.ts` case asserting combo accumulates and
+  shows on a real `lose` result. Deliberately did *not* route the
+  existing exit-confirm flow through `ResultScreen`'s new `"abandoned"`
+  kind — that would change already-shipped, already-tested behavior for
+  no real UX gain (most games just exit on quit, no "you quit" screen);
+  the kind exists in the type system for an Activity that wants it, the
+  generic flow doesn't use it. Countdown is deliberately *not* wired into
+  the real route either: `GameHeader` stays visible through `countdown`
+  (so Thoát/Pause work immediately, matching the tested flow), but the
+  countdown overlay would visually cover the demo body's own action
+  buttons, so proving it out stays on `/vo-tri-styleguide` until a real
+  timed minigame exists to justify enabling it live. All 13 pre-existing
+  E2E tests plus 1 new one (14 total) pass unchanged after the rewrite.

@@ -103,6 +103,17 @@ export const successCopy = {
   published: { title: "Lên sóng rồi đó!" },
 };
 
+// The Gameplay Engine's Result Pipeline — one entry per ResultKind so
+// every Activity's win/lose/complete/timeout/abandoned screen pulls
+// from the same five lines instead of each game inventing its own.
+export const resultCopy = {
+  win: { title: "Chiến thắng!", description: "Bạn vừa chơi một ván xuất sắc." },
+  complete: { title: "Xong xuôi!", description: "Bạn vừa hoàn thành" },
+  lose: { title: "Chưa thắng lần này", description: "Không sao, thử lại xem sao." },
+  timeout: { title: "Hết giờ!", description: "Nhanh tay hơn ở lần sau nhé." },
+  abandoned: { title: "Đã thoát", description: "Bạn đã rời khỏi giữa chừng." },
+};
+
 // Default titles a <Toast variant="..."/> falls back to when the caller
 // doesn't pass one — a caller can always override with a specific message.
 export const toastDefaultTitle: Record<"success" | "danger" | "warning" | "info", string> = {
