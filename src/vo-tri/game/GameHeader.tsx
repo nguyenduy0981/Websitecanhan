@@ -90,7 +90,7 @@ export function GameHeader({
           )}
           {combo !== undefined && combo > 0 && (
             <span className="flex items-center gap-1 font-semibold text-vt-warning">
-              <Flame className="h-4 w-4" /> Combo x{combo}
+              <Flame className="h-4 w-4" aria-hidden /> Combo x{combo}
             </span>
           )}
           {score !== undefined && (

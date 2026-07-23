@@ -52,7 +52,7 @@ it `import` the same catalog module and look the data up itself.
 
 | Route | Purpose | Data today |
 |---|---|---|
-| `/` | Home — hero, daily message, quick access, daily quest preview, activity spotlight, community pulse | No session yet → always logged-out branch. Daily Quest catalog is real and always visible (like Explore's Daily Picks); per-user progress stays honestly absent |
+| `/` | Home — hero, daily message, quick access, daily quest preview, activity spotlight, community pulse, activity feed | No session yet → always logged-out branch. Daily Quest catalog is real and always visible (like Explore's Daily Picks); per-user progress and the activity feed stay honestly absent |
 | `/explore` | Activity catalog — search/filter/detail sheet | Real static catalog (`explore/activities.ts`) |
 | `/profile` | Own profile | No auth yet → honest logged-out state only |
 | `/leaderboard` | Rankings | No backend yet → honest empty state |
@@ -68,6 +68,15 @@ File-convention routes (no manual wiring needed): `icon.tsx`/`apple-icon.tsx`
 it), `robots.ts`, `sitemap.ts` (static routes + one entry per real
 Explore activity). All four read the real activity catalog or
 `lib/site.ts`'s `SITE_URL` — nothing hardcoded or guessed.
+
+`error.tsx` catches a thrown error anywhere below the root layout and
+renders it through the brand's `ErrorState`. `global-error.tsx` is the
+separate fallback for the rarer case where the root layout itself throws
+(a different Next.js convention — `error.tsx` cannot catch that, since it
+renders *inside* the layout it would need to replace); it renders its own
+minimal `<html>/<body>` with inline styles matching the real design
+tokens and deliberately skips `AppShell`/context providers, since those
+are exactly what may have just failed.
 
 ## 3. Component inventory
 
@@ -107,7 +116,13 @@ scoring.ts (DEFAULT_SCORING — difficulty + combo multiplier formula).
 
 **`social/`** — SocialCard, ReactionBar, CommentSection/Item/Composer,
 ShareSheet, UserPreviewCard, FollowButton, FeedItemCard, ActivityFeed,
-NotificationCenter.
+NotificationCenter. `ActivityFeed` is wired into Home ("Cộng đồng đang làm
+gì", real route, `items={[]}` today — the honest empty state, same
+discipline as `DailyQuestPreview`); `NotificationCenter` backs the real
+Header bell. `CommentSection`/`ShareSheet`/`UserPreviewCard`/`FollowButton`
+remain demonstrated with fixture data on `/vo-tri-styleguide` only — there
+is no real comment thread, share target, or followable profile yet for
+any of them to attach to honestly.
 
 **`retention/`** — QuestCard/QuestList (Daily Quest + Weekly Goal, same
 component parameterized by `cadence` rather than two near-duplicates),

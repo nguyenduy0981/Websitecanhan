@@ -37,9 +37,15 @@ export function StreakTracker({ streak, compact = false }: { streak: StreakData;
                   isToday && "ring-2 ring-vt-secondary ring-offset-2 ring-offset-vt-card",
                 )}
               >
-                {active ? <Flame className="h-3.5 w-3.5" /> : ""}
+                {active ? <Flame className="h-3.5 w-3.5" aria-hidden /> : ""}
+                <span className="sr-only">
+                  {dayLabel}
+                  {isToday && " (hôm nay)"}: {active ? "đã hoạt động" : "chưa hoạt động"}
+                </span>
               </span>
-              <span className="text-[10px] text-vt-text-secondary">{dayLabel}</span>
+              <span aria-hidden className="text-[10px] text-vt-text-secondary">
+                {dayLabel}
+              </span>
             </div>
           );
         })}

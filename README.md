@@ -24,6 +24,7 @@ npm run dev
 ```bash
 npm run lint
 npm run typecheck
+npm run test       # Vitest — pure logic (scoring, catalogs, small lib helpers)
 npm run build
 npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
 ```
@@ -51,15 +52,23 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
   component inventory.
 - `src/app/` — Next.js App Router routes/layout, plus `icon.tsx`/
   `apple-icon.tsx`/`opengraph-image.tsx` (dynamically generated, on-brand)
-  and `robots.ts`/`sitemap.ts`. `/vo-tri-styleguide` is an internal
-  (noindex, enforced via its own `layout.tsx`) living reference for every
-  primitive above.
+  and `robots.ts`/`sitemap.ts`. `error.tsx` catches per-route errors in the
+  brand's `ErrorState`; `global-error.tsx` is the deliberately separate
+  fallback for the rarer case where the root layout itself throws — it
+  renders its own minimal `<html>/<body>` (no `AppShell`/providers, since
+  those are exactly what may have failed) with inline styles matching the
+  real design tokens. `/vo-tri-styleguide` is an internal (noindex,
+  enforced via its own `layout.tsx`) living reference for every primitive
+  above.
 - `docs/VO_TRI_DESIGN_BIBLE.md` — brand + design system documentation.
 - `docs/VO_TRI_ARCHITECTURE.md` — folder structure, component inventory,
   routing map, motion/responsive guidelines.
 - `tests/e2e/` — Playwright E2E suite (navigation, accessibility, Explore
   search/filter, the real gameplay flow). Runs in CI (`.github/workflows/ci.yml`)
   on every push against a real production build.
+- `src/**/*.test.ts` — Vitest unit tests for pure logic (scoring formula,
+  quest/milestone catalogs, rank ladder, date/time helpers), colocated
+  next to the file they test. Runs in CI alongside the E2E suite.
 
 No backend yet — this is front-end only (design system, shell, Home,
 Explore, Profile, Leaderboard, Gameplay Framework, Social Foundation) until

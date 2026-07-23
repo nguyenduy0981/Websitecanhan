@@ -434,3 +434,46 @@ sessions don't re-litigate it from scratch.
   buttons, so proving it out stays on `/vo-tri-styleguide` until a real
   timed minigame exists to justify enabling it live. All 13 pre-existing
   E2E tests plus 1 new one (14 total) pass unchanged after the rewrite.
+- **Autonomous audit round — unit tests, accessibility, error-boundary
+  gap, and the last unwired Social component.** No new prompt number; a
+  self-directed pass per the standing "audit the whole project, find the
+  biggest remaining gap, decide what's highest-value" instruction, since
+  Retention System and Gameplay Engine had both just closed out their own
+  scopes. Four real gaps found and fixed: (1) the project had zero unit
+  tests — only E2E — so every pure-logic function (scoring formula, quest/
+  milestone catalog rotation, rank-ladder boundaries, `dayOfYear`/
+  `timeAgo`/`cn` helpers) was only ever exercised indirectly through full
+  browser E2E runs; added Vitest (`vitest.config.ts`, 7 files, 30 tests,
+  colocated as `src/**/*.test.ts`) and wired it into CI between Typecheck
+  and Build. (2) `StreakTracker` and `MilestoneTrack` both conveyed their
+  real state (active/inactive day; reached/next/locked/not-logged-in
+  milestone) purely through color + icon shape, with no text alternative
+  — a screen-reader user got nothing from either component. Fixed both
+  with `aria-hidden` on the decorative icon plus a `sr-only` span stating
+  the day label and activity status (StreakTracker) or the milestone title
+  and status (MilestoneTrack); `GameHeader`'s combo flame icon got the
+  same `aria-hidden` treatment since the adjacent text already carries the
+  information (deliberately did *not* add `aria-live` to the timer/combo/
+  score row — those tick every second during play, and an AT announcement
+  on every tick is the specific anti-pattern accessibility guidance warns
+  against for countdown timers, not a gap). (3) `error.tsx` only catches
+  errors thrown *below* the root layout — a crash in `layout.tsx` itself
+  (font loading, `AppShell`) would have fallen through to Next's generic
+  unstyled error screen, since only `global-error.tsx` (a separate file
+  convention) can catch that. Added it: its own minimal `<html>/<body>`,
+  reusing `errorCopy.generic` from the microcopy dictionary but with raw
+  inline styles (not Tailwind classes, not `AppShell`) matching the real
+  design tokens by hex, since this fallback exists precisely for the case
+  where more of the normal stack has failed. (4) Prompt 09 built
+  `ActivityFeed` but never wired it into a real route — every other Social
+  Foundation piece either backs something real (`NotificationCenter` →
+  Header's bell) or has an honest reason to stay fixture-only
+  (`CommentSection`/`ShareSheet`/`FollowButton` all need a real thread/
+  profile/target to attach to); `ActivityFeed` had neither excuse, it's a
+  standalone list that can honestly render empty. Wired into Home as a new
+  "Cộng đồng đang làm gì" section with `items={[]}` — the same honest-
+  empty-state pattern as `DailyQuestPreview` — verified via screenshots at
+  390/1440px (no overflow, matches existing section rhythm) and a new
+  `tests/e2e/social.spec.ts`. Full verification: `tsc`, lint, `vitest run`
+  (30/30), `next build`, and the full Playwright suite (now 15 tests) all
+  green.

@@ -30,6 +30,8 @@ export function MilestoneTrack({
             const reached = current !== undefined && current >= milestone.threshold;
             const isNext = current !== undefined && !reached && (i === 0 || current >= milestones[i - 1]!.threshold);
             const Icon = milestone.icon;
+            const statusLabel =
+              current === undefined ? "Cần đăng nhập để xem tiến độ" : reached ? "Đã đạt" : isNext ? "Đang hướng tới" : "Chưa mở khóa";
 
             return (
               <div key={milestone.id} className="flex shrink-0 flex-col items-center gap-2 text-center" style={{ width: 92 }}>
@@ -44,12 +46,15 @@ export function MilestoneTrack({
                   )}
                 >
                   {reached ? (
-                    <Check className="h-5 w-5" />
+                    <Check className="h-5 w-5" aria-hidden />
                   ) : current === undefined ? (
-                    <Lock className="h-4 w-4" />
+                    <Lock className="h-4 w-4" aria-hidden />
                   ) : (
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-5 w-5" aria-hidden />
                   )}
+                  <span className="sr-only">
+                    {milestone.title}: {statusLabel}
+                  </span>
                 </span>
                 <div>
                   <p className="text-xs font-semibold text-vt-text-primary">{milestone.title}</p>

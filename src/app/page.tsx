@@ -8,6 +8,7 @@ import { TodayCard, type TodayStats } from "@/vo-tri/home/TodayCard";
 import { DailyQuestPreview } from "@/vo-tri/retention";
 import { Container } from "@/vo-tri/shell";
 import type { VoTriUser } from "@/vo-tri/shell/types";
+import { ActivityFeed } from "@/vo-tri/social";
 import { Badge, Button, Mascot, SmoothAnchorLink } from "@/vo-tri/ui";
 
 // No session yet — Home always renders the logged-out path (no TodayCard).
@@ -72,6 +73,13 @@ export default function HomePage() {
         </section>
 
         <CommunityPulse />
+
+        <section className="flex flex-col gap-3">
+          <h2 className="px-1 font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">
+            Cộng đồng đang làm gì
+          </h2>
+          <ActivityFeed items={[]} />
+        </section>
       </Container>
     </>
   );
