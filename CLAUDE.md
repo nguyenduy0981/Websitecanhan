@@ -477,3 +477,24 @@ sessions don't re-litigate it from scratch.
   `tests/e2e/social.spec.ts`. Full verification: `tsc`, lint, `vitest run`
   (30/30), `next build`, and the full Playwright suite (now 15 tests) all
   green.
+- **Autonomous audit round — PWA installability.** No new prompt number.
+  The app had no `manifest.ts`, meaning "Add to Home Screen" on mobile
+  fell back to a generic browser-chrome icon/name instead of the real
+  brand — a real gap toward feeling like a shippable product rather than
+  a browser tab, and doable with zero backend. Added `manifest.ts`
+  (name/theme_color/background_color pulled from the real design tokens,
+  not guessed hex) plus `icon192/route.tsx` and `icon512/route.tsx` —
+  plain Route Handlers with `dynamic = "force-static"` (confirmed via
+  `next build` output moving from `ƒ` to `○`) rather than the `icon.tsx`
+  file convention, since that convention owns exactly one size per file
+  and a manifest needs multiple explicit sizes. Also added a `viewport`
+  export to `layout.tsx` (Next 15 moved `themeColor`/`colorScheme` out of
+  `metadata`) so mobile browser chrome renders in the brand's dark
+  surface color instead of a default light strip — verified via a live
+  server (`curl` on `/manifest.webmanifest`, `/icon192`, `/icon512`, and
+  grepping Home's rendered HTML for the `<link rel="manifest">` and
+  `<meta name="theme-color">` tags) and visually by rendering the 512px
+  icon. Added a permanent regression test (`tests/e2e/navigation.spec.ts`)
+  asserting the manifest is valid JSON, both icon URLs resolve, and the
+  real tags are present. Full verification: `tsc`, lint, `next build` all
+  green.

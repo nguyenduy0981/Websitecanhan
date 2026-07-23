@@ -52,7 +52,11 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
   component inventory.
 - `src/app/` — Next.js App Router routes/layout, plus `icon.tsx`/
   `apple-icon.tsx`/`opengraph-image.tsx` (dynamically generated, on-brand)
-  and `robots.ts`/`sitemap.ts`. `error.tsx` catches per-route errors in the
+  and `robots.ts`/`sitemap.ts`. `manifest.ts` (PWA install manifest,
+  `icon192`/`icon512` route handlers for its larger icon sizes) plus a
+  `viewport` export in `layout.tsx` (dark `theme-color` matching `--vt-bg`)
+  make the site installable and give mobile browser chrome the right
+  color — no backend needed for either. `error.tsx` catches per-route errors in the
   brand's `ErrorState`; `global-error.tsx` is the deliberately separate
   fallback for the rarer case where the root layout itself throws — it
   renders its own minimal `<html>/<body>` (no `AppShell`/providers, since

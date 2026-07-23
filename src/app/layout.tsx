@@ -1,8 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { voTriFontVariables } from "@/vo-tri/fonts";
 import { SITE_URL } from "@/vo-tri/lib/site";
 import { AppShell } from "@/vo-tri/shell";
+
+// Dark-mode-first brand (see CLAUDE.md) — themeColor matches `--vt-bg` so
+// mobile browser chrome (address bar) reads as part of the app, not a
+// mismatched light strip above it.
+export const viewport: Viewport = {
+  themeColor: "#120E17",
+  colorScheme: "dark",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

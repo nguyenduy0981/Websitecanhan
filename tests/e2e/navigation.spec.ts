@@ -30,4 +30,20 @@ test.describe("navigation", () => {
       }
     });
   }
+
+  test("PWA manifest is valid and its icons resolve", async ({ page, request }) => {
+    const manifestResponse = await request.get("/manifest.webmanifest");
+    expect(manifestResponse.ok()).toBe(true);
+    const manifest = await manifestResponse.json();
+    expect(manifest.name).toBe("VÔ TRI");
+    expect(manifest.icons.length).toBeGreaterThan(0);
+    for (const icon of manifest.icons) {
+      const iconResponse = await request.get(icon.src);
+      expect(iconResponse.ok(), `${icon.src} should resolve`).toBe(true);
+    }
+
+    await page.goto("/");
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#120E17");
+  });
 });

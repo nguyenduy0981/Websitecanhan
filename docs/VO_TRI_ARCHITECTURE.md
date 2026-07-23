@@ -69,6 +69,16 @@ it), `robots.ts`, `sitemap.ts` (static routes + one entry per real
 Explore activity). All four read the real activity catalog or
 `lib/site.ts`'s `SITE_URL` — nothing hardcoded or guessed.
 
+`manifest.ts` makes the site installable (Add to Home Screen) with real
+brand colors (`background_color`/`theme_color` = `--vt-bg`), sourcing its
+two larger icon sizes from `icon192/route.tsx` and `icon512/route.tsx` —
+plain Route Handlers (`export const dynamic = "force-static"`) rather than
+the `icon.tsx` convention, since that convention owns one size per file
+and a manifest needs explicitly-sized entries. `layout.tsx` exports a
+`viewport` (Next 15 moved `themeColor`/`colorScheme` out of `metadata`)
+so mobile browser chrome renders in the brand's dark surface color instead
+of a default light strip.
+
 `error.tsx` catches a thrown error anywhere below the root layout and
 renders it through the brand's `ErrorState`. `global-error.tsx` is the
 separate fallback for the rarer case where the root layout itself throws
