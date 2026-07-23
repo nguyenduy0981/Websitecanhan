@@ -435,8 +435,8 @@ nó đã tự động áp dụng cho mọi `.vt-*` class.
 Barrel export duy nhất: `src/vo-tri/ui/index.ts` — import từ đây, không
 import trực tiếp file nội bộ. Danh sách đầy đủ hiện có: `AchievementUnlockCard`,
 `Avatar`, `Background`, `Badge`, `BottomSheet` (+ 5 sub-export, dùng
-`vaul`), `Button`, `Card` (+ 4 sub-export), `ChipGroup`, `ContextMenu`
-(+ 8 sub-export, Radix-based), `Dialog` (+ 6 sub-export, Radix-based) và
+`vaul`), `Button`, `Card` (+ 5 sub-export), `ChipGroup`, `ContextMenu`
+(+ 10 sub-export, Radix-based), `Dialog` (+ 6 sub-export, Radix-based) và
 4 preset (`ConfirmDialog`/`ErrorDialog`/`RewardDialog`/`SuccessDialog`),
 `StatePanel` (7 preset: `EmptyState`/`ErrorState`/`MaintenanceState`/
 `OfflineState`/`PermissionState`/`RetryState`/`SuccessState`), `Field`/
