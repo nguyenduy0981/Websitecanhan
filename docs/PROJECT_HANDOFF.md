@@ -221,13 +221,15 @@ thật ngay khi có session.
 
 ### Prompt 04 — Explore
 `src/vo-tri/explore/`. Catalog hoạt động thật (`activities.ts`) — hiện có
-**12 activity thật**: Điểm Danh Hôm Nay, Vòng Quay Vô Tri, Rút Thẻ Số
-Phận, Thử Thách 60 Giây, Đố Vui Vô Tri, Máy Chế Meme, Chuyện Ngẫu Nhiên,
-Đoán Cảm Xúc Mascot, Gõ Nhanh Vô Tri, Đấu Trường Vô Tri, Nuôi Thú Vô Tri,
-Chợ Đồ Vô Tri — mỗi activity có tên/reward/XP/difficulty/thời lượng/giới
-hạn thật, đây là **nội dung sản phẩm thật**, không phải dữ liệu giả
-CLAUDE.md cấm (rule đó nhắm vào tín
-hiệu xã hội/lượt dùng giả, không phải nội dung game). Featured Activity +
+**9 activity thật** (`Activity[]`, đầy đủ reward/XP/difficulty/thời
+lượng/giới hạn): Điểm Danh Hôm Nay, Vòng Quay Vô Tri, Rút Thẻ Số Phận,
+Thử Thách 60 Giây, Đố Vui Vô Tri, Máy Chế Meme, Chuyện Ngẫu Nhiên, Đoán
+Cảm Xúc Mascot, Gõ Nhanh Vô Tri — cộng thêm **3 "Coming Soon"**
+(`ComingSoonActivity[]`, một type nhẹ hơn, chỉ id/name/description/icon,
+**không có** reward/xp/difficulty vì chưa có gameplay thật): Đấu Trường
+Vô Tri, Nuôi Thú Vô Tri, Chợ Đồ Vô Tri — đây là **nội dung sản phẩm
+thật**, không phải dữ liệu giả CLAUDE.md cấm (rule đó nhắm vào tín hiệu
+xã hội/lượt dùng giả, không phải nội dung game). Featured Activity +
 Daily Picks tái dùng cơ chế day-seed của Home trên chính catalog thật
 này. Category chip là nút thường trong tab order tự nhiên, không phải
 ARIA `tablist` tự chế — hành vi Tab/Enter đúng chuẩn có sẵn, được verify
@@ -481,7 +483,7 @@ trung thực). `TodayCard` tồn tại đầy đủ nhưng chỉ render khi
 `currentUser` thật (hiện luôn `undefined`).
 
 ### Explore (`src/app/explore/page.tsx` + `src/vo-tri/explore/`)
-Catalog 12 activity thật (`activities.ts`). Hero, Featured Activity +
+Catalog 9 activity thật + 3 "Coming Soon" (`activities.ts`). Hero, Featured Activity +
 Daily Picks (day-seeded), category chip filter, search client-side,
 `ActivityDetailSheet` (BottomSheet mobile/Dialog desktop qua
 `useMediaQuery`), `ComingSoonStrip`/`ComingSoonCard` (không bao giờ hứa
