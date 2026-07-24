@@ -498,3 +498,62 @@ sessions don't re-litigate it from scratch.
   asserting the manifest is valid JSON, both icon URLs resolve, and the
   real tags are present. Full verification: `tsc`, lint, `next build` all
   green.
+- **Backend Foundation Phase 1 — design, not yet connected.** Full
+  reference: `docs/BACKEND_ARCHITECTURE.md`. Chose Supabase (free tier
+  Auth+Postgres+Storage in one, real Postgres RLS, `@supabase/ssr` fits
+  Next.js App Router natively). 24-table schema across 8 groups (identity,
+  catalog mirrors, gameplay/reward economy, retention, unlocks, social,
+  notifications/timeline, ranking/ops) — catalog content (activities/
+  quests/milestones/achievements/badges) stays authored in frontend code
+  as always; DB tables are thin `id`-keyed mirrors seeded from that code,
+  existing only so per-user progress tables get real FK integrity, never
+  a second source of truth for game-design content. Anti-cheat design
+  went through a real correction during this round: the first draft
+  assumed the server could exactly recompute `GameOutcome.points` from
+  `(comboMax, durationSeconds)` — re-reading `GameFrame.tsx` showed score
+  is an accumulated total across many `addScore()` calls with combo state
+  changing between them, not a closed-form result, and `PlayClient.tsx`'s
+  demo paths show both `points` and `xp` can be client-influenced
+  depending which button fires. Exact server-side replay would need
+  `GameFrame` to log its full event sequence — a frontend change out of
+  this round's scope — so the shipped design instead clamps both fields
+  to a generous ceiling (`activities.reward/xp × 3`) computed entirely
+  server-side from catalog data, logs a `score_clamped` audit row when
+  triggered, and documents the full-replay upgrade path for if the
+  economy ever gets real stakes. Every privileged write (recording a
+  session, claiming a quest/milestone, following) goes through a
+  `security definer` Postgres function, never a raw client
+  INSERT/UPDATE — this is what actually enforces the anti-cheat/business
+  rules, not the RLS policies alone (RLS is the last line of defense,
+  per the doc's own stated principle). Migrations are split so every
+  cross-cutting function (touching tables from multiple domains) lives
+  in one final `..._functions.sql`, avoiding a real forward-reference bug
+  caught during this round (an earlier draft had `record_activity_session`
+  writing to `notifications`/`audit_log` from inside the *tables*
+  migration for its own domain, before those tables existed). Docker Hub
+  was blocked by this session's egress policy (confirmed via the proxy
+  status endpoint, a deliberate org policy — not routed around), so all
+  12 migrations were validated for real against the `postgresql-16` apt
+  package already on the sandbox instead of a Docker-based local Supabase
+  stack: stubbed `auth`/`storage` schemas + roles, applied all 12 files
+  in order, then ran a real smoke test (not just DDL syntax) proving the
+  trigger auto-creates a profile, `record_activity_session` awards
+  correct points/XP/streak/level and advances all 7 relevant quests in
+  one call, `dailyLimit` blocks a same-day repeat, the anti-cheat clamp
+  actually clamps and logs, `claim_quest`/`claim_milestone` reject
+  premature claims, RLS genuinely isolates two different users' private
+  rows, and `anon` can read public data but is rejected calling the
+  privileged RPC. Also shipped (no credentials needed to write):
+  `src/vo-tri/server/supabase/{server-client,admin-client,database.types}.ts`,
+  `src/middleware.ts` (session refresh — found during verification that
+  it must live at `src/middleware.ts`, not repo root, since this project
+  uses a `src/` layout; `next build`'s missing "ƒ Middleware" line caught
+  the wrong location immediately), `.env.example`, and the
+  `@supabase/supabase-js`/`@supabase/ssr`/`zod` dependencies. Deliberately
+  NOT written yet: the actual `repositories/`/`services/`/`actions/`
+  layer — writing business logic with no live project to typecheck
+  against or exercise a real request through would be exactly the kind
+  of "unverified code sitting in the repo" this project's own honesty
+  rule forbids. Full verification after every change: `tsc`, lint,
+  `next build` (confirms middleware registers), `vitest run` (30/30),
+  and the full Playwright suite (16/16) all green.

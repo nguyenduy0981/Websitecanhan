@@ -6,9 +6,12 @@ các quy tắc thiết kế bắt buộc, [`docs/VO_TRI_DESIGN_BIBLE.md`](./docs
 cho toàn bộ Design System, [`docs/VO_TRI_ARCHITECTURE.md`](./docs/VO_TRI_ARCHITECTURE.md)
 cho component inventory + routing map, [`docs/VO_TRI_GAMEPLAY_ENGINE.md`](./docs/VO_TRI_GAMEPLAY_ENGINE.md)
 cho lifecycle/state-flow của Gameplay Engine + cách thêm một Activity mới,
-và [`docs/PROJECT_HANDOFF.md`](./docs/PROJECT_HANDOFF.md) — tài liệu bàn
+[`docs/PROJECT_HANDOFF.md`](./docs/PROJECT_HANDOFF.md) — tài liệu bàn
 giao chính thức, điểm khởi đầu cho bất kỳ ai (hoặc phiên Claude nào) tiếp
-quản dự án mà không có ngữ cảnh trước đó.
+quản dự án mà không có ngữ cảnh trước đó — và
+[`docs/BACKEND_ARCHITECTURE.md`](./docs/BACKEND_ARCHITECTURE.md) cho
+thiết kế backend (Supabase: schema, RLS, migration, API) đã hoàn chỉnh
+nhưng chưa nối vào project thật.
 
 ## Stack
 
@@ -38,6 +41,13 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
   OG-image metadata to build absolute URLs. Falls back to
   `http://localhost:3000` if unset; set it to the real domain once one
   exists (see `src/vo-tri/lib/site.ts`).
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
+  `SUPABASE_SERVICE_ROLE_KEY` — required once a real Supabase project
+  exists (see `docs/BACKEND_ARCHITECTURE.md` §11); copy `.env.example` to
+  `.env.local` and fill them in. Every Supabase-touching file
+  (`src/vo-tri/server/supabase/*`, `src/middleware.ts`) fails loudly with
+  a clear message, or no-ops, until these are set — nothing in the app
+  depends on them today.
 
 ## Project layout
 
@@ -70,6 +80,16 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
 - `docs/VO_TRI_DESIGN_BIBLE.md` — brand + design system documentation.
 - `docs/VO_TRI_ARCHITECTURE.md` — folder structure, component inventory,
   routing map, motion/responsive guidelines.
+- `docs/BACKEND_ARCHITECTURE.md` — Supabase schema/RLS/migration/API
+  design; `supabase/migrations/*.sql` implements it (validated against a
+  local Postgres, not yet applied to any live project).
+- `src/vo-tri/server/supabase/` — Supabase client factories
+  (`server-client.ts` for the normal cookie-scoped, RLS-respecting path;
+  `admin-client.ts` for the narrow service-role exception) +
+  `database.types.ts` (hand-written until a live project exists to
+  `supabase gen types typescript` from).
+- `src/middleware.ts` — refreshes the Supabase session cookie; a no-op
+  until the Supabase env vars are set.
 - `tests/e2e/` — Playwright E2E suite (navigation, accessibility, Explore
   search/filter, the real gameplay flow). Runs in CI (`.github/workflows/ci.yml`)
   on every push against a real production build.
@@ -77,6 +97,9 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
   quest/milestone catalogs, rank ladder, date/time helpers), colocated
   next to the file they test. Runs in CI alongside the E2E suite.
 
-No backend yet — this is front-end only (design system, shell, Home,
-Explore, Profile, Leaderboard, Gameplay Framework, Social Foundation) until
-a future milestone actually needs accounts/data.
+Backend design is complete (`docs/BACKEND_ARCHITECTURE.md`) but not yet
+connected to a live Supabase project — every route still shows the
+honest logged-out/empty state (design system, shell, Home, Explore,
+Profile, Leaderboard, Gameplay Framework, Social Foundation are otherwise
+fully built). See that doc's §11 for exactly what's needed from the
+project owner to go further.
