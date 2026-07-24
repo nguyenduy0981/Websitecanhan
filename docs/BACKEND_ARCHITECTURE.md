@@ -952,13 +952,134 @@ schema) — xem §12.
   pass, `vitest run` vẫn 30/30 — không có gì trong app hiện tại bị ảnh
   hưởng bởi các file chuẩn bị này.
 
-**Cố tình CHƯA viết** ở lượt này: `repositories/`/`services/`/`actions/`
+**Cố tình CHƯA viết** ở Phase 1: `repositories/`/`services/`/`actions/`
 thật (logic nghiệp vụ) — vì viết mà không có project thật để chạy
 `typecheck` lẫn thử nghiệm request thật sẽ là code "chưa từng được xác
-minh" nằm im trong repo, đúng thứ nguyên tắc "luôn verify, không giả
-định" của dự án này cấm. Sẽ viết ngay khi có Project URL/Anon Key/Service
-Role Key theo đúng thứ tự roadmap ở `PROJECT_HANDOFF.md` §10 (Auth trước
-tiên, rồi Profile/XP, rồi Retention, rồi Leaderboard, rồi Social).
+minh" nằm im trong repo. **Quyết định này đã được chủ dự án ghi đè tường
+minh ở đầu Phase 2** (yêu cầu chuẩn bị toàn bộ repositories/services/
+actions ngay, chấp nhận rằng chúng chỉ verify được bằng
+typecheck/lint/unit test cho tới khi có credentials thật, miễn là ranh
+giới phụ thuộc credentials được cô lập rõ ràng) — xem §13.
+
+---
+
+## 13. Phase 2 — Supabase Integration Prep (đã triển khai, chưa nối credentials thật)
+
+Toàn bộ mục này viết theo chỉ đạo tường minh của chủ dự án: chuẩn bị hết
+mọi thứ *không phụ thuộc credentials* ngay bây giờ, để khi có Project
+URL/Anon Key/Service Role Key thì việc nối dây diễn ra nhanh và ít rủi ro
+nhất — không phải lập kế hoạch lại.
+
+### 13.1 Ranh giới cô lập credentials (điểm mấu chốt)
+
+Đúng một điểm trong toàn bộ stack đọc biến môi trường Supabase:
+`createServerSupabaseClient()` trong `server-client.ts`. Mọi
+repository/service/action đều nhận `client` qua tham số hoặc gọi hàm này
+gián tiếp qua `require-auth.ts` — không có `import`/kết nối trực tiếp nào
+khác tới `NEXT_PUBLIC_SUPABASE_*` ở bất kỳ đâu khác trong `server/`. Điều
+này có nghĩa: toàn bộ 6 repository + 7 service + adapters + validation
+verify được đầy đủ bằng `tsc`/`eslint`/`vitest` **ngay hôm nay**, không
+cần project thật — chỉ có bản thân lệnh gọi Supabase thật (network I/O)
+là chưa thử nghiệm được, và nó bị cô lập gọn trong đúng các hàm
+repository, không rò rỉ ra service/action layer.
+
+Ranh giới này được chứng minh bằng một test thật (không chỉ khẳng định
+bằng lời): `src/vo-tri/server/supabase/server-client.test.ts` xoá 2 biến
+môi trường Supabase, gọi `createServerSupabaseClient()`/`getCurrentUser()`
+ngoài mọi request context của Next.js (thuần Vitest), và xác nhận cả hai
+`reject` với đúng thông báo lỗi tiếng Việt đã thiết kế ở Phase 1 — không
+crash mơ hồ bên trong `@supabase/ssr`, không im lặng chạy tiếp với
+credentials `undefined`. Hàm được viết sao cho check biến môi trường chạy
+**trước** khi chạm vào `cookies()` từ `next/headers`, nên test này chạy
+được hoàn toàn bên ngoài runtime request thật của Next.js.
+
+### 13.2 Repositories (`src/vo-tri/server/repositories/`)
+
+6 file, mỗi file là các hàm mỏng bọc quanh Supabase query, nhận `client:
+SupabaseClient<Database>` làm tham số đầu tiên (không tự tạo client) để
+tách khỏi `next/headers`/cookies và test được không cần request context:
+`profile-repository.ts`, `activity-repository.ts` (RPC
+`record_activity_session`), `retention-repository.ts` (RPC
+`claim_quest`/`claim_milestone`, đọc `quest_progress`),
+`leaderboard-repository.ts`, `social-repository.ts` (RPC
+`toggle_follow`, reactions/comments/feed), `notification-repository.ts`.
+Không có business logic ở lớp này — chỉ query/RPC call trực tiếp khớp
+schema §4.
+
+### 13.3 Services (`src/vo-tri/server/services/`)
+
+7 file — lớp nghiệp vụ thật: validate input bằng zod (§13.4), gọi
+repository, map lỗi Postgres/RPC qua `mapSupabaseError()`, map row DB →
+kiểu frontend thật qua adapters (§78). `auth-service.ts` (signUp/signIn/
+signOut), `profile-service.ts` (identity/stats/level/streak/today-stats/
+update, ghép `getRecentActiveDates` + `getTodayAwardedPoints` để tính
+streak và điểm-trong-ngày mà không cần cột đếm riêng), `gameplay-
+service.ts` (`recordSession` — bọc RPC anti-cheat ở §7, không có tham số
+`userId` vì RPC tự scope theo `auth.uid()`), `retention-service.ts`
+(`getQuestProgressMap` trả về theo `quest_id` để trang gọi
+`progress={map[quest.id]}` không cần biết gì về DB, `getMilestoneMetricValues`,
+`claimQuest`/`claimMilestone`), `leaderboard-service.ts` (chỉ scope
+"Toàn cầu/mọi thời điểm" — 4 scope còn lại cần social graph/time-window
+chưa nối, đúng như frontend `ScopeFilter` đã honest-empty mọi scope hôm
+nay), `social-service.ts` (follow, reaction "chọn 1" — bấm lại reaction
+đang active thì xoá, bấm reaction khác thì đổi — comment/feed),
+`notification-service.ts`.
+
+### 13.4 Validation (`src/vo-tri/server/validation/`) + error plumbing (`errors.ts`)
+
+`auth.ts`/`profile.ts`/`social.ts` — zod schema khớp đúng giới hạn
+frontend đã có sẵn (`EditProfileSheet`'s `NAME_MAX=24`/`TAGLINE_MAX=60`)
+và đúng check constraint của DB (`comments.body` 1–1000 ký tự) thay vì
+một con số khác không ai được thông báo. `errors.ts` chuẩn hoá
+`ServiceResult<T>` toàn bộ stack: `ok()`, `fail(code)` (tra `serverErrorCopy`
+theo mã lỗi RPC), `validationFail(message)` (dùng riêng cho lỗi zod —
+thông điệp zod sinh ra đã là tiếng Việt đúng giọng thương hiệu, đưa qua
+`fail()` sẽ bị tra nhầm và rơi về thông báo chung chung), `mapSupabaseError()`
+(khớp theo substring vì `security definer` function luôn `raise
+exception` bằng mã lỗi trần, không phải câu tiếng Việt hoàn chỉnh).
+
+### 13.5 Server Actions (`src/vo-tri/server/actions/`)
+
+7 file, mỗi hàm là một lớp `"use server"` mỏng: lấy client (qua
+`require-auth.ts`), gọi đúng 1 hàm service, `revalidatePath()` route liên
+quan khi có mutation thật thành công. `require-auth.ts` xuất 2 helper
+dùng chung: `requireAuthenticatedClient()` (bail với `ServiceResult`
+lỗi rõ ràng nếu chưa đăng nhập — dùng cho mọi write) và
+`getClientAndOptionalUserId()` (cho read hoạt động cả khi chưa đăng nhập,
+RLS tự lọc theo `auth.uid()`/`anon`). Danh sách: `auth-actions.ts`
+(signUp/signIn/signOut), `profile-actions.ts` (đọc identity/stats/level/
+streak/today-stats + `updateProfileAction`), `activity-actions.ts`
+(`recordActivitySessionAction`), `quest-actions.ts`/`milestone-
+actions.ts` (đọc tiến độ + claim), `leaderboard-actions.ts` (đọc global
+leaderboard/vị trí của tôi), `social-actions.ts` (follow/reaction/
+comment/feed), `notification-actions.ts`. Chưa có Client Component nào
+gọi các action này — đó là bước tiếp theo, chỉ thực hiện được sau khi có
+project thật để nối `LoginButton`, `EditProfileSheet`, `PlayClient`,
+`QuestCard`, v.v. vào state thật thay vì fixture.
+
+### 13.6 Đã verify (Phase 2)
+
+`tsc --noEmit` sạch, `eslint` sạch, `vitest run` — **77/77 test qua 17
+file** (30 test cũ từ Phase 0 + 44 test mới cho validation/adapters/errors
++ 3 test chứng minh ranh giới cô lập credentials ở §13.1), `next build`
+thành công (xác nhận không có static import nào crash vì thiếu biến môi
+trường Supabase — các Server Action chỉ được bundle, không bị gọi lúc
+build), và toàn bộ 16 test Playwright E2E hiện có vẫn pass — không có gì
+trong app hiện tại bị ảnh hưởng bởi lớp backend mới này vì chưa có UI nào
+gọi tới nó.
+
+**Cố tình CHƯA làm ở Phase 2** (đúng phạm vi §5 chỉ đạo — chỉ dừng khi
+thật sự cần credentials): nối các Server Action ở trên vào Client
+Component thật (`LoginButton`, `EditProfileSheet`, `PlayClient`,
+`QuestCard`/`MilestoneTrack`, `FollowButton`, `CommentSection`,
+`NotificationCenter`) — việc này *có thể* viết code không cần credentials
+(chỉ là gọi action thay vì no-op), nhưng **không thể verify thật** cho
+tới khi có project Supabase thật để bấm nút và xem kết quả round-trip
+thật; nối mà không xác minh được vi phạm đúng nguyên tắc honesty của dự
+án. Việc nối dây này là bước đầu tiên ngay khi có Project
+URL/Anon Key/Service Role Key, theo đúng thứ tự roadmap ở
+`PROJECT_HANDOFF.md` §10 (Auth trước, rồi Profile/XP, rồi Retention, rồi
+Leaderboard, rồi Social) — không cần lập kế hoạch lại.
 
 ---
 

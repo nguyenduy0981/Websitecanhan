@@ -93,6 +93,62 @@ export const notReadyCopy = {
   },
 };
 
+/**
+ * One entry per error code a Postgres `security definer` RPC can raise
+ * (see docs/BACKEND_ARCHITECTURE.md §6.2/§9.3) — the server layer
+ * (`src/vo-tri/server/errors.ts`) maps the raw exception message to a key
+ * here instead of ever showing raw SQL error text in a toast/dialog.
+ * Unknown codes fall back to `errorCopy.generic`.
+ */
+export const serverErrorCopy = {
+  NOT_AUTHENTICATED: {
+    title: "Bạn chưa đăng nhập",
+    description: "Đăng nhập rồi quay lại làm tiếp nhé.",
+  },
+  DAILY_LIMIT_EXCEEDED: {
+    title: "Hôm nay chơi đủ rồi đó",
+    description: "Trò này có giới hạn mỗi ngày — mai quay lại chơi tiếp nhé.",
+  },
+  COOLDOWN_ACTIVE: {
+    title: "Chưa đến lượt đâu",
+    description: "Trò này cần nghỉ một chút giữa các lần chơi. Thử lại sau nhé.",
+  },
+  QUEST_NOT_COMPLETE: {
+    title: "Chưa xong nhiệm vụ này đâu",
+    description: "Hoàn thành đủ điều kiện rồi quay lại nhận thưởng nhé.",
+  },
+  QUEST_ALREADY_CLAIMED: {
+    title: "Nhận rồi mà!",
+    description: "Nhiệm vụ này bạn đã nhận thưởng trước đó rồi.",
+  },
+  MILESTONE_NOT_REACHED: {
+    title: "Chưa tới cột mốc này đâu",
+    description: "Cố thêm chút nữa, sắp chạm tới rồi.",
+  },
+  MILESTONE_ALREADY_CLAIMED: {
+    title: "Nhận rồi mà!",
+    description: "Cột mốc này bạn đã nhận thưởng trước đó rồi.",
+  },
+  CANNOT_FOLLOW_SELF: {
+    title: "Tự theo dõi chính mình á?",
+    description: "Vô tri tới mức này thì thôi, chọn người khác đi.",
+  },
+  UNKNOWN_ACTIVITY: {
+    title: "Không tìm thấy trò này",
+    description: "Có thể nó vừa bị gỡ hoặc chưa từng tồn tại.",
+  },
+  UNKNOWN_QUEST: {
+    title: "Không tìm thấy nhiệm vụ này",
+    description: "Thử tải lại trang xem sao.",
+  },
+  UNKNOWN_MILESTONE: {
+    title: "Không tìm thấy cột mốc này",
+    description: "Thử tải lại trang xem sao.",
+  },
+} satisfies Record<string, { title: string; description: string }>;
+
+export type ServerErrorCode = keyof typeof serverErrorCopy;
+
 export const successCopy = {
   generic: {
     title: "Xong xuôi!",

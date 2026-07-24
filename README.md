@@ -88,18 +88,27 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
   `admin-client.ts` for the narrow service-role exception) +
   `database.types.ts` (hand-written until a live project exists to
   `supabase gen types typescript` from).
+- `src/vo-tri/server/{repositories,services,actions,validation,adapters}/`
+  — full 3-layer backend (repository → service → `"use server"` action),
+  zod validation, and pure DB-row → frontend-type adapters, all built and
+  unit-tested ahead of having a live Supabase project (see
+  `docs/BACKEND_ARCHITECTURE.md` §13). `require-auth.ts` is the single
+  shared entry point every action uses to get an authenticated/optional
+  client. None of it is wired into a Client Component yet.
 - `src/middleware.ts` — refreshes the Supabase session cookie; a no-op
   until the Supabase env vars are set.
 - `tests/e2e/` — Playwright E2E suite (navigation, accessibility, Explore
   search/filter, the real gameplay flow). Runs in CI (`.github/workflows/ci.yml`)
   on every push against a real production build.
 - `src/**/*.test.ts` — Vitest unit tests for pure logic (scoring formula,
-  quest/milestone catalogs, rank ladder, date/time helpers), colocated
-  next to the file they test. Runs in CI alongside the E2E suite.
+  quest/milestone catalogs, rank ladder, date/time helpers) plus the full
+  backend layer above (validation, adapters, and a real test proving the
+  credential-isolation boundary), colocated next to the file they test.
+  Runs in CI alongside the E2E suite.
 
-Backend design is complete (`docs/BACKEND_ARCHITECTURE.md`) but not yet
-connected to a live Supabase project — every route still shows the
-honest logged-out/empty state (design system, shell, Home, Explore,
-Profile, Leaderboard, Gameplay Framework, Social Foundation are otherwise
-fully built). See that doc's §11 for exactly what's needed from the
-project owner to go further.
+Backend design and the full repository/service/action layer are complete
+(`docs/BACKEND_ARCHITECTURE.md`) but not yet connected to a live Supabase
+project — every route still shows the honest logged-out/empty state
+(design system, shell, Home, Explore, Profile, Leaderboard, Gameplay
+Framework, Social Foundation are otherwise fully built). See that doc's
+§11 for exactly what's needed from the project owner to go further.

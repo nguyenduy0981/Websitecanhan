@@ -557,3 +557,50 @@ sessions don't re-litigate it from scratch.
   rule forbids. Full verification after every change: `tsc`, lint,
   `next build` (confirms middleware registers), `vitest run` (30/30),
   and the full Playwright suite (16/16) all green.
+- **Backend Foundation Phase 2 — Supabase Integration Prep (owner
+  explicitly overrode Phase 1's "don't write it yet" call).** Full
+  reference: `docs/BACKEND_ARCHITECTURE.md` §13. The owner directed
+  writing repositories/services/actions now, accepting they can only be
+  typecheck/lint/unit-test verified (not execution-tested) until real
+  credentials exist, as long as the credential-dependent boundary stays
+  cleanly isolated. That boundary is exactly one function:
+  `createServerSupabaseClient()` in `server-client.ts` — every
+  repository/service/action reaches Supabase only through a `client`
+  parameter or `require-auth.ts`'s two helpers
+  (`requireAuthenticatedClient`/`getClientAndOptionalUserId`), so the
+  entire layer above it (6 repositories, 7 services, all adapters/
+  validation from Phase 2's earlier rounds, all 7 new
+  `"use server"` action files) is fully unit-testable today. Proved the
+  isolation with a real test, not just an architectural claim:
+  `server-client.test.ts` deletes both Supabase env vars and asserts
+  `createServerSupabaseClient()`/`getCurrentUser()` reject with the exact
+  configured Vietnamese error — runnable in plain Vitest with zero Next.js
+  request context, because the function checks env vars *before* ever
+  calling `cookies()` from `next/headers`. Rewrote `database.types.ts`
+  during this round after `tsc` surfaced a real structural bug: using
+  `Insert: never`/`Update: never` to encode "not client-writable" and
+  omitting `Relationships`/`Views` broke `@supabase/supabase-js`'s
+  `GenericSchema` generic inference project-wide — root-caused by reading
+  the library's own type source, fixed with real Insert/Update object
+  shapes everywhere (RLS is what actually blocks unauthorized writes, not
+  the TypeScript types) plus accurate `Relationships` entries for
+  `comments`/`feed_items` so embedded joins (`select("*, author:profiles(*)")`)
+  type-check instead of resolving to `SelectQueryError`. Self-caught bug:
+  `auth-service.ts` originally piped a zod validation *message* through
+  `fail(code)`, which does a `serverErrorCopy` lookup by code and silently
+  discards anything that isn't a recognized key — added `validationFail(message)`
+  to `errors.ts` specifically so a real, specific validation message
+  never gets swapped for the generic fallback. Server Actions are thin by
+  design — each parses input, calls exactly one service function, and
+  `revalidatePath()`s the affected route on a successful mutation — but
+  none are wired into any Client Component yet; writing the call site
+  is easy without credentials, but verifying it round-trips correctly is
+  not, so wiring `LoginButton`/`EditProfileSheet`/`PlayClient`/`QuestCard`/
+  `FollowButton`/`CommentSection`/`NotificationCenter` to these actions is
+  the first thing that happens once Project URL/Anon Key/Service Role Key
+  exist — no re-planning needed. Verified: `tsc`, lint, `vitest run`
+  (77/77 across 17 files, up from 30), `next build` (confirms no
+  credential-dependent code crashes at static-generation time since
+  Server Actions are only bundled, never invoked, during build), and the
+  full Playwright suite (16/16) all green — nothing in the shipped app
+  changed since no UI calls the new layer yet.
