@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toLevelProgress, toProfileIdentity, toProfileStats, toStreakData, toTodayStats } from "./profile";
+import { toLevelProgress, toProfileIdentity, toProfileStats, toShellUser, toStreakData, toTodayStats } from "./profile";
 import type { Database } from "@/vo-tri/server/supabase/database.types";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -46,6 +46,16 @@ describe("toProfileStats", () => {
       activeDays: 12,
       activitiesPlayed: 25,
     });
+  });
+});
+
+describe("toShellUser", () => {
+  it("maps display_name/avatar_url/points to the shell's VoTriUser shape", () => {
+    expect(toShellUser(fixtureRow)).toEqual({ name: "Bé Vô Tri", avatarUrl: undefined, points: 120 });
+  });
+
+  it("keeps a real avatar_url when present", () => {
+    expect(toShellUser({ ...fixtureRow, avatar_url: "https://example.com/a.png" }).avatarUrl).toBe("https://example.com/a.png");
   });
 });
 

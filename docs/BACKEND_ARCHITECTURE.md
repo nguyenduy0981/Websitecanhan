@@ -1083,6 +1083,96 @@ Leaderboard, rồi Social) — không cần lập kế hoạch lại.
 
 ---
 
+## 14. Phase 3 — Auth wiring thật (chủ dự án đã cung cấp Project URL/Anon Key/Service Role Key)
+
+Chủ dự án cung cấp 3 giá trị thật ngày 2026-07-24. Lưu ngay vào `.env.local`
+(đã `.gitignore`, xác nhận qua `git check-ignore`) — **không bao giờ commit**.
+
+**Chặn cứng ngoài dự đoán:** session này không kết nối mạng được tới
+Supabase dưới bất kỳ hình thức nào — REST API của project
+(`*.supabase.co`), Management API (`api.supabase.com`), và Postgres trực
+tiếp (`db.*.supabase.co:5432`) đều bị egress policy của tổ chức chặn (403
+"policy denial", xác nhận qua `$HTTPS_PROXY/__agentproxy/status` — cùng
+loại chặn đã gặp với Docker Hub ở Phase 1, không được né qua). Vì vậy
+**migration chưa được áp lên project thật từ session này** — đã gửi chủ
+dự án file SQL gộp (`vo-tri-supabase-migrations-combined.sql`) để tự chạy
+qua Supabase SQL Editor, hoặc hướng dẫn dùng `supabase db push` từ máy họ.
+Toàn bộ phần dưới đây được viết và verify bằng `tsc`/`eslint`/`vitest`/
+`next build`/Playwright — **chưa** verify round-trip thật với DB vì không
+có kết nối, đúng như đã nói trước ở §13.6.
+
+**Auth UI thật:** `shell/AuthDialog.tsx` (mới) — form đăng nhập/đăng ký
+thật trong 1 Dialog, tab chuyển đổi bằng 2 nút thường (chưa cần dựng một
+primitive Tabs mới cho 1 chỗ dùng), gọi thẳng `signInAction`/
+`signUpAction`. `LoginButton` đổi từ "mở toast báo chưa xây auth thật"
+sang "mở AuthDialog thật" — 3 trạng thái nối tiếp nhau của đúng 1 nút này
+qua các round trước: nút chết (bug thật, Prompt 10) → toast honest
+"chưa xây" (Phase 1) → dialog thật (round này). `shell/UserMenu.tsx`
+(mới) — thay `Avatar` trần trong Header bằng nút bọc Tooltip
+"Đăng xuất", gọi `signOutAction`; chưa dùng `ContextMenu`/dropdown mới vì
+hiện chỉ có đúng 1 hành động, thêm primitive mới cho 1 mục là quá tay.
+
+**Session thật xuyên suốt app:** `src/vo-tri/server/session.ts` (mới) —
+`isSupabaseConfigured()` + `getOptionalSession()` (client + userId hoặc
+`null`, không bao giờ throw) + `getSessionUser()` (rút gọn thành
+`VoTriUser` cho Header/Sidebar). **Bug thật tự phát hiện và tránh trước
+khi ship, không phải sau khi vỡ**: `createServerSupabaseClient()` throw
+lỗi rõ ràng khi thiếu biến môi trường theo đúng thiết kế ở Phase 1 (dành
+cho Server Action — throw loud là đúng ở đó), nhưng gọi thẳng nó từ
+`RootLayout` (chạy trên *mọi* request, kể cả lúc `next build` prerender)
+sẽ sập toàn bộ app ở mọi môi trường chưa cấu hình Supabase — tức là gần
+như mọi nơi hôm nay (CI không có secret nào). `getOptionalSession()` check
+biến môi trường trước, y hệt pattern `middleware.ts` đã dùng — xác nhận
+bằng cách build thật 2 lần: có `.env.local` → mọi route chuyển từ `○`
+(static) sang `ƒ` (dynamic, vì đọc `cookies()`) như kỳ vọng khi có session
+thật cần render mỗi request; xoá `.env.local` → build lại, mọi route vẫn
+`○` y hệt trước khi có Phase 3, **0 thay đổi** cho môi trường CI hôm nay.
+`src/app/layout.tsx` giờ là `async` Server Component, gọi
+`getSessionUser()` một lần, truyền xuống `AppShell` — không cần
+client-side auth store vì session luôn tính lại mỗi request qua cookie
+`@supabase/ssr` đã ghi.
+
+**`/profile` route thật:** rewrite từ "luôn honest logged-out" (comment cũ
+tự ghi "swap this file's body for a real session lookup then" — đúng thời
+điểm đó đã tới) sang: gọi `getOptionalSession()`, không có session → y hệt
+state cũ; có session → gọi song song `getProfileIdentity`/`getProfileStats`/
+`getLevelProgress`/`getStreakData` (đều đã có từ Phase 2, không viết thêm
+backend), render `ProfileHero`/`StatCards`/`LevelCard`/`StreakTracker` với
+data thật. `AchievementSection`/`BadgeCollection`/`JourneyTimeline`/
+`CollectionShowcase` chưa có backend (§10) — render `items={[]}` là honest
+empty-state y hệt demo có sẵn trên `/vo-tri-styleguide`, không phải data
+giả. `EditProfileSheet` cố tình chưa nối (`editable`/`onEditAvatar` không
+truyền) — cần thêm state client-side, để phase sau tránh làm quá nhiều
+việc chưa verify được cùng lúc.
+
+**Robustness thật, không giả định:** `AuthDialog`/`UserMenu` bọc
+`try/catch` quanh lời gọi action — nếu `createServerSupabaseClient()`
+throw (đúng thiết kế khi thiếu config), người dùng thấy lỗi honest
+(`errorCopy.generic`) thay vì crash sang màn hình lỗi mặc định của
+Next.js. Bắt được bằng cách viết `tests/e2e/auth.spec.ts` case 2 và chạy
+thật với `.env.local` bị xoá (đúng mô phỏng CI/production-chưa-cấu-hình)
+— test đầu tiên fail vì tôi assert nhầm `.title` thay vì `.description`
+của `errorCopy.generic`, sửa lại rồi pass thật.
+
+**Đã verify (Phase 3):** `tsc`, `eslint`, `vitest run` (**79/79**, +2 test
+cho `toShellUser`), `next build` chạy **2 lần** (có và không có
+`.env.local`, xem trên) đều thành công, Playwright E2E **18/18** (16 cũ +
+2 mới ở `auth.spec.ts`, cộng `accessibility.spec.ts`'s "no dead buttons"
+case được cập nhật để khớp hành vi dialog thật thay vì toast cũ) — chạy cả
+với và không có credentials để xác nhận CI (không có secret) không bị ảnh
+hưởng. Chụp màn hình thật qua Playwright xác nhận dialog đăng nhập/đăng ký
+đúng token màu thương hiệu, không phải chỉ nhìn code.
+
+**Cố tình CHƯA làm ở Phase 3:** áp migration lên project thật (chặn mạng,
+xem trên — chờ chủ dự án tự chạy); verify round-trip thật (đăng ký/đăng
+nhập/đăng xuất thật, dữ liệu Profile thật) — không thể làm từ session này;
+`EditProfileSheet` nối vào `/profile` thật; `PlayClient`/`QuestCard`/
+`MilestoneTrack`/`FollowButton`/`CommentSection`/`NotificationCenter` nối
+Server Action — đúng thứ tự roadmap còn lại (Profile/XP → Retention →
+Leaderboard → Social) sau khi Auth đã xong và verify được thật.
+
+---
+
 ## Phụ lục: cách migration đã được verify thật (không chỉ đọc bằng mắt)
 
 Kế hoạch ban đầu là dựng một Supabase local stack đầy đủ qua Docker để

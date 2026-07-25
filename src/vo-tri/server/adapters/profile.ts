@@ -1,9 +1,19 @@
 import type { LevelProgress, ProfileIdentity, ProfileStats } from "@/vo-tri/profile/types";
 import type { StreakData } from "@/vo-tri/retention/types";
 import type { TodayStats } from "@/vo-tri/home/TodayCard";
+import type { VoTriUser } from "@/vo-tri/shell/types";
 import type { Database } from "@/vo-tri/server/supabase/database.types";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+/** The minimal shape Header/Sidebar need — see shell/types.ts. Kept separate from `toProfileIdentity` since the shell doesn't need username/tagline/joinedAt. */
+export function toShellUser(row: ProfileRow): VoTriUser {
+  return {
+    name: row.display_name,
+    avatarUrl: row.avatar_url ?? undefined,
+    points: row.points,
+  };
+}
 
 export function toProfileIdentity(row: ProfileRow): ProfileIdentity {
   return {

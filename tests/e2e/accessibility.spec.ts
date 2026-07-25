@@ -21,10 +21,9 @@ test.describe("accessibility", () => {
   test("every button-shaped CTA responds to a click (no dead buttons)", async ({ page }) => {
     await page.goto("/profile");
     // Regression test for a real bug found in audit: this button had no
-    // onClick at all and did nothing when clicked.
+    // onClick at all and did nothing when clicked. It later opened only a
+    // "chưa xây auth thật" toast; now it opens the real AuthDialog.
     await page.getByRole("button", { name: "Đăng nhập" }).last().click();
-    // Radix Toast renders both the visible card and a visually-hidden
-    // aria-live announcer with the same text — .first() is the visible one.
-    await expect(page.getByText("Đăng nhập chưa có ở đây").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Đăng nhập" })).toBeVisible();
   });
 });

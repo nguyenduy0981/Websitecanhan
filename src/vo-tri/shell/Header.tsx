@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Avatar } from "@/vo-tri/ui/Avatar";
 import { Badge } from "@/vo-tri/ui/Badge";
 import { Mascot } from "@/vo-tri/ui/Mascot";
 import { cn } from "@/vo-tri/lib/cn";
 import type { VoTriUser } from "./types";
 import { LoginButton } from "./LoginButton";
 import { NotificationBell } from "./NotificationBell";
+import { UserMenu } from "./UserMenu";
 
 const SCROLL_THRESHOLD = 24;
 
@@ -56,7 +56,7 @@ export function Header({ user }: { user?: VoTriUser }) {
               {user.points.toLocaleString("vi-VN")} điểm
             </Badge>
             <NotificationBell />
-            <Avatar name={user.name} avatarUrl={user.avatarUrl} size={36} className="border border-vt-border" />
+            <UserMenu user={user} />
           </div>
         ) : (
           <div className="flex items-center gap-2">

@@ -604,3 +604,51 @@ sessions don't re-litigate it from scratch.
   Server Actions are only bundled, never invoked, during build), and the
   full Playwright suite (16/16) all green — nothing in the shipped app
   changed since no UI calls the new layer yet.
+- **Backend Foundation Phase 3 — Auth wired for real (owner provided
+  Project URL/Anon Key/Service Role Key).** Full reference:
+  `docs/BACKEND_ARCHITECTURE.md` §14. Credentials went straight into
+  `.env.local` (confirmed gitignored, never committed) — but this
+  sandbox's egress policy blocks all outbound access to Supabase (REST
+  API, Management API, and raw Postgres all 403 at the proxy, same class
+  of deliberate org policy as Phase 1's Docker Hub block), so migrations
+  could not be applied from here; sent the owner a combined SQL file for
+  the Supabase SQL Editor plus exact `supabase db push` steps instead.
+  Real bug caught before it could ship, not after: `createServerSupabaseClient()`
+  is designed to throw loudly when unconfigured (correct for a Server
+  Action), but calling it directly from `RootLayout` — which renders on
+  *every* request, including `next build`'s static prerender — would have
+  crashed the entire app in every environment without Supabase configured
+  (i.e. almost everywhere today, including CI). Fixed with
+  `server/session.ts`'s `getOptionalSession()`, which checks env vars
+  first exactly like `middleware.ts` already does, never throws. Proved
+  both branches with two real `next build` runs: with `.env.local`
+  present, every route flips from static (`○`) to dynamic (`ƒ`) — an
+  expected, necessary tradeoff since real per-request session detection
+  needs `cookies()`, which Next.js correctly treats as dynamic; with
+  `.env.local` removed, the build is byte-identical to before Phase 3
+  (all static), so CI sees zero regression. `AuthDialog` (new) is a real
+  sign-in/sign-up form wired to `signInAction`/`signUpAction`, opened by
+  `LoginButton` — the third state of that one button across three rounds
+  (dead button → honest "not built" toast → real dialog). `UserMenu`
+  (new) replaces the bare `Avatar` in Header with a Tooltip-labeled
+  sign-out button once a session exists — skipped building a dropdown-menu
+  primitive for a single action. `/profile` now branches on
+  `getOptionalSession()`: logged out renders the unchanged honest empty
+  state; logged in renders `ProfileHero`/`StatCards`/`LevelCard`/
+  `StreakTracker` with real data (services already existed from Phase 2)
+  while `AchievementSection`/`BadgeCollection`/`JourneyTimeline`/
+  `CollectionShowcase` render `items={[]}` — no achievement/badge/journey
+  backend exists yet, so this is the same honest-empty pattern already
+  used everywhere else, not fabricated data. `EditProfileSheet` stayed
+  deliberately unwired this round. Both `AuthDialog` and `UserMenu` wrap
+  their action calls in `try/catch` — a real gap caught by writing
+  `tests/e2e/auth.spec.ts`'s second case with `.env.local` removed: an
+  uncaught throw from a misconfigured backend would otherwise crash to
+  Next's default error screen instead of showing a graceful message.
+  Verified: `tsc`, lint, `vitest run` (79/79, +2 for the new
+  `toShellUser` adapter), `next build` run twice (with and without
+  credentials, see above), the full Playwright suite (18/18, including 2
+  new Auth tests and an updated dead-button regression test), and real
+  Playwright screenshots of the sign-in/sign-up dialog confirming the
+  actual rendered brand tokens rather than trusting the code by
+  inspection alone.

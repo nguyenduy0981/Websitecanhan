@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toLevelProgress, toProfileIdentity, toProfileStats, toStreakData, toTodayStats } from "@/vo-tri/server/adapters/profile";
+import { toLevelProgress, toProfileIdentity, toProfileStats, toShellUser, toStreakData, toTodayStats } from "@/vo-tri/server/adapters/profile";
 import { fail, mapSupabaseError, ok, validationFail, type ServiceResult } from "@/vo-tri/server/errors";
 import {
   getProfileById,
@@ -13,6 +13,7 @@ import type { Database } from "@/vo-tri/server/supabase/database.types";
 import type { ProfileIdentity, ProfileStats, LevelProgress } from "@/vo-tri/profile/types";
 import type { StreakData } from "@/vo-tri/retention/types";
 import type { TodayStats } from "@/vo-tri/home/TodayCard";
+import type { VoTriUser } from "@/vo-tri/shell/types";
 
 type Client = SupabaseClient<Database>;
 
@@ -27,6 +28,13 @@ export async function getProfileIdentity(client: Client, userId: string): Promis
   const { row, result } = await fetchProfileRow(client, userId);
   if (!row) return result;
   return ok(toProfileIdentity(row));
+}
+
+/** The minimal shape Header/Sidebar need to render a logged-in state — see shell/types.ts. */
+export async function getShellUser(client: Client, userId: string): Promise<ServiceResult<VoTriUser>> {
+  const { row, result } = await fetchProfileRow(client, userId);
+  if (!row) return result;
+  return ok(toShellUser(row));
 }
 
 export async function getProfileIdentityByUsername(client: Client, username: string): Promise<ServiceResult<ProfileIdentity>> {
