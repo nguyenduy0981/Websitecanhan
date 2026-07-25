@@ -171,19 +171,46 @@ export interface Database {
         Row: { user_id: string; achievement_id: string; unlocked_at: string };
         Insert: Omit<Database["public"]["Tables"]["user_achievements"]["Row"], "unlocked_at">;
         Update: Partial<Database["public"]["Tables"]["user_achievements"]["Row"]>;
-        Relationships: [];
+        // Lets `.from("achievement_definitions").select("*, user_achievements(...)")`
+        // (the reverse-direction embed unlocks-repository.ts needs) type-check —
+        // same fix as comments/feed_items in Phase 2.
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey";
+            columns: ["achievement_id"];
+            isOneToOne: false;
+            referencedRelation: "achievement_definitions";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_badges: {
         Row: { user_id: string; badge_id: string; unlocked_at: string };
         Insert: Omit<Database["public"]["Tables"]["user_badges"]["Row"], "unlocked_at">;
         Update: Partial<Database["public"]["Tables"]["user_badges"]["Row"]>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey";
+            columns: ["badge_id"];
+            isOneToOne: false;
+            referencedRelation: "badge_definitions";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_collection_items: {
         Row: { user_id: string; item_id: string; unlocked_at: string };
         Insert: Omit<Database["public"]["Tables"]["user_collection_items"]["Row"], "unlocked_at">;
         Update: Partial<Database["public"]["Tables"]["user_collection_items"]["Row"]>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "user_collection_items_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "collection_definitions";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       follows: {
         Row: { follower_id: string; followee_id: string; created_at: string };

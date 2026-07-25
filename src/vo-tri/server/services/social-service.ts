@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toCommentTree, toFeedItem, toReactionCounts } from "@/vo-tri/server/adapters/social";
+import { toCommentTree, toFeedItem, toReactionCounts, toUserPreview } from "@/vo-tri/server/adapters/social";
 import { fail, mapSupabaseError, ok, validationFail, type ServiceResult } from "@/vo-tri/server/errors";
+import { getProfileByUsername } from "@/vo-tri/server/repositories/profile-repository";
 import {
+  getMyReaction as getMyReactionRow,
   getReactionCounts as getReactionCountsRow,
   insertComment,
   isFollowing,
@@ -13,7 +15,7 @@ import {
 } from "@/vo-tri/server/repositories/social-repository";
 import { postCommentSchema, reactSchema, type PostCommentInput, type ReactInput } from "@/vo-tri/server/validation/social";
 import type { Database } from "@/vo-tri/server/supabase/database.types";
-import type { CommentData, FeedItem, ReactionCounts } from "@/vo-tri/social/types";
+import type { CommentData, FeedItem, ReactionCounts, UserPreview } from "@/vo-tri/social/types";
 
 type Client = SupabaseClient<Database>;
 
@@ -68,6 +70,26 @@ export async function getReactionCounts(
     tally.set(row.reaction_id, (tally.get(row.reaction_id) ?? 0) + 1);
   }
   return ok(toReactionCounts([...tally.entries()].map(([reaction_id, count]) => ({ reaction_id, count }))));
+}
+
+/** `FeedItemCard.activeReactionId`/`ReactionBar`'s "already picked" highlight — `null` (not an error) means no reaction yet. */
+export async function getMyReactionForTarget(
+  client: Client,
+  userId: string,
+  targetType: ReactInput["targetType"],
+  targetId: string,
+): Promise<ServiceResult<string | null>> {
+  const { data, error } = await getMyReactionRow(client, userId, targetType, targetId);
+  if (error) return mapSupabaseError(error);
+  return ok(data?.reaction_id ?? null);
+}
+
+/** `UserPreviewCard` — public by design (same profile a public profile page would show), so no auth required to call. */
+export async function getUserPreview(client: Client, username: string): Promise<ServiceResult<UserPreview>> {
+  const { data, error } = await getProfileByUsername(client, username);
+  if (error) return mapSupabaseError(error);
+  if (!data) return fail("generic");
+  return ok(toUserPreview(data));
 }
 
 export async function listComments(

@@ -652,3 +652,53 @@ sessions don't re-litigate it from scratch.
   Playwright screenshots of the sign-in/sign-up dialog confirming the
   actual rendered brand tokens rather than trusting the code by
   inspection alone.
+- **Backend Foundation — data-layer completion + frontend↔backend audit
+  while migration was pending.** Full reference:
+  `docs/BACKEND_ARCHITECTURE.md` §15. While the owner applied migrations
+  on their end, used an Explore agent to read every real component file
+  (not guess from memory) and build an exhaustive component→server-
+  function map across Profile/XP/Retention/Leaderboard/Social — surfaced
+  in the doc's §15.2 table. Two real, previously-unnoticed gaps found and
+  fixed: (1) `achievement_definitions`/`badge_definitions`/
+  `collection_definitions` had tables and RLS policies since Phase 1 but
+  were **never seeded** — unlike `seasons` (deliberately empty pending a
+  real season, per §10), this was a genuine oversight, since Profile's
+  Achievement/Badge/Collection sections need real catalog content the
+  same way Explore/Retention have `activities.ts`/`quests.ts`/
+  `milestones.ts`. Authored `profile/{achievements,badges,collection}.ts`
+  (6+6+4 items, same real-game-design-content status as those other
+  catalogs) plus a seed migration
+  (`20260724000013_unlocks_catalog_seed.sql`) — validated for real by
+  rebuilding the full local-Postgres stub from Phase 1 and applying all
+  13 migrations in order, confirming the seed is idempotent and the
+  left-join query shape (`badge_definitions !left user_badges`, needed
+  because BadgeCollection shows locked placeholders too) returns correct
+  rows. Built the matching `unlocks-repository.ts`/`unlocks-service.ts`/
+  `adapters/unlocks.ts` (6 new unit tests)/`unlock-actions.ts`.
+  Deliberately did NOT design the *granting* rules (which gameplay event
+  earns which achievement) — that's a separate game-design decision, not
+  a data-layer gap, so every real user's achievement list stays honestly
+  empty until that's designed, but now for the right reason (nothing's
+  unlocked yet) instead of the wrong one (no read path existed). (2)
+  `FeedItemCard.activeReactionId` and `UserPreviewCard` had no backing
+  service at all — `getMyReaction()`/`getMyReactionForTarget()`/
+  `getMyReactionAction()` added for the former; `getUserPreview()`/
+  `getUserPreviewAction()` added for the latter, reusing the
+  already-tested `toUserPreview()` adapter that had never actually been
+  called from a service. Confirmed `RankChange`/leaderboard-snapshot is
+  NOT a gap — already correctly documented in §10 as deliberately
+  deferred pending real traffic. Also documented (not yet fixed, since
+  fixing requires changing shipped-and-tested behavior mid-audit) a new
+  integration risk class: `ClaimResult.milestoneReached` carries a
+  `MilestoneDefinition` with a `LucideIcon` field as a Server Action's
+  *return value* — unlike an RSC prop (already handled correctly
+  everywhere via the `DailyQuestPreview`-style client-side catalog
+  lookup), a Server Action's return value is marshaled through the same
+  serialization Next.js uses for RSC payloads, so returning a raw icon
+  reference through it would likely hit the same class of error;
+  flagged for the Retention wiring step to reduce it to an id first.
+  Zero UI wiring happened this round per explicit instruction (prepare
+  the data layer + refactor only, wire real components after migration
+  is confirmed) — verified with `tsc`, lint, `vitest run` (85/85, +6),
+  `next build` twice (with/without credentials — CI still sees zero
+  route-level changes), and the full Playwright suite (18/18).

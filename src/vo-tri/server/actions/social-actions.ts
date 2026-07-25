@@ -5,7 +5,7 @@ import { getClientAndOptionalUserId, requireAuthenticatedClient } from "@/vo-tri
 import * as socialService from "@/vo-tri/server/services/social-service";
 import type { ServiceResult } from "@/vo-tri/server/errors";
 import type { PostCommentInput, ReactInput } from "@/vo-tri/server/validation/social";
-import type { CommentData, FeedItem, ReactionCounts } from "@/vo-tri/social/types";
+import type { CommentData, FeedItem, ReactionCounts, UserPreview } from "@/vo-tri/social/types";
 
 export async function toggleFollowAction(targetId: string): Promise<ServiceResult<{ following: boolean }>> {
   const auth = await requireAuthenticatedClient();
@@ -40,6 +40,20 @@ export async function getReactionCountsAction(
 ): Promise<ServiceResult<ReactionCounts>> {
   const { client } = await getClientAndOptionalUserId();
   return socialService.getReactionCounts(client, targetType, targetId);
+}
+
+export async function getMyReactionAction(
+  targetType: ReactInput["targetType"],
+  targetId: string,
+): Promise<ServiceResult<string | null>> {
+  const auth = await requireAuthenticatedClient();
+  if ("error" in auth) return auth.error;
+  return socialService.getMyReactionForTarget(auth.client, auth.userId, targetType, targetId);
+}
+
+export async function getUserPreviewAction(username: string): Promise<ServiceResult<UserPreview>> {
+  const { client } = await getClientAndOptionalUserId();
+  return socialService.getUserPreview(client, username);
 }
 
 export async function listCommentsAction(

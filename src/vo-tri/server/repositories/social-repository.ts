@@ -24,6 +24,17 @@ export function removeReaction(client: Client, userId: string, targetType: React
   return client.from("reactions").delete().eq("user_id", userId).eq("target_type", targetType).eq("target_id", targetId);
 }
 
+/** The current user's own reaction on a target, if any — powers `FeedItemCard.activeReactionId`/`ReactionBar`'s "already picked" highlight. */
+export function getMyReaction(client: Client, userId: string, targetType: ReactionTargetType, targetId: string) {
+  return client
+    .from("reactions")
+    .select("reaction_id")
+    .eq("user_id", userId)
+    .eq("target_type", targetType)
+    .eq("target_id", targetId)
+    .maybeSingle();
+}
+
 export function getReactionCounts(client: Client, targetType: ReactionTargetType, targetId: string) {
   // Supabase JS has no native GROUP BY — a plain `select` + service-side
   // tally is simpler than a Postgres view for this small a query;

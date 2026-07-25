@@ -1173,6 +1173,131 @@ Leaderboard → Social) sau khi Auth đã xong và verify được thật.
 
 ---
 
+## 15. Chuẩn bị trong lúc chờ migration — audit frontend↔backend + lỗ hổng thật tìm được
+
+Chủ dự án yêu cầu: trong lúc áp migration lên project thật, hoàn thiện
+tầng dữ liệu cho Profile/XP/Retention/Leaderboard/Social (chỉ phần không
+cần kết nối Supabase), rà soát chính xác component nào nhận dữ liệu gì,
+và refactor trước những điểm sẽ gây khó khăn khi nối dữ liệu thật sau
+này. Việc audit dùng một agent đọc trực tiếp từng file component thật
+(không suy đoán) — kết quả đầy đủ tóm tắt dưới đây.
+
+### 15.1 Lỗ hổng thật tìm được và đã vá ngay (không cần Supabase thật)
+
+**`achievement_definitions`/`badge_definitions`/`collection_definitions`
+có bảng từ §4 nhưng chưa từng được seed** — nghĩa là dù `unlocks-service.ts`
+có tồn tại, kết quả luôn rỗng vì catalog rỗng. Khác với `seasons` (rỗng
+có chủ đích, chờ mùa giải thật — §10), đây là thiếu sót thật: 3 domain
+này cần catalog nội dung tác giả hoá như `activities.ts`/`quests.ts`/
+`milestones.ts`, nhưng chưa ai viết. Đã vá bằng cách tự biên soạn 3 file
+catalog thật (`src/vo-tri/profile/{achievements,badges,collection}.ts`,
+6+6+4 mục, cùng vị thế nội dung game-design như các catalog khác, không
+phải dữ liệu giả) + migration seed idempotent
+(`20260724000013_unlocks_catalog_seed.sql`, **đã áp thật lên local
+Postgres 16** theo đúng phương pháp Phụ lục — dựng lại stub `auth`/
+`storage` từ đầu, áp cả 13 migration theo thứ tự, xác nhận insert +
+re-run idempotent + join query left-join đúng ngữ nghĩa "hiện toàn bộ
+catalog kèm cờ đã-mở-khoá") + `unlocks-repository.ts`/`unlocks-service.ts`/
+`adapters/unlocks.ts` (có test) + `unlock-actions.ts`. **Việc *cấp phát*
+achievement/badge cho một user cụ thể (luật game nào thì mở khoá gì) vẫn
+cố tình chưa thiết kế** — đó là quyết định game-design riêng, không phải
+việc của tầng dữ liệu; mọi user thật vẫn sẽ thấy rỗng cho tới khi luật
+cấp phát được thiết kế, nhưng giờ đã rỗng *vì lý do đúng* (chưa có ai mở
+khoá) chứ không phải vì thiếu tầng đọc dữ liệu.
+
+**`FeedItemCard.activeReactionId` không có hàm đọc** — `setReactionAction`/
+`clearReactionAction` (ghi) đã có từ Phase 2, nhưng không có hàm nào trả
+lời "user hiện tại đã react gì vào target này chưa". Đã thêm
+`getMyReaction()` (`social-repository.ts`), `getMyReactionForTarget()`
+(`social-service.ts`), `getMyReactionAction()` (`social-actions.ts`).
+
+**`UserPreviewCard` không có service nào trả về `UserPreview`** — adapter
+`toUserPreview()` đã tồn tại và có test từ Phase 2 nhưng chưa từng được
+gọi ở đâu. Đã thêm `getUserPreview(client, username)` (`social-service.ts`,
+dùng lại `getProfileByUsername` có sẵn) + `getUserPreviewAction(username)`
+— public, không cần đăng nhập, đúng như `UserPreviewCard` hiển thị hồ sơ
+công khai của người khác.
+
+**`RankChange`/leaderboard snapshot — xác nhận lại, không phải lỗ hổng.**
+Bảng `leaderboard_rank_snapshots` đã có trong schema, nhưng job snapshot
+đã được ghi rõ ở §10 là cố tình chưa xây (chờ traffic thật) — audit lần
+này xác nhận lại quyết định đó vẫn đúng, không cần hành động.
+
+### 15.2 Bản đồ component ↔ hàm server (đầy đủ, xem code thật để tra chi tiết dòng)
+
+Mọi hàm service/action nói tới trong bảng dưới đã tồn tại và đã verify
+qua `tsc`/`vitest`, trừ khi ghi rõ "MISSING". "Đã nối?" = component đó
+có thật sự nhận data từ hàm server trên một route thật (`src/app/**`)
+hôm nay, không phải chỉ trên `/vo-tri-styleguide`.
+
+| Domain | Component | Hàm server | Đã nối? |
+|---|---|---|---|
+| Profile | `ProfileHero`/`StatCards`/`LevelCard`/`StreakTracker` (full) | `getProfileIdentity`/`getProfileStats`/`getLevelProgress`/`getStreakData` | **Có** — `/profile` (Phase 3) |
+| Profile | `EditProfileSheet` | `updateProfileAction` | Không — chưa gắn nút mở sheet vào `/profile` |
+| Profile (unlocks) | `AchievementSection`/`BadgeCollection`/`JourneyTimeline`/`CollectionShowcase` | `getMyAchievementsAction`/`getMyBadgesAction`/`getMyJourneyAction`/`getMyCollectionAction` (mới xong ở §15.1) | Không — `/profile/page.tsx` vẫn truyền `[]` cứng, đây là việc nối dây rẻ nhất còn lại (server đã sẵn sàng 100%) |
+| XP | `TodayCard` (Home) | `getMyTodayStatsAction` | Không — `src/app/page.tsx:18` có `const currentUser = undefined` cứng, chưa gọi `getOptionalSession()` như layout/profile đã làm |
+| Retention | `DailyQuestPreview`/`QuestList`/`QuestCard` | `getMyQuestProgressAction` | Không — luôn render nhánh "chưa đăng nhập" |
+| Retention | `MilestoneTrack`/`MilestoneBanner` | `getMyMilestoneMetricsAction` | Không — chỉ có ở styleguide |
+| Retention | `ClaimRewardDialog` | `claimQuestAction`/`claimMilestoneAction` | Không — chỉ có ở styleguide |
+| Leaderboard | `LeaderboardHero`/`MyPositionCard` | `getMyGlobalPositionAction` | Không |
+| Leaderboard | `LeaderboardList`/`LeaderboardRow`/`TopThreePodium` | `getGlobalLeaderboardAction` | Không — `LeaderboardInteractive.tsx` có `const players: never[] = []` cứng; `TopThreePodium`/`MyPositionCard` còn chưa được ghép vào component này (chỉ ở styleguide) |
+| Social | `ActivityFeed` (Home) | `getRecentFeedAction` | Không — `src/app/page.tsx` truyền `items={[]}` cứng |
+| Social | `NotificationCenter`/`NotificationBell` | `getMyNotificationsAction` | Không — `NotificationBell.tsx` có mảng rỗng cứng |
+| Social | `FeedItemCard`/`ReactionBar` | `getReactionCountsAction`, `getMyReactionAction` (mới), `setReactionAction`/`clearReactionAction` | Không |
+| Social | `CommentSection`/`CommentItem`/`CommentComposer` | `listCommentsAction`/`postCommentAction` | Không — component chưa được gắn vào `/play/[activityId]` hay `/explore` |
+| Social | `FollowButton` | `getMyFollowStatusAction`/`toggleFollowAction` | Không — component chưa được gắn ở đâu thật |
+| Social | `UserPreviewCard` | `getUserPreviewAction` (mới, §15.1) | Không |
+
+Ngoài 5 domain trên, `ActivitySpotlight`/`CommunityPulse` (Home) cần
+`SpotlightItem`/`CommunityStats` — **MISSING thật, nhưng ngoài phạm vi
+yêu cầu lần này**: `CommunityStats` cần Presence thật (đã ghi ở §10 là
+cố tình chưa xây), `SpotlightItem` cần một adapter nhỏ trên `FeedItem`
+(dễ, nhưng thuộc về khi Social/Home được nối, không phải tầng dữ liệu).
+
+### 15.3 Rủi ro tích hợp thật đã tìm ra (ghi lại để tránh lặp lại lỗi cũ)
+
+**Ràng buộc `LucideIcon` qua RSC boundary — đã có tiền lệ, giờ xác nhận
+phạm vi chính xác.** `QuestDefinition.icon`/`MilestoneDefinition.icon`
+(và giờ cả `AchievementDefinition`/`BadgeDefinition`/`CollectionDefinition`
+mới thêm ở §15.1) đều mang `LucideIcon`. Quy tắc đã xác nhận qua đọc code
+thật: **chỉ vỡ khi một Server Component truyền nó làm prop xuống một
+Client Component** (`"use client"`) — `DailyQuestPreview.tsx` đã tránh
+đúng cách này (tự gọi catalog phía client thay vì nhận prop). Ngược lại,
+`AchievementSection`/`BadgeCollection`/`CollectionShowcase`/`ProfileHero`
+**không có `"use client"`** — nên `/profile/page.tsx` (Server Component)
+gọi thẳng service (đã merge icon từ catalog phía server) và truyền xuống
+**an toàn**, không cần tách client-side lookup như Quest/Milestone.
+
+**Rủi ro mới, chưa gặp trước đây: `ClaimResult.milestoneReached` mang
+`MilestoneDefinition` (có icon) làm *giá trị trả về* của
+`claimQuestAction`/`claimMilestoneAction`.** Khác với prop RSC, đây là
+kết quả một Server Action gọi từ code client — nhưng Next.js marshal giá
+trị trả về của Server Action qua cùng cơ chế serialize như RSC payload,
+nên trả thẳng một `LucideIcon` reference qua đây nhiều khả năng vỡ y hệt
+lỗi cũ. **Khi nối `ClaimRewardDialog` thật**: đổi `ClaimResult.milestoneReached`
+thành chỉ mang `id` (client tự tra icon từ `milestones.ts`) trước khi cho
+phép nó đi qua một Server Action — refactor này chưa làm ở lượt này vì
+đổi shape của `ClaimResult` (dùng chung bởi `retention-service.ts` và
+`ClaimRewardDialog`) nên để dành đúng lúc nối Retention thật, tránh sửa
+type mà không verify được ngay.
+
+**Home's `currentUser` — điểm nối dây rẻ nhất, đã xác nhận sẵn sàng
+100%.** `src/app/page.tsx:18` vẫn `const currentUser = undefined` cứng.
+Khi nối: đổi `HomePage` thành `async function`, gọi `getOptionalSession()`
++ `getMyTodayStatsAction()` (trả đúng type `TodayStats`, không có field
+icon nào) — không có rủi ro serialize, chỉ là một page chưa được đổi.
+
+### 15.4 Đã verify sau vòng này
+
+`tsc`, `eslint`, `vitest run` (**85/85** — +6 test cho `adapters/unlocks.ts`),
+migration mới đã áp thật + idempotent trên local Postgres 16 (xem §15.1),
+`next build` chạy 2 lần (có/không `.env.local`) không đổi hành vi CI,
+Playwright E2E 18/18. Không route nào đổi hành vi thật ở vòng này —
+toàn bộ là tầng dữ liệu + audit, đúng như chủ dự án yêu cầu chờ xác nhận
+migration trước khi nối UI thật.
+
+---
+
 ## Phụ lục: cách migration đã được verify thật (không chỉ đọc bằng mắt)
 
 Kế hoạch ban đầu là dựng một Supabase local stack đầy đủ qua Docker để
