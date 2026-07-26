@@ -1234,7 +1234,7 @@ hôm nay, không phải chỉ trên `/vo-tri-styleguide`.
 |---|---|---|---|
 | Profile | `ProfileHero`/`StatCards`/`LevelCard`/`StreakTracker` (full) | `getProfileIdentity`/`getProfileStats`/`getLevelProgress`/`getStreakData` | **Có** — `/profile` (Phase 3) |
 | Profile | `EditProfileSheet` | `updateProfileAction` | Không — chưa gắn nút mở sheet vào `/profile` |
-| Profile (unlocks) | `AchievementSection`/`BadgeCollection`/`JourneyTimeline`/`CollectionShowcase` | `getMyAchievementsAction`/`getMyBadgesAction`/`getMyJourneyAction`/`getMyCollectionAction` (mới xong ở §15.1) | Không — `/profile/page.tsx` vẫn truyền `[]` cứng, đây là việc nối dây rẻ nhất còn lại (server đã sẵn sàng 100%) |
+| Profile (unlocks) | `AchievementSection`/`BadgeCollection`/`JourneyTimeline`/`CollectionShowcase` | `unlocksService.getAchievements`/`getBadges`/`getCollectionItems`/`getJourneyEvents` gọi thẳng từ `/profile/page.tsx` (Server Component, an toàn với icon — xem §16.2), **không phải** `unlock-actions.ts`'s `getMy*Action` (những action đó trả DTO không-icon cho một caller client-side giả định, xem §16.1) | Không — `/profile/page.tsx` vẫn truyền `[]` cứng, đây là việc nối dây rẻ nhất còn lại (server đã sẵn sàng 100%) |
 | XP | `TodayCard` (Home) | `getMyTodayStatsAction` | Không — `src/app/page.tsx:18` có `const currentUser = undefined` cứng, chưa gọi `getOptionalSession()` như layout/profile đã làm |
 | Retention | `DailyQuestPreview`/`QuestList`/`QuestCard` | `getMyQuestProgressAction` | Không — luôn render nhánh "chưa đăng nhập" |
 | Retention | `MilestoneTrack`/`MilestoneBanner` | `getMyMilestoneMetricsAction` | Không — chỉ có ở styleguide |
@@ -1268,18 +1268,11 @@ Client Component** (`"use client"`) — `DailyQuestPreview.tsx` đã tránh
 gọi thẳng service (đã merge icon từ catalog phía server) và truyền xuống
 **an toàn**, không cần tách client-side lookup như Quest/Milestone.
 
-**Rủi ro mới, chưa gặp trước đây: `ClaimResult.milestoneReached` mang
-`MilestoneDefinition` (có icon) làm *giá trị trả về* của
-`claimQuestAction`/`claimMilestoneAction`.** Khác với prop RSC, đây là
-kết quả một Server Action gọi từ code client — nhưng Next.js marshal giá
-trị trả về của Server Action qua cùng cơ chế serialize như RSC payload,
-nên trả thẳng một `LucideIcon` reference qua đây nhiều khả năng vỡ y hệt
-lỗi cũ. **Khi nối `ClaimRewardDialog` thật**: đổi `ClaimResult.milestoneReached`
-thành chỉ mang `id` (client tự tra icon từ `milestones.ts`) trước khi cho
-phép nó đi qua một Server Action — refactor này chưa làm ở lượt này vì
-đổi shape của `ClaimResult` (dùng chung bởi `retention-service.ts` và
-`ClaimRewardDialog`) nên để dành đúng lúc nối Retention thật, tránh sửa
-type mà không verify được ngay.
+**Rủi ro `ClaimResult.milestoneReached` — đã vá ở §16, không còn deferred.**
+Ban đầu định để dành sửa lúc nối Retention thật (xem lịch sử git), nhưng
+chủ dự án sau đó yêu cầu tường minh "audit mọi Server Action, vá ngay mọi
+kiểu trả về không serialize được" — nên đã sửa ngay trong vòng đó thay vì
+chờ. Chi tiết đầy đủ ở §16.1.
 
 **Home's `currentUser` — điểm nối dây rẻ nhất, đã xác nhận sẵn sàng
 100%.** `src/app/page.tsx:18` vẫn `const currentUser = undefined` cứng.
@@ -1295,6 +1288,153 @@ migration mới đã áp thật + idempotent trên local Postgres 16 (xem §15.1
 Playwright E2E 18/18. Không route nào đổi hành vi thật ở vòng này —
 toàn bộ là tầng dữ liệu + audit, đúng như chủ dự án yêu cầu chờ xác nhận
 migration trước khi nối UI thật.
+
+---
+
+## 16. Audit tính serialize-được + tầng chuyển đổi dữ liệu (chưa nối UI)
+
+Chủ dự án chỉ đạo tường minh: coi các phát hiện ở §15 là *cải tiến kiến
+trúc*, không phải fix lẻ tẻ — audit toàn bộ Server Action xem giá trị trả
+về có serialize được qua ranh giới RSC Flight không, đảm bảo repository/
+adapter tách biệt khỏi UI DTO, chuẩn hoá error contract, tiếp tục tìm lỗ
+hổng tích hợp. Không nối UI nào ở vòng này (đúng chỉ đạo "chờ xác nhận
+migration").
+
+### 16.1 Kiểu trả về của Server Action — audit toàn bộ, không chỉ 1 chỗ
+
+Grep toàn bộ field `icon: LucideIcon` trong `src/vo-tri/*/types.ts` +
+`game/types.ts`, rồi truy ngược xem có Server Action nào (`"use server"`,
+không phải service gọi trực tiếp từ Server Component) từng trả nó về
+không. Kết quả: 8 type có field `icon` (`Activity`/`ComingSoonActivity`,
+`GameOutcome.achievementUnlocked`, `Achievement`/`ProfileBadge`/
+`CollectionItem`, `QuestDefinition`/`MilestoneDefinition`,
+`ReactionKind`) — chỉ **2 chỗ thật sự rò rỉ qua action**, cả hai đã vá:
+
+1. **`ClaimResult.milestoneReached: MilestoneDefinition`** (đã nêu ở
+   §15.3, để dành sửa sau) — sửa ngay vòng này thành
+   `milestoneReached?: { id: string }`. `ClaimRewardDialog.tsx` (Client
+   Component) tự `milestones.find(m => m.id === result.milestoneReached.id)`
+   để lấy lại icon thật — y hệt cách `DailyQuestPreview` đã làm.
+2. **`unlock-actions.ts` (tự viết ở §15.1, cùng vòng nên chưa kịp phát
+   hiện) trả thẳng `Achievement[]`/`ProfileBadge[]`/`CollectionItem[]`
+   từ `getMy{Achievements,Badges,Collection}Action`** — đúng loại lỗi
+   vừa vá ở (1), tự mắc lại ngay trong cùng phiên làm việc. Sửa bằng 3
+   DTO mới (`AchievementUnlockDTO`/`BadgeUnlockDTO`/`CollectionUnlockDTO`
+   — chỉ `id` + trạng thái unlock, không tên/mô tả/icon/rarity), action
+   tự `.map()` sang DTO trước khi `ok(...)`. Các hàm `unlocksService.get*`
+   **giữ nguyên** kiểu đầy đủ (có icon) — chúng an toàn vì consumer thật
+   duy nhất hôm nay là `/profile/page.tsx`, một Server Component không có
+   con `"use client"` nào ở giữa (xem quy tắc ở §16.2).
+
+6 type còn lại xác nhận an toàn: `Activity`/`ComingSoonActivity` chưa
+từng qua action nào (Explore đọc catalog thẳng phía client); `GameOutcome`
+là type nội bộ của `GameFrame`, không action nào trả nó; `QuestDefinition`/
+`MilestoneDefinition` — action chỉ trả `QuestProgress`/số liệu thô, không
+trả definition; `ReactionKind` — action chỉ trả `ReactionCounts`
+(`Record<string, number>`), không trả catalog.
+
+### 16.2 Quy tắc chính thức: khi nào một type "có icon" an toàn để trả về
+
+Không phải mọi hàm trả `LucideIcon` đều sai — quy tắc thật (xác nhận qua
+đọc code, không suy đoán):
+
+- **An toàn:** một hàm `service` (không có `"use server"`) được gọi trực
+  tiếp trong thân một Server Component, và component đó truyền kết quả
+  xuống các component con **không có `"use client"`**. Không có ranh
+  giới serialize nào bị vượt qua — toàn bộ cây vẫn render phía server.
+  Ví dụ thật: `/profile/page.tsx` → `unlocksService.getAchievements()` →
+  `<AchievementSection achievements={...} />` (không `"use client"`).
+- **Không an toàn:** bất kỳ hàm nào có `"use server"` (một Server
+  Action) — giá trị trả về luôn phải serialize qua Flight protocol để về
+  tới trình gọi phía client, bất kể trình gọi đó là Server hay Client
+  Component. Cũng không an toàn: một Server Component truyền prop xuống
+  con có `"use client"`.
+- **Cách vá chuẩn khi cần:** không bao giờ trả `LucideIcon` (hay bất kỳ
+  function/class instance nào) qua 2 trường hợp "không an toàn" ở trên —
+  chỉ trả `id`/dữ liệu thuần, để phía nhận tự tra cứu catalog (đã import
+  sẵn, không cần round-trip) để lấy lại icon. `Date` thì khác — Next.js
+  Server Action serialize `Date` được thật (không như function/class),
+  nên giữ nguyên `Date` ở những field cần nó (`Achievement.unlockedAt`,
+  `JourneyEvent.date`) là đúng, không cần đổi thành string.
+
+### 16.3 Domain Model vs UI DTO — quy tắc tường minh hoá, không phải kiến trúc mới
+
+Chủ dự án yêu cầu một tầng chuyển đổi rõ ràng: DB Row → Repository Model
+→ Domain Model → UI DTO. Đọc lại toàn bộ `repositories/`/`services/`
+xác nhận: **kiến trúc này đã tồn tại từ Phase 2**, chỉ chưa được đặt tên
+tường minh — ghi lại đây thay vì dựng thêm class/abstraction mới (dự án
+này chủ trương không thêm tầng trừu tượng khi chưa cần, xem CLAUDE.md):
+
+1. **Database Row** — kiểu `Database["public"]["Tables"][...]["Row"]`
+   (`database.types.ts`), snake_case, khớp cột SQL 1-1.
+2. **Repository Model** — chính là Database Row, không đổi gì; mọi hàm
+   `repositories/*.ts` trả thẳng query builder (`client.from(...).select(...)`),
+   không tự transform — `services/*.ts` là nơi duy nhất gọi `.data`/`.error`.
+3. **Domain Model** — kiểu camelCase khớp chính xác prop type frontend
+   thật (`ProfileIdentity`, `QuestProgress`, `Achievement`, ...), sinh ra
+   bởi các hàm `adapters/*.ts` (`toProfileIdentity`, `toQuestProgress`,
+   ...). Đây là những gì mọi hàm `services/*.ts` trả về qua `ok(...)` —
+   xác nhận lại bằng cách grep toàn bộ `return ok(` trong `services/`:
+   không chỗ nào trả thẳng Row chưa qua adapter/construct thủ công.
+4. **UI DTO** — **thường trùng với Domain Model** (đa số trường hợp,
+   service gọi trực tiếp từ Server Component); nhưng khi Domain Model đi
+   qua một Server Action, nó phải hẹp lại thành một DTO serialize-được
+   nếu Domain Model có field không serialize (§16.1–16.2). Đây là điểm
+   khác nhau *duy nhất* giữa Domain Model và UI DTO trong toàn bộ
+   codebase này — mọi trường hợp khác, action trả nguyên Domain Model.
+
+### 16.4 Error contract — chuẩn hoá `requireAuthenticatedClient()`
+
+Audit toàn bộ 8 file `actions/*.ts` tìm việc gọi `getClientAndOptionalUserId()`
+rồi tự kiểm `if (!userId) return fail("NOT_AUTHENTICATED")` thủ công — dù
+hai cách cho **cùng kết quả** (không phải lỗi contract), đây vẫn là code
+trùng lặp không cần thiết khi `requireAuthenticatedClient()` đã làm đúng
+việc đó trong 1 dòng. Đã đổi toàn bộ action "dữ liệu của chính tôi, luôn
+cần đăng nhập" (`getMyProfileAction`, `getMyProfileStatsAction`,
+`getMyLevelProgressAction`, `getMyStreakDataAction`, `getMyTodayStatsAction`,
+`getMyQuestProgressAction`, `getMyMilestoneMetricsAction`,
+`getMyGlobalPositionAction`, `getMyAchievementsAction`, `getMyBadgesAction`,
+`getMyCollectionAction`, `getMyJourneyAction`) sang dùng
+`requireAuthenticatedClient()`. Những action đọc công khai thật sự
+(`getGlobalLeaderboardAction`, `getReactionCountsAction`,
+`getUserPreviewAction`, `listCommentsAction`, `getRecentFeedAction`) vẫn
+đúng khi dùng `getClientAndOptionalUserId()` — không đổi.
+
+### 16.5 2 bug tích hợp thật khác tìm được (frontend giả định ≠ backend thật)
+
+**`postCommentAction`/`toggleFollowAction` gọi `revalidatePath()` tới
+route không tồn tại.** `revalidatePath("/play")` — không có route `/play`
+(chỉ có `/play/[activityId]`); `revalidatePath(`/profile/${targetId}`)`
+— chưa có route `/profile/[username]` nào cả (chỉ có `/profile` cho
+chính mình). Sửa: `postCommentAction` giờ revalidate đúng
+`/play/${targetId}` (activity) hoặc `/` (feed_item, nơi `ActivityFeed`
+render); `toggleFollowAction` bỏ hẳn `revalidatePath` — `FollowButton`
+vốn đã fully controlled/optimistic (`following` + `onToggle`, caller tự
+cập nhật state), không cần server re-render, và chưa có route nào để
+revalidate.
+
+**`getMyReactionForTarget`/`getMyReactionAction` trả `string | null` —
+khác quy ước `undefined` dùng xuyên suốt mọi adapter khác.** Mọi adapter
+khác trong codebase chuẩn hoá giá trị-DB-vắng-mặt thành `undefined`
+(`avatar_url ?? undefined`, `tagline ?? undefined`, ...), không bao giờ
+`null`. Nếu giữ nguyên `| null`, khi nối `FeedItemCard.activeReactionId`/
+`ReactionBar.activeReactionId` (cả hai đều `?: string`, tức chỉ nhận
+`undefined`) sẽ là lỗi kiểu thật ngay khi nối dây. Sửa tại nguồn — đổi
+`data?.reaction_id ?? null` thành `?? undefined` — thay vì nới lỏng 2
+prop UI để nhận `| null` (sẽ tạo một ngoại lệ riêng, phá quy ước chung).
+
+### 16.6 Đã verify sau vòng này
+
+`tsc`, `eslint`, `vitest run` (85/85, không đổi số lượng — vòng này là
+refactor kiểu/error-contract, không thêm logic mới cần test riêng),
+`next build` (không route nào đổi hành vi), Playwright E2E 18/18 (xanh
+trên CI thật — một test `accessibility.spec.ts` bị flaky *cục bộ* trong
+sandbox này do tải hệ thống, xác nhận không liên quan tới thay đổi lần
+này bằng cách chạy lại trên đúng commit `198e813` chưa sửa gì — vẫn fail
+y hệt, nên đây là flake môi trường cục bộ, không phải regression; CI thật
+trên GitHub Actions là nguồn xác nhận chính thức). Không route/behavior
+nào thay đổi ở người dùng thật — toàn bộ là refactor kiểu dữ liệu + error
+contract, đúng chỉ đạo "chỉ dừng khi cần xác nhận migration".
 
 ---
 

@@ -52,5 +52,13 @@ export interface ClaimResult {
   points: number;
   xp: number;
   leveledUp?: { newLevel: number };
-  milestoneReached?: MilestoneDefinition;
+  /**
+   * Just the id — a Server Action's return value crosses the same RSC
+   * Flight-protocol boundary as a Server Component prop, so a full
+   * `MilestoneDefinition` (its `icon` is a component reference) can't
+   * travel here safely. Callers look up the full definition from
+   * `milestones.ts` client-side by id, same fix class as
+   * `DailyQuestPreview`/`PlayClient`'s existing icon workaround.
+   */
+  milestoneReached?: { id: string };
 }

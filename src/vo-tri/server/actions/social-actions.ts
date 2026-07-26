@@ -11,9 +11,11 @@ export async function toggleFollowAction(targetId: string): Promise<ServiceResul
   const auth = await requireAuthenticatedClient();
   if ("error" in auth) return auth.error;
 
-  const result = await socialService.toggleFollow(auth.client, targetId);
-  if (result.ok) revalidatePath(`/profile/${targetId}`);
-  return result;
+  // No revalidatePath here: `FollowButton` is fully controlled/optimistic
+  // (caller flips its own `following` state on tap), and there's no public
+  // `/profile/[username]` route yet to revalidate anyway — add one back
+  // once that route exists and needs server-rendered follow state.
+  return socialService.toggleFollow(auth.client, targetId);
 }
 
 export async function getMyFollowStatusAction(targetId: string): Promise<ServiceResult<boolean>> {
@@ -45,7 +47,7 @@ export async function getReactionCountsAction(
 export async function getMyReactionAction(
   targetType: ReactInput["targetType"],
   targetId: string,
-): Promise<ServiceResult<string | null>> {
+): Promise<ServiceResult<string | undefined>> {
   const auth = await requireAuthenticatedClient();
   if ("error" in auth) return auth.error;
   return socialService.getMyReactionForTarget(auth.client, auth.userId, targetType, targetId);
@@ -69,7 +71,10 @@ export async function postCommentAction(input: PostCommentInput): Promise<Servic
   if ("error" in auth) return auth.error;
 
   const result = await socialService.postComment(auth.client, auth.userId, input);
-  if (result.ok) revalidatePath(`/${input.targetType === "activity" ? "play" : "explore"}`);
+  // "/play" isn't a real route (only /play/[activityId] is) — revalidate the
+  // actual page the comment was posted on: the specific activity for
+  // "activity" comments, Home (where ActivityFeed renders) for "feed_item".
+  if (result.ok) revalidatePath(input.targetType === "activity" ? `/play/${input.targetId}` : "/");
   return result;
 }
 

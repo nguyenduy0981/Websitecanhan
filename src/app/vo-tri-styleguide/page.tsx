@@ -54,7 +54,6 @@ import {
   ClaimRewardDialog,
   getDailyQuests,
   getMilestonesForMetric,
-  milestones,
   MilestoneTrack,
   QuestList,
   StreakTracker,
@@ -250,7 +249,7 @@ export default function VoTriStyleGuidePage() {
       points: quest.reward,
       xp: quest.xp,
       leveledUp: quest.id === "daily-play-two" ? { newLevel: 8 } : undefined,
-      milestoneReached: quest.id === "daily-play-two" ? milestones.find((m) => m.id === "streak-7") : undefined,
+      milestoneReached: quest.id === "daily-play-two" ? { id: "streak-7" } : undefined,
     };
     setClaimState({ quest, result });
     setDemoQuestProgress((prev) => ({ ...prev, [quest.id]: { questId: quest.id, current: quest.target, claimed: true } }));

@@ -702,3 +702,49 @@ sessions don't re-litigate it from scratch.
   is confirmed) — verified with `tsc`, lint, `vitest run` (85/85, +6),
   `next build` twice (with/without credentials — CI still sees zero
   route-level changes), and the full Playwright suite (18/18).
+- **Backend Foundation — serialization audit + transformation-layer
+  formalization (no new UI wiring).** Full reference:
+  `docs/BACKEND_ARCHITECTURE.md` §16. Owner asked to treat the prior
+  round's findings as architecture improvements and audit every Server
+  Action's return type for RSC-Flight serializability. Grepped every
+  `icon: LucideIcon` field across the frontend type files and traced
+  each one forward to see whether any Server Action actually returned
+  it — found exactly 2 real leaks, both fixed: (1) the already-flagged
+  `ClaimResult.milestoneReached: MilestoneDefinition` — fixed now
+  instead of deferring, narrowed to `{ id: string }`, with
+  `ClaimRewardDialog` doing the client-side catalog lookup, same pattern
+  as `DailyQuestPreview`. (2) A self-introduced instance of the *exact
+  same bug*, written in the immediately preceding round: `unlock-actions.ts`
+  returned full `Achievement[]`/`ProfileBadge[]`/`CollectionItem[]`
+  (all icon-bearing) directly from `"use server"` functions — added
+  `AchievementUnlockDTO`/`BadgeUnlockDTO`/`CollectionUnlockDTO` (id +
+  unlock state only, no icon) as the action-layer contract, while
+  `unlocks-service.ts`'s functions keep returning the full types
+  unchanged, since their only real caller (`/profile/page.tsx`) is a
+  Server Component with no `"use client"` children — confirmed and
+  documented the exact rule for when an icon-bearing return value is
+  safe (never crosses a `"use server"` boundary or a Server→Client
+  Component prop) vs. unsafe. Documented (not restructured — it already
+  existed, just unnamed) the Database Row → Repository Model → Domain
+  Model → UI DTO pipeline already implicit in every repository/service:
+  UI DTO equals Domain Model except at the Server Action boundary, where
+  it narrows if the Domain Model carries a non-serializable field.
+  Consolidated 12 "my own data, always requires auth" actions that
+  duplicated `getClientAndOptionalUserId()` + manual
+  `fail("NOT_AUTHENTICATED")` onto the existing `requireAuthenticatedClient()`
+  helper — same resulting error contract either way, but one path
+  instead of two. Found and fixed 2 more real integration bugs:
+  `postCommentAction`/`toggleFollowAction` called `revalidatePath()` on
+  routes that don't exist (`/play`, `/profile/[username]` — neither is a
+  real route today) — fixed to revalidate the actual activity/Home page,
+  or dropped entirely where `FollowButton`'s already-optimistic/controlled
+  design makes revalidation unnecessary; and `getMyReactionForTarget`
+  returned `string | null` where every other adapter in the codebase
+  normalizes an absent DB value to `undefined` — fixed at the source
+  (`?? undefined`) rather than special-casing two UI prop types to accept
+  `null`, keeping the one established convention intact. Verified: `tsc`,
+  lint, `vitest run` (85/85, unchanged — pure type/contract refactor, no
+  new logic needing its own tests), `next build`, full Playwright suite
+  (18/18 on CI; one `accessibility.spec.ts` case flaked locally in this
+  sandbox under system load, reproduced identically against the
+  untouched prior commit, confirmed unrelated to this round's changes).

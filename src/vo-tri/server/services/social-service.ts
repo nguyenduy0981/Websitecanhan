@@ -72,16 +72,24 @@ export async function getReactionCounts(
   return ok(toReactionCounts([...tally.entries()].map(([reaction_id, count]) => ({ reaction_id, count }))));
 }
 
-/** `FeedItemCard.activeReactionId`/`ReactionBar`'s "already picked" highlight — `null` (not an error) means no reaction yet. */
+/**
+ * `FeedItemCard.activeReactionId`/`ReactionBar`'s "already picked"
+ * highlight — `undefined` (not an error) means no reaction yet. Every
+ * other adapter in this codebase normalizes an absent DB value to
+ * `undefined`, never `null` (`avatar_url ?? undefined`, `tagline ??
+ * undefined`, ...); matching that convention here means the eventual
+ * caller can pass this straight through as the prop without an `?? undefined`
+ * conversion at every call site.
+ */
 export async function getMyReactionForTarget(
   client: Client,
   userId: string,
   targetType: ReactInput["targetType"],
   targetId: string,
-): Promise<ServiceResult<string | null>> {
+): Promise<ServiceResult<string | undefined>> {
   const { data, error } = await getMyReactionRow(client, userId, targetType, targetId);
   if (error) return mapSupabaseError(error);
-  return ok(data?.reaction_id ?? null);
+  return ok(data?.reaction_id ?? undefined);
 }
 
 /** `UserPreviewCard` — public by design (same profile a public profile page would show), so no auth required to call. */

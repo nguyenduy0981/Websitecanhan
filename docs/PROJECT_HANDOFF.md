@@ -371,6 +371,48 @@ giữ nguyên byte-for-byte sau khi viết lại engine (verify bằng E2E khôn
   thật, không chỉ giả định), bundle size hợp lý (~167–184 kB First Load
   JS mỗi route thật).
 
+### Backend Foundation (Phase 1–3 + các round chuẩn bị tầng dữ liệu)
+Full reference: `docs/BACKEND_ARCHITECTURE.md`, decision log đầy đủ trong
+`CLAUDE.md`. Tóm tắt trạng thái thật tính đến bây giờ (không phải kế
+hoạch — đây là những gì đã chạy, đã verify):
+
+- **Schema + migration:** 13 file migration (`supabase/migrations/`),
+  24 bảng, RLS đầy đủ, 5 hàm `security definer` cho mọi write có đặc
+  quyền. Đã validate thật trên local Postgres nhiều lần (kể cả sau khi
+  thêm bảng seed catalog Achievement/Badge/Collection ở round gần nhất)
+  — **chưa áp lên project Supabase thật** (session này không có mạng ra
+  ngoài tới Supabase, đã gửi chủ dự án file SQL gộp + hướng dẫn
+  `supabase db push`).
+- **Data layer đầy đủ cho cả 5 domain** (Profile/XP, Retention, Leaderboard,
+  Social, Unlocks): repository → service → validation → adapter → Server
+  Action, tách lớp rõ ràng, có unit test. Không domain nào còn thiếu hàm
+  đọc/ghi cần thiết — xem `BACKEND_ARCHITECTURE.md` §15 để có bản đồ
+  component ↔ hàm server chính xác.
+- **Auth đã nối thật vào UI** (Phase 3): `AuthDialog` (đăng nhập/đăng ký
+  thật), `UserMenu` (đăng xuất thật), `RootLayout` nhận diện session thật
+  mỗi request, `/profile` hiển thị Identity/Stats/Level/Streak thật khi
+  có session — tất cả **chưa verify round-trip thật** vì chưa có kết nối
+  Supabase từ session này, chỉ verify được bằng typecheck/lint/build/E2E.
+- **Domain khác (Quest/Milestone/Leaderboard/Social) cố tình CHƯA nối
+  vào UI** — theo đúng chỉ đạo của chủ dự án: chuẩn bị toàn bộ tầng dữ
+  liệu trước, nối UI sau khi xác nhận migration đã áp dụng thành công.
+- **3 bug tích hợp thật tự phát hiện và sửa** ở round audit gần nhất
+  (không phải giả định — đọc code thật, không chỉ đọc type): (1)
+  `ClaimResult.milestoneReached` từng mang cả `MilestoneDefinition`
+  (có field `icon: LucideIcon`) — không serialize được qua ranh giới
+  Server Action, sửa còn `{id}`, client tự tra catalog theo id. (2)
+  `unlock-actions.ts` (component mới tự viết ngay trong round trước) mắc
+  đúng lỗi tương tự — trả thẳng `Achievement[]`/`ProfileBadge[]`/
+  `CollectionItem[]` (đều có `icon`) từ một `"use server"` action; sửa
+  bằng DTO an toàn (`id` + trạng thái unlock, không icon). (3)
+  `postCommentAction`/`toggleFollowAction` gọi `revalidatePath()` tới
+  route không tồn tại (`/play`, `/profile/[id]` — route sau còn chưa
+  được xây) — sửa về đúng route thật hoặc bỏ hẳn nếu component đã tự
+  optimistic-update. Achievement/Badge/Collection cũng thiếu catalog seed
+  thật (bảng có từ Phase 1 nhưng chưa từng insert dữ liệu) — đã bổ sung
+  `profile/{achievements,badges,collection}.ts` (nội dung game-design
+  thật, không phải dữ liệu giả) + migration seed tương ứng.
+
 ---
 
 ## 4. Design System
@@ -669,15 +711,39 @@ rõ ràng, có giá trị, an toàn để tự triển khai** mà không cần i
   `localhost`, ảnh hưởng URL tuyệt đối trong sitemap/OG image khi lên
   production thật.
 
-### Cần backend thật (không thể làm nếu thiếu)
-- Toàn bộ Auth/Session — điểm khoá gần như mọi tính năng còn lại.
-- Persist User/Profile/XP/Level thật.
-- Persist tiến độ Quest/Streak/Milestone thật.
-- Query ranking Leaderboard thật.
-- Dữ liệu Social thật (feed/comment/follow/reaction).
+### Cần backend thật (đã hết ở mức "chưa có code" — giờ chỉ còn chờ kết nối thật)
+Toàn bộ tầng dữ liệu (repository/service/action) cho 5 domain dưới đây đã
+viết xong, verify bằng typecheck/lint/unit test — xem
+`docs/PROJECT_HANDOFF.md` §3 "Backend Foundation" và
+`BACKEND_ARCHITECTURE.md` §13–§15. Cái còn thiếu thật sự không phải code,
+mà là: (1) áp migration lên project Supabase thật, (2) nối các Server
+Action đã có vào từng Client Component (theo đúng thứ tự Profile → XP →
+Retention → Leaderboard → Social, đang chờ xác nhận migration).
+
+- **Auth/Session** — đã nối thật vào UI (Phase 3), chưa verify round-trip
+  thật vì chưa có kết nối Supabase từ session làm việc này.
+- **Persist User/Profile/XP/Level** — service/action đã có
+  (`profile-service.ts`), `/profile` đã gọi thật khi có session; chưa
+  verify round-trip thật.
+- **Persist tiến độ Quest/Streak/Milestone** — service/action đã có
+  (`retention-service.ts`), chưa nối vào `QuestCard`/`MilestoneTrack`/
+  Home thật.
+- **Query ranking Leaderboard** — service/action đã có
+  (`leaderboard-service.ts`), chưa nối vào `/leaderboard` thật.
+  `RankChange`/snapshot job cố tình chưa thiết kế (chờ traffic thật, xem
+  `BACKEND_ARCHITECTURE.md` §10) — không phải lỗ hổng.
+- **Dữ liệu Social (feed/comment/follow/reaction)** — service/action đã
+  có (`social-service.ts`), chưa nối vào `ActivityFeed`/`CommentSection`/
+  `FollowButton`/`ReactionBar` thật.
+- **Achievement/Badge/Collection** — catalog + seed + data layer đã có
+  (round audit gần nhất); *luật cấp phát* (khi nào một user thật mở khoá
+  một achievement/badge cụ thể) vẫn cố tình chưa thiết kế — đây là quyết
+  định game-design, không phải lỗ hổng tầng dữ liệu.
 - Analytics/audio thật (điểm nối đã sẵn sàng, chỉ thiếu provider/asset
   thật).
-- Upload ảnh (avatar) thật — cần Storage.
+- Upload ảnh (avatar) thật — cần Storage (bucket `avatars` đã có trong
+  migration, chưa verify được vì Storage schema chỉ tồn tại trên project
+  Supabase thật, không mô phỏng được bằng local Postgres).
 
 ---
 
