@@ -159,6 +159,19 @@ export const successCopy = {
   published: { title: "Lên sóng rồi đó!" },
 };
 
+export const authCopy = {
+  signedIn: { title: "Chào mừng trở lại!" },
+  signedUp: { title: "Tạo tài khoản thành công!" },
+  // Shown instead of `signedUp` when the Supabase project requires email
+  // confirmation (its own default) — `data.session` comes back empty in
+  // that case, so the user is NOT actually logged in yet even though the
+  // account now exists. Telling them anything else would be a silent lie.
+  confirmEmailSent: {
+    title: "Kiểm tra email để xác nhận nhé",
+    description: "Bọn mình vừa gửi một đường link xác nhận. Bấm vào đó rồi quay lại đăng nhập nha.",
+  },
+};
+
 // The Gameplay Engine's Result Pipeline — one entry per ResultKind so
 // every Activity's win/lose/complete/timeout/abandoned screen pulls
 // from the same five lines instead of each game inventing its own.

@@ -8,10 +8,14 @@ cho component inventory + routing map, [`docs/VO_TRI_GAMEPLAY_ENGINE.md`](./docs
 cho lifecycle/state-flow của Gameplay Engine + cách thêm một Activity mới,
 [`docs/PROJECT_HANDOFF.md`](./docs/PROJECT_HANDOFF.md) — tài liệu bàn
 giao chính thức, điểm khởi đầu cho bất kỳ ai (hoặc phiên Claude nào) tiếp
-quản dự án mà không có ngữ cảnh trước đó — và
+quản dự án mà không có ngữ cảnh trước đó —
 [`docs/BACKEND_ARCHITECTURE.md`](./docs/BACKEND_ARCHITECTURE.md) cho
-thiết kế backend (Supabase: schema, RLS, migration, API) đã hoàn chỉnh
-nhưng chưa nối vào project thật.
+thiết kế backend (Supabase: schema, RLS, migration, API, security review)
+đã hoàn chỉnh nhưng chưa nối vào project thật,
+[`docs/INTEGRATION_CHECKLIST.md`](./docs/INTEGRATION_CHECKLIST.md) — các
+bước chính xác còn lại một khi có project Supabase thật, và
+[`docs/OPERATIONS.md`](./docs/OPERATIONS.md) cho chiến lược backup/
+migration/recovery/logging/monitoring và checklist deploy production.
 
 ## Stack
 
@@ -37,17 +41,15 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
 
 ## Environment variables
 
-- `NEXT_PUBLIC_SITE_URL` — optional, used by `src/app/sitemap.ts` and the
-  OG-image metadata to build absolute URLs. Falls back to
-  `http://localhost:3000` if unset; set it to the real domain once one
-  exists (see `src/vo-tri/lib/site.ts`).
-- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
-  `SUPABASE_SERVICE_ROLE_KEY` — required once a real Supabase project
-  exists (see `docs/BACKEND_ARCHITECTURE.md` §11); copy `.env.example` to
-  `.env.local` and fill them in. Every Supabase-touching file
-  (`src/vo-tri/server/supabase/*`, `src/middleware.ts`) fails loudly with
-  a clear message, or no-ops, until these are set — nothing in the app
-  depends on them today.
+Full reference table (what reads each one, required/optional, fallback
+behavior) is in [`docs/INTEGRATION_CHECKLIST.md`](./docs/INTEGRATION_CHECKLIST.md#2-set-environment-variables).
+Short version: `NEXT_PUBLIC_SITE_URL` is optional (falls back to
+`http://localhost:3000`); `NEXT_PUBLIC_SUPABASE_URL` /
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are required
+once a real Supabase project exists — copy `.env.example` to `.env.local`
+and fill them in. Every Supabase-touching file fails loudly with a clear
+message, or no-ops, until these are set — nothing in the app depends on
+them today.
 
 ## Project layout
 
@@ -82,12 +84,20 @@ npm run test:e2e   # Playwright — builds + serves, then runs tests/e2e/**
   routing map, motion/responsive guidelines.
 - `docs/BACKEND_ARCHITECTURE.md` — Supabase schema/RLS/migration/API
   design; `supabase/migrations/*.sql` implements it (validated against a
-  local Postgres, not yet applied to any live project).
+  local Postgres, not yet applied to any live project). §18 is the
+  production-readiness + security review pass (schema fixes, the
+  `restrict_update_columns()` column-guard trigger, a real RLS bug found
+  and fixed in comment soft-delete).
+- `docs/INTEGRATION_CHECKLIST.md` — the exact remaining steps once a real
+  Supabase project exists, from creating it through wiring the UI.
+- `docs/OPERATIONS.md` — backup/migration/recovery/logging/monitoring
+  strategy + a production deployment checklist.
 - `src/vo-tri/server/supabase/` — Supabase client factories
   (`server-client.ts` for the normal cookie-scoped, RLS-respecting path;
-  `admin-client.ts` for the narrow service-role exception) +
-  `database.types.ts` (hand-written until a live project exists to
-  `supabase gen types typescript` from).
+  `admin-client.ts` for the narrow service-role exception, unused by any
+  real code path yet) + `env.ts` (the one shared "is Supabase configured"
+  check every client factory uses) + `database.types.ts` (hand-written
+  until a live project exists to `supabase gen types typescript` from).
 - `src/vo-tri/server/{repositories,services,actions,validation,adapters}/`
   — full 3-layer backend (repository → service → `"use server"` action),
   zod validation, and pure DB-row → frontend-type adapters, all built and

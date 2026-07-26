@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabasePublicEnv } from "./env";
 import type { Database } from "./database.types";
 
 /**
@@ -15,15 +16,14 @@ import type { Database } from "./database.types";
  * real config exists" pattern as lib/sound.ts and lib/analytics.ts.
  */
 export async function createServerSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
+  const env = getSupabasePublicEnv();
+  if (!env) {
     throw new Error(
       "Supabase chưa được cấu hình: thiếu NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
         "Xem docs/BACKEND_ARCHITECTURE.md §11 để biết cách lấy 2 giá trị này từ project Supabase thật.",
     );
   }
+  const { url, anonKey } = env;
 
   const cookieStore = await cookies();
 

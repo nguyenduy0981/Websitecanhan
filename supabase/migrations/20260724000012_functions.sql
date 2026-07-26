@@ -174,6 +174,13 @@ begin
 
   select level, last_active_date into v_old_level, v_last_active from public.profiles where id = v_user_id;
 
+  -- Lets the two privileged profiles UPDATEs below (points/xp/streak,
+  -- then level/xp/xp_to_next) through restrict_update_columns()'s guard
+  -- (20260724000001_extensions_and_helpers.sql) — `is_local => true`
+  -- scopes this to the current transaction only, so it can't leak across
+  -- a pooled connection into an unrelated later request.
+  perform set_config('vo_tri.bypass_column_guard', 'on', true);
+
   v_new_streak := case
     when v_last_active = v_today then (select current_streak from public.profiles where id = v_user_id)
     when v_last_active = v_today - 1 then (select current_streak from public.profiles where id = v_user_id) + 1
@@ -281,6 +288,9 @@ begin
 
   select level into v_old_level from public.profiles where id = v_user_id;
 
+  -- See the matching comment in record_activity_session above.
+  perform set_config('vo_tri.bypass_column_guard', 'on', true);
+
   update public.profiles p set
     points = p.points + v_quest.reward,
     total_xp_earned = p.total_xp_earned + v_quest.xp
@@ -381,6 +391,9 @@ begin
   -- once milestones actually ship to a real route.
   insert into public.xp_ledger (user_id, source, source_id, points, xp)
   values (v_user_id, 'milestone_claim', null, v_milestone.threshold * 2, v_milestone.threshold);
+
+  -- See the matching comment in record_activity_session above.
+  perform set_config('vo_tri.bypass_column_guard', 'on', true);
 
   -- Table alias required here — `returns table (points integer, xp
   -- integer)` on this function implicitly declares `points`/`xp` as

@@ -23,6 +23,12 @@
 > - [`docs/VO_TRI_GAMEPLAY_ENGINE.md`](./VO_TRI_GAMEPLAY_ENGINE.md) —
 >   lifecycle/state-flow chi tiết của Gameplay Engine + hướng dẫn thêm
 >   Activity mới.
+> - [`docs/BACKEND_ARCHITECTURE.md`](./BACKEND_ARCHITECTURE.md) — thiết kế
+>   backend đầy đủ (schema/RLS/migration/API/security review).
+> - [`docs/INTEGRATION_CHECKLIST.md`](./INTEGRATION_CHECKLIST.md) — các
+>   bước chính xác còn lại một khi có project Supabase thật.
+> - [`docs/OPERATIONS.md`](./OPERATIONS.md) — backup/migration/recovery/
+>   logging/monitoring strategy + checklist deploy production.
 > - [`README.md`](../README.md) — hướng dẫn chạy dự án, verify commands.
 
 ---
@@ -836,10 +842,13 @@ bị bỏ sót).
   Activity mới chỉ cần khai báo `rules: ActivityRules` + logic
   win/lose/scoring qua `GameplayContext`, không cần đụng vào
   `GameFrame.tsx`.
-- **Khi bắt đầu nối backend thật:** bắt đầu từ Auth (xem §10), và khi
-  nối dữ liệu thật vào một component, ưu tiên tìm prop shape đã có sẵn
-  (types trong mỗi domain) trước khi định nghĩa type mới — phần lớn đã
-  được chuẩn bị sẵn chính xác cho việc này.
+- **Khi bắt đầu nối backend thật:** làm theo `docs/INTEGRATION_CHECKLIST.md`
+  theo đúng thứ tự (đó chính là canonical checklist, không phải tự suy
+  luận lại từ đầu) — và khi nối dữ liệu thật vào một component, ưu tiên
+  tìm prop shape đã có sẵn (types trong mỗi domain) trước khi định nghĩa
+  type mới — phần lớn đã được chuẩn bị sẵn chính xác cho việc này.
+- **Khi cần biết chiến lược backup/monitoring/deploy production:** xem
+  `docs/OPERATIONS.md` — đừng tự nghĩ ra một quy trình mới song song.
 - **Khi gặp lỗi "Event handlers cannot be passed to Client Component
   props" hoặc "Functions cannot be passed directly to Client
   Components":** đây là lỗi RSC boundary đã gặp nhiều lần (component
@@ -881,16 +890,39 @@ Nguồn chi tiết đầy đủ cho mỗi mục nằm ở `docs/BACKEND_ARCHITEC
   đã viết sẵn trong repository nhưng chưa service nào gọi. Cố tình chờ
   traffic thật (§10 gốc).
 - **Storage (avatar upload) chưa verify được từ môi trường làm việc
-  này** — bucket `avatars` + policy đã có trong migration, nhưng
-  `storage.buckets`/`storage.objects` chỉ tồn tại thật trên một project
-  Supabase, không mô phỏng được bằng local Postgres như 12 migration
-  còn lại. Sẽ verify lần đầu khi `supabase db push` chạy thật.
+  này** — bucket `avatars` + policy + `file_size_limit`/`allowed_mime_types`
+  (thêm ở §18.1) đã có trong migration, nhưng `storage.buckets`/
+  `storage.objects` chỉ tồn tại thật trên một project Supabase, không mô
+  phỏng được bằng local Postgres như 12 migration còn lại. Sẽ verify lần
+  đầu khi `supabase db push` chạy thật — xem
+  `docs/INTEGRATION_CHECKLIST.md` §3.
 - **Achievement/Badge granting rules chưa thiết kế** — catalog + bảng +
   read path đã đầy đủ (`unlocks-service.ts`), nhưng luật "khi nào một
   hành động thật cấp một achievement/badge cụ thể cho user" là quyết
   định game-design riêng, chưa làm. Mọi user thật sẽ thấy danh sách rỗng
   cho tới khi luật này được thiết kế — rỗng đúng lý do, không phải thiếu
   code đọc dữ liệu.
+- **`reactions.target_id`/`comments.target_id` không có FK thật** (đối
+  tượng polymorphic, trỏ tới `feed_item`/`comment`/`activity`) — nếu một
+  hàng đích bị hard-delete trong tương lai, reaction/comment trỏ tới nó
+  sẽ mồ côi thay vì bị dọn cascade. Không có đường hard-delete nào cho
+  các bảng đích đó hôm nay nên rủi ro chỉ là lý thuyết; nếu một cleanup
+  job admin sau này thêm hard-delete, job đó phải tự dọn reactions/
+  comments mồ côi luôn. Xem `BACKEND_ARCHITECTURE.md` §18.1.
+- **`milestone_progress.reached_at` hiện luôn trùng `claimed_at`** — được
+  set cùng lúc trong `claim_milestone` thay vì tại đúng thời điểm mốc
+  thật sự đạt được (không có luồng "phát hiện đạt mốc" riêng khỏi "nhận
+  thưởng" hôm nay). Không sai dữ liệu, chỉ là cột này chưa mang thông tin
+  hữu ích (khoảng cách thời gian đạt-mốc→nhận-thưởng) như tên gợi ý. Xem
+  `BACKEND_ARCHITECTURE.md` §18.1.
+- **Chưa có APM/error-tracking service nào được nối** — `error.tsx`/
+  `global-error.tsx` đã sẵn sàng làm điểm nối (xem `docs/OPERATIONS.md`),
+  nhưng chưa nối gì vì đó là thêm một service bên thứ ba mới, hoãn tới
+  khi có traffic thật justify việc đó theo đúng quy tắc cost trong
+  CLAUDE.md.
+- **Chưa có `CRON_SECRET` (hay tương đương) cho job snapshot leaderboard
+  tương lai** — chưa cần vì job đó (§10) chưa tồn tại; thêm biến này khi
+  job được xây, không phải bây giờ.
 
 ### Cải tiến đã cố tình hoãn lại (intentionally postponed)
 
@@ -922,6 +954,25 @@ Nguồn chi tiết đầy đủ cho mỗi mục nằm ở `docs/BACKEND_ARCHITEC
 - **RLS là lớp phòng thủ cuối, `security definer` function là lớp thật
   thi hành business rule** — giả định này xuyên suốt toàn bộ schema
   (§6.1), không đổi.
+- **Một policy "sửa hàng của chính mình" (`using (auth.uid() = id)`) chỉ
+  gate hàng nào, không gate cột nào** — bài học nghiêm trọng nhất tìm
+  được ở §18.2: policy này từng cho phép tự sửa `profiles.points/xp/level`
+  trực tiếp, phá vỡ toàn bộ anti-cheat. Mọi bảng mới có một policy dạng
+  "own row" trong tương lai (không chỉ 4 bảng đã sửa) phải tự hỏi: cột
+  nào KHÔNG được phép đổi qua policy này, và gắn
+  `restrict_update_columns()` (`20260724000001_extensions_and_helpers.sql`)
+  nếu có bất kỳ cột nào chỉ nên đổi qua một security-definer function.
+- **Một bảng có SELECT policy hạn chế (vd. `deleted_at is null`) sẽ chặn
+  ngầm mọi UPDATE khiến hàng thoát khỏi điều kiện đó** — bài học thứ hai
+  từ §18.2: Postgres RLS coi SELECT policy của bảng là một phần điều
+  kiện hợp lệ cho hàng-kết-quả của UPDATE luôn, không chỉ policy UPDATE
+  riêng. `softDeleteComment()` từng hoàn toàn không hoạt động vì lý do
+  này (không ai chạy thật để phát hiện, cho tới vòng audit này). Bất kỳ
+  cột "trạng thái" nào (`deleted_at`, `archived_at`, ...) dùng trong điều
+  kiện SELECT policy đều cần tính trước: policy đó có cho phép tác nhân
+  thực hiện transition đó tiếp tục thấy hàng sau khi đổi không? Nếu
+  không, thêm `or auth.uid() = <cột chủ sở hữu>` (hoặc tương đương) vào
+  chính SELECT policy, như đã sửa cho `comments`.
 
 ### Cơ hội tối ưu tương lai (future optimization opportunities)
 

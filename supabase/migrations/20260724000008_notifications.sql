@@ -33,6 +33,14 @@ create policy "users can read their own notifications"
 create policy "users can mark their own notifications read"
   on public.notifications for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- See restrict_update_columns() in 20260724000001_extensions_and_helpers.sql.
+-- Without this, the policy above would also let a client silently rewrite
+-- a notification's own title/description/type after the fact — this is
+-- meant to be "mark read", nothing else. Only read_at may change.
+create trigger notifications_restrict_update_columns
+  before update on public.notifications
+  for each row execute function public.restrict_update_columns('read_at');
+
 -- journey_events: public read. Profiles are already public-facing
 -- (leaderboard/UserPreviewCard show other people's level/points), and a
 -- future /profile/[username] route will need this same data for anyone's

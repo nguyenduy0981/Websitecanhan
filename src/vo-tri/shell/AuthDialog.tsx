@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { errorCopy } from "@/vo-tri/copy/microcopy";
+import { authCopy, errorCopy } from "@/vo-tri/copy/microcopy";
 import { signInAction, signUpAction } from "@/vo-tri/server/actions/auth-actions";
 import { Button } from "@/vo-tri/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/vo-tri/ui/Dialog";
@@ -70,7 +70,18 @@ export function AuthDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       return;
     }
 
-    toast({ variant: "success", title: mode === "signIn" ? "Chào mừng trở lại!" : "Tạo tài khoản thành công!" });
+    // Sign-up when the Supabase project requires email confirmation (its
+    // own default) never establishes a session — `router.refresh()` would
+    // silently re-render the still-logged-out shell, and the "success"
+    // toast would be a lie. Tell the user to check their email instead,
+    // and don't pretend a session exists that doesn't.
+    if (mode === "signUp" && "needsEmailConfirmation" in result.data && result.data.needsEmailConfirmation) {
+      toast({ variant: "success", ...authCopy.confirmEmailSent });
+      handleOpenChange(false);
+      return;
+    }
+
+    toast({ variant: "success", title: mode === "signIn" ? authCopy.signedIn.title : authCopy.signedUp.title });
     handleOpenChange(false);
     router.refresh();
   }

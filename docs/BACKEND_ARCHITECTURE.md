@@ -1631,6 +1631,243 @@ thật".
 
 ---
 
+## 18. Production Readiness + Security Review (trước khi nối Supabase thật)
+
+Chủ dự án coi kiến trúc backend là **stable** sau §17 và yêu cầu chuyển
+trọng tâm từ "hardening" sang "production readiness": tìm mọi thứ có thể
+thành incident thật sau khi launch, audit bảo mật toàn diện, chuẩn bị vận
+hành dài hạn, audit biến môi trường, và một checklist tích hợp duy nhất.
+Vẫn **chưa nối Supabase thật** — mọi phát hiện dưới đây được sửa/verify
+trên local Postgres 16 y hệt cách §17 đã làm.
+
+### 18.1 Production Readiness Review — schema
+
+Audit từng bảng trong 13 migration cho: index thiếu, constraint thiếu,
+nullable sai, cascade sai, unique thiếu, FK không nhất quán, storage
+lifecycle, cleanup job, an toàn rollback. Kết quả — **6 lỗ hổng thật**,
+đã sửa trực tiếp trong migration gốc (chưa có Supabase thật nào áp dụng
+các migration này, nên sửa tại chỗ là an toàn, giống cách §17 đã sửa
+`20260724000012_functions.sql`):
+
+1. **`profiles.points` chưa có index** — `getTopProfilesByPoints` (`order
+   by points desc`) và `countProfilesAbove`/`getNextHigherProfile` (`gt
+   ("points", ...)`) sẽ full table scan ngay khi có traffic thật. Đã
+   thêm `profiles_points_idx on profiles (points desc)`
+   (`20260724000002_profiles.sql`).
+2. **`follows.followee_id` chưa có index** — PK `(follower_id,
+   followee_id)` chỉ phục vụ "tôi follow ai", không phục vụ "ai follow
+   tôi" (một query hồ sơ tương lai thật). Đã thêm
+   `follows_followee_idx` (`20260724000007_social.sql`).
+3. **`reactions(target_type, target_id)` chưa có index** —
+   `getReactionCounts`'s query shape lọc theo target, nhưng index của
+   unique constraint dẫn đầu bằng `user_id` nên không phục vụ được. Đã
+   thêm `reactions_target_idx`.
+4. **`comments.parent_comment_id on delete cascade` — cascade sai, có
+   thể xoá mất nội dung của người khác.** Bảng `comments` chỉ hard-delete
+   qua đường `author_id ... on delete cascade` (khi một user xoá tài
+   khoản) — `softDeleteComment()` chỉ set `deleted_at`, không bao giờ
+   `DELETE` thật. Nếu user A bị xoá tài khoản, comment gốc của A bị xoá
+   cascade — và vì `parent_comment_id` cũng `on delete cascade`, mọi reply
+   của user B/C/... vào comment đó cũng bị xoá cascade theo, dù tài khoản
+   B/C không hề bị xoá. Đã sửa thành `on delete set null` — reply trở
+   thành comment gốc (mồ côi), vẫn đọc được, chỉ mất lồng ghép.
+5. **Bucket `avatars` không giới hạn kích thước/loại file** — một bucket
+   public không giới hạn chấp nhận file bất kỳ kích thước và loại nội
+   dung bất kỳ (kể cả thực thi được). Đã thêm `file_size_limit = 5MiB`,
+   `allowed_mime_types = image/png|jpeg|webp|gif`
+   (`20260724000011_storage.sql`).
+6. **Migration rollback safety** — không có down-migration nào, đúng quy
+   ước Supabase CLI (forward-only). Vì chưa có Supabase thật nào chạy
+   các migration này, sửa tại chỗ (không phải migration mới) vẫn an toàn
+   ở giai đoạn này; **từ thời điểm `supabase db push` đầu tiên chạy
+   thật, quy tắc đổi hẳn**: mọi thay đổi schema sau đó phải là migration
+   mới, không sửa file cũ — và một cột `NOT NULL` mới trên bảng đã có dữ
+   liệu thật cần 2 bước (thêm nullable + backfill, rồi mới `NOT NULL` ở
+   migration sau) chứ không thể làm trong 1 bước như lúc bảng còn trống.
+   Ghi lại ở `docs/PROJECT_HANDOFF.md` §12 làm quy tắc chuẩn cho tương lai.
+
+**Không sửa (ghi nhận là giới hạn đã biết, không phải bug cần chặn
+launch):**
+`reactions.target_id`/`comments.target_id` là polymorphic association
+(trỏ tới `feed_item` HOẶC `comment`/`activity`) nên không thể có FK thật
+— nếu một `comment`/`feed_item` bị hard-delete trong tương lai, reaction
+trỏ tới nó sẽ mồ côi thay vì bị cascade xoá theo. Không có đường xoá cứng
+nào cho các bảng đó hôm nay (chỉ soft-delete), nên rủi ro chỉ là lý
+thuyết — nhưng nếu một cleanup job admin sau này thêm hard-delete thật,
+job đó cũng phải tự dọn `reactions` trỏ tới đối tượng đã xoá. Tương tự,
+`milestone_progress.reached_at` hiện luôn bằng `claimed_at` (được set
+cùng lúc trong `claim_milestone`, không phải tại thời điểm mốc thật sự
+đạt được) — một nhược điểm dữ liệu nhỏ, không phải lỗi bảo mật, để lại
+cho lúc milestone thật sự có luồng "đạt mốc" riêng khỏi "nhận thưởng".
+
+### 18.2 Security Review
+
+**RLS coverage** — xác nhận lại: **mọi bảng** trong `public` schema có
+`enable row level security`, không sót bảng nào (đối chiếu lại toàn bộ
+13 file migration). `audit_log` cố tình có RLS bật nhưng **0 policy** —
+kể cả owner cũng không đọc được qua client key, chỉ qua Dashboard/
+`service_role`. Bảng catalog (`activities`, `quest_definitions`, ...)
+public-read, không client-write — đúng thiết kế "nội dung chỉ đổi qua
+migration mới".
+
+**Phát hiện nghiêm trọng nhất của cả vòng audit này — không phải bug
+mới tự viết, mà là một lỗ hổng có từ §1 (Backend Foundation Phase 1),
+chưa ai từng chạy thật để phát hiện:** policy
+`"users can update their own profile" using (auth.uid() = id) with
+check (auth.uid() = id)` chỉ giới hạn **hàng nào** một client được sửa
+(chính hàng của họ), **không giới hạn cột nào**. Vì Supabase gán quyền
+UPDATE trên bảng trực tiếp cho role `authenticated` (qua `alter default
+privileges`, không phải qua `public`), RLS là **lớp chặn duy nhất** — và
+như viết ban đầu, một client gọi thẳng Supabase JS (bỏ qua toàn bộ app
+Next.js) có thể chạy
+`update profiles set points = 999999, level = 100 where id = <chính họ>`
+và **tự thưởng điểm/level vô hạn**, phá vỡ hoàn toàn kiến trúc anti-cheat
+ceiling-clamp + chỉ-security-definer-mới-được-ghi đã xây dựng công phu ở
+§7. Cùng lỗ hổng (RLS chỉ gate hàng, không gate cột) tồn tại ở 3 bảng
+khác có policy "sửa hàng của chính mình": `notifications` (có thể tự
+sửa `title`/`description`, không chỉ `read_at`), `comments` (có thể tự
+sửa `body` — một tính năng edit ngầm không ai kiểm thử, thay vì chỉ
+`deleted_at`), `reactions` (có thể tự đổi `target_type`/`target_id` sang
+đối tượng bất kỳ qua UPDATE thay vì chỉ đổi `reaction_id`).
+
+**Đã sửa bằng một trigger dùng chung, không phải GRANT cột:** thử
+phương án `revoke update ... grant update (col) to authenticated` trước,
+nhưng loại bỏ vì `upsertReaction`'s `ON CONFLICT DO UPDATE` (PostgREST
+upsert) luôn liệt kê **mọi** cột trong payload vào `SET`, kể cả các cột
+conflict-key không đổi giá trị — GRANT cột sẽ chặn nhầm chính luồng
+upsert hợp lệ. Thay vào đó, `restrict_update_columns()`
+(`20260724000001_extensions_and_helpers.sql`) là một trigger `before
+update` dùng chung, nhận allow-list qua `TG_ARGV`, so sánh **giá trị**
+OLD/NEW theo từng cột (không phải "câu UPDATE có nhắc tới cột đó
+không") — nên upsert hợp lệ (giá trị conflict-key không đổi) vẫn qua,
+còn một UPDATE thật sự đổi giá trị cột bị cấm thì bị chặn. Áp dụng:
+`profiles` (chỉ `display_name`/`tagline`/`avatar_url`/`updated_at`),
+`notifications` (chỉ `read_at`), `comments` (chỉ `deleted_at`),
+`reactions` (chỉ `reaction_id`). Các RPC hợp pháp (`record_activity_
+session`/`claim_quest`/`claim_milestone`) cần tự sửa `profiles.points/xp/
+level` — mỗi hàm gọi `perform set_config('vo_tri.bypass_column_guard',
+'on', true)` (transaction-local, `is_local => true` nên không rò rỉ qua
+kết nối pool sang request khác) ngay trước UPDATE đặc quyền của mình;
+client bình thường không có cách nào tự set GUC này (PostgREST chỉ cho
+gọi SELECT/INSERT/UPDATE/DELETE hoặc RPC đã `grant execute`, không cho
+chạy `set_config` tuỳ ý).
+
+**Toàn bộ đã verify sống, không chỉ đọc code:** dựng lại local Postgres
+16 stub (giống §17), tạo user thật, `set role authenticated` +
+`set_config('request.jwt.claim.sub', ...)` giả lập JWT thật, rồi:
+- `update profiles set points=999999, level=100` → bị chặn
+  `COLUMN_NOT_UPDATABLE: level` (đúng như thiết kế).
+- `update profiles set display_name=..., tagline=...` (đúng luồng
+  `updateProfileRow` thật) → vẫn thành công.
+- Gọi `record_activity_session()` thật (đường hợp pháp) → vẫn cộng
+  đúng points/xp/level như trước khi có guard.
+- `update reactions set target_id = <khác>` → bị chặn
+  `COLUMN_NOT_UPDATABLE: target_id`; upsert thật của `upsertReaction`
+  (đổi target cùng giá trị, chỉ đổi `reaction_id`) → vẫn thành công.
+- `update comments set body = 'edited by attacker'` → bị chặn
+  `COLUMN_NOT_UPDATABLE: body`.
+- `update notifications set title = 'fake'` → bị chặn
+  `COLUMN_NOT_UPDATABLE: title`; `markNotificationRead`'s update thật
+  (chỉ `read_at`) → vẫn thành công.
+
+**Một lỗi thật thứ hai, hoàn toàn độc lập với trigger trên, phát hiện
+đúng lúc verify — `softDeleteComment()` chưa từng hoạt động từ đầu:**
+khi test soft-delete một comment thật (kể cả sau khi **tắt** trigger mới
+để cô lập biến số), UPDATE vẫn bị Postgres từ chối với
+`"new row violates row-level security policy for table comments"`. Root
+cause (xác nhận bằng cách tạm nới policy SELECT thành `using (true)` và
+thấy UPDATE thành công): Postgres RLS coi policy SELECT của một bảng
+(`"comments are publicly readable" using (deleted_at is null)`) là một
+phần của điều kiện "hàng kết quả có hợp lệ không" cho UPDATE — set
+`deleted_at` khiến hàng ngay lập tức không còn thoả policy SELECT của
+chính bảng đó, và Postgres từ chối UPDATE thẳng, bất kể policy UPDATE
+riêng (`auth.uid() = author_id`) có thoả hay không. Nghĩa là **tính năng
+xoá comment của chính mình chưa bao giờ hoạt động**, kể từ ngày schema
+này được viết — không ai từng chạy thật câu UPDATE đó trước vòng audit
+này. Sửa bằng cách nới policy SELECT thành
+`using (deleted_at is null or auth.uid() = author_id)` — tác giả luôn
+thấy được comment đã xoá mềm của chính mình (vô hại: `listComments()` đã
+tự lọc `deleted_at is null` cho mọi người khác rồi), còn UPDATE giờ
+thành công. Verify lại: soft-delete thật thành công, và
+`restrict_update_columns` vẫn chặn đúng việc sửa `body`.
+
+**Không phát hiện thêm vấn đề nào khác:** không RPC nào bỏ sót check
+`auth.uid() is null` (raise `NOT_AUTHENTICATED`); không đường nào trong
+`admin-client.ts` (service-role, bypass RLS hoàn toàn) được import bởi
+bất kỳ Server Action/Route Handler nào hôm nay (`grep` xác nhận file đó
+chỉ tự tham chiếu trong comment của chính nó) — đúng thiết kế "chỉ dành
+cho job đặc quyền tương lai, không phải code path request thường";
+`SUPABASE_SERVICE_ROLE_KEY` không xuất hiện ở bất kỳ file nào ngoài
+`admin-client.ts`/`.env.example`, không có nguy cơ rò rỉ vào bundle
+client (không có prefix `NEXT_PUBLIC_`, và Next.js chỉ inline biến có
+prefix đó vào client bundle).
+
+### 18.3 Environment Validation
+
+Kiểm tra lại toàn bộ biến môi trường dự án dùng — chi tiết đầy đủ ở
+`docs/INTEGRATION_CHECKLIST.md` (mới). Tóm tắt: đặt tên nhất quán
+(`NEXT_PUBLIC_*` cho biến an toàn lộ ra client, không prefix cho biến bí
+mật — đúng quy ước Next.js, không lẫn lộn ở đâu). Hành vi fallback: thiếu
+`NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY` → `getOptionalSession()` trả `null`
+êm ái (không crash trang render mỗi request), còn
+`createServerSupabaseClient()`/`admin-client.ts` throw lỗi tiếng Việt cụ
+thể (đúng cho Server Action một người dùng vừa bấm). `NEXT_PUBLIC_SITE_URL`
+có fallback `localhost` hợp lý, không đoán domain production.
+
+**Một lỗ hổng grep-confirmed đã dọn ở vòng này** (không phải bug, là
+trùng lặp code — nhất quán với quy tắc "hai chỗ giống nhau thì hợp nhất"
+đã áp dụng nhiều lần trước đây): 4 chỗ (`server-client.ts`,
+`middleware.ts`, `session.ts`, và gián tiếp `admin-client.ts`) tự kiểm
+tra `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY` độc lập. Gộp thành
+`src/vo-tri/server/supabase/env.ts` (`getSupabasePublicEnv()`/
+`isSupabaseConfigured()`), dùng lại ở `server-client.ts`/`middleware.ts`/
+`session.ts` — `admin-client.ts` giữ nguyên riêng vì đó là một cặp biến
+khác hẳn (service role key), không phải cùng một check lặp lại. An toàn
+cho Edge runtime (chỉ đọc `process.env`, không API Node-only) — verify
+bằng `next build` (middleware vẫn compile, vẫn hiện dòng `ƒ Middleware`).
+
+**Biến môi trường còn thiếu, cần thêm khi tính năng liên quan thật sự
+được xây (không phải thiếu sót hôm nay):** một `CRON_SECRET` (hoặc tương
+đương) cho job snapshot leaderboard tương lai (§10) — chưa cần vì job đó
+chưa tồn tại; document ở `docs/PROJECT_HANDOFF.md` §12 làm việc cần làm
+khi job đó được xây.
+
+### 18.4 Một lỗ hổng luồng thật tìm được ở tầng ứng dụng: đăng ký không
+### báo "kiểm tra email"
+
+`auth-service.ts`'s `signUp()` trước đây luôn trả `ok({ userId })`, bất
+kể Supabase project có bật "Confirm email" hay không (mặc định BẬT cho
+project mới). Khi bật, `auth.signUp()` thành công (`data.user` có giá
+trị) nhưng **`data.session` là `null`** — chưa có cookie phiên nào được
+ghi, người dùng **chưa thực sự đăng nhập**. `AuthDialog` cũ không phân
+biệt được 2 trường hợp, luôn hiện toast "Tạo tài khoản thành công!" rồi
+gọi `router.refresh()` như thể đã có phiên — với mọi project bật email
+confirmation (tức đa số project Supabase mới), đây sẽ là trải nghiệm mở
+đầu của **mọi người dùng thật đầu tiên**: một thông báo thành công giả,
+rồi im lặng vẫn ở trạng thái chưa đăng nhập, không ai bảo họ phải làm
+gì tiếp. Sửa: `signUp()` giờ trả thêm `needsEmailConfirmation:
+!data.session`; `AuthDialog` hiện toast + copy riêng
+(`authCopy.confirmEmailSent`, mới trong `microcopy.ts`) khi cờ này bật,
+và **không** gọi `router.refresh()` (không có phiên nào để refresh
+tới). Additive, không phá vỡ luồng cũ khi confirmation tắt (test
+`data.session` có giá trị → giữ nguyên hành vi "thành công + refresh").
+
+### 18.5 Đã verify sau vòng này
+
+Migration đã áp lại sạch từ đầu trên local Postgres 16 mới dựng
+(13 file, không lỗi). Toàn bộ phát hiện §18.2 đã chứng minh sống (không
+chỉ đọc SQL): exploit bị chặn, luồng hợp pháp vẫn chạy đúng, và bug
+`softDeleteComment` được tái hiện + sửa + verify lại. Re-run 3 RPC đã
+sửa ở §17 (`claim_quest`/`claim_milestone`/`toggle_follow`) để xác nhận
+guard mới không phá vỡ concurrency fix trước đó — cả 3 vẫn đúng hành vi
+(award đúng 1 lần, chặn claim lần 2, follow/unfollow idempotent).
+`tsc`, `eslint`, `vitest run` (**103/103** — +3 test cho `env.ts`) đều
+xanh. Không route/behavior nào ở UI thay đổi ngoài `AuthDialog`'s luồng
+đăng ký (đã mô tả ở §18.4) — không có Supabase thật nào được nối trong
+vòng này.
+
+---
+
 ## Phụ lục: cách migration đã được verify thật (không chỉ đọc bằng mắt)
 
 Kế hoạch ban đầu là dựng một Supabase local stack đầy đủ qua Docker để

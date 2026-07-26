@@ -1,13 +1,11 @@
 import { getClientAndOptionalUserId } from "@/vo-tri/server/require-auth";
 import { getShellUser } from "@/vo-tri/server/services/profile-service";
+import { isSupabaseConfigured } from "@/vo-tri/server/supabase/env";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/vo-tri/server/supabase/database.types";
 import type { VoTriUser } from "@/vo-tri/shell/types";
 
-/** Mirrors middleware.ts's own env-var check — true only once real Supabase credentials exist. */
-export function isSupabaseConfigured(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-}
+export { isSupabaseConfigured };
 
 /**
  * What any Server Component that renders on *every* request (root layout,

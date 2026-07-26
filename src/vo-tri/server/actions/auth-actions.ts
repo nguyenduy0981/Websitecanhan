@@ -5,7 +5,9 @@ import * as authService from "@/vo-tri/server/services/auth-service";
 import type { ServiceResult } from "@/vo-tri/server/errors";
 import type { SignInInput, SignUpInput } from "@/vo-tri/server/validation/auth";
 
-export async function signUpAction(input: SignUpInput): Promise<ServiceResult<{ userId: string }>> {
+export async function signUpAction(
+  input: SignUpInput,
+): Promise<ServiceResult<{ userId: string; needsEmailConfirmation: boolean }>> {
   const client = await createServerSupabaseClient();
   return authService.signUp(client, input);
 }

@@ -804,3 +804,91 @@ sessions don't re-litigate it from scratch.
   method above, `next build` ×2 (with/without credentials), full
   Playwright suite. No live Supabase integration performed and no UI
   wiring changed, per the round's explicit constraint.
+- **Backend Foundation — production readiness + security review (owner
+  moved objective from "hardening" to "production readiness").** Full
+  reference: `docs/BACKEND_ARCHITECTURE.md` §18, new
+  `docs/INTEGRATION_CHECKLIST.md` and `docs/OPERATIONS.md`. The single
+  most severe finding of any round so far, found by design review rather
+  than execution: the profile "own row" RLS policy
+  (`using (auth.uid() = id)`) gated which row a client could touch but
+  not which columns — a client calling Supabase directly (bypassing the
+  Next.js app) could have run
+  `update profiles set points = 999999, level = 100 where id = <self>`,
+  a total anti-cheat bypass of the ceiling-clamped economy §7 describes.
+  Same gap existed on `notifications` (title/description editable, not
+  just `read_at`), `comments` (body editable, not just `deleted_at`),
+  `reactions` (target_type/target_id retargetable, not just
+  `reaction_id`). Fixed with a new reusable trigger,
+  `restrict_update_columns()` (`20260724000001_extensions_and_helpers.sql`),
+  attached with an explicit allow-list per table — deliberately an
+  allow-list, not a deny-list, so a future `alter table add column` is
+  unwritable by default instead of silently exposed. Value-based (OLD vs
+  NEW comparison), not statement-based, specifically because
+  `upsertReaction`'s real `ON CONFLICT DO UPDATE` names every column
+  including unchanged conflict keys — a column-GRANT-based approach
+  (tried first, discarded) would have broken that legitimate upsert.
+  The three legitimate privileged RPCs
+  (`record_activity_session`/`claim_quest`/`claim_milestone`) now call
+  `perform set_config('vo_tri.bypass_column_guard', 'on', true)`
+  (transaction-local) immediately before their own profiles UPDATEs.
+  **A second, completely independent real bug surfaced only by executing
+  the fix's own verification, not by reading SQL:** `softDeleteComment()`
+  had never actually worked, since the schema was first written — Postgres
+  RLS folds a table's SELECT policy into what counts as a valid resulting
+  row for UPDATE too, so `comments`'s SELECT policy
+  (`deleted_at is null`) rejected every soft-delete outright the moment
+  `deleted_at` became non-null, regardless of the UPDATE policy's own
+  ownership check passing. Fixed by loosening the SELECT policy to
+  `deleted_at is null or auth.uid() = author_id` (author can always see
+  their own comments, including soft-deleted ones — harmless, since
+  `listComments()` already filters `deleted_at is null` for everyone
+  else). Both fixes proved live via a rebuilt local Postgres 16 stub with
+  `set role authenticated` + a settable `auth.uid()` GUC impersonating a
+  real JWT — not just read, actually executed: the exploit UPDATE fails
+  with `COLUMN_NOT_UPDATABLE`, the legitimate `updateProfileRow`/
+  `markNotificationRead`/`upsertReaction`/`softDeleteComment` paths all
+  still succeed, and the RPC bypass flag doesn't break the concurrency
+  fixes from the prior round (re-verified `claim_quest`/
+  `claim_milestone`/`toggle_follow` end-to-end). Also fixed in the same
+  schema pass: 3 missing indexes (`profiles.points desc` for the
+  leaderboard's real query shape, `follows.followee_id`,
+  `reactions(target_type, target_id)`), a real cascade bug
+  (`comments.parent_comment_id on delete cascade` would have transitively
+  hard-deleted other users' replies when one user's account was deleted
+  — changed to `on delete set null`), and an unrestricted public storage
+  bucket (added `file_size_limit`/`allowed_mime_types` to `avatars`).
+  A third real app-layer bug, found by reasoning about Supabase Auth's
+  actual defaults rather than the code in isolation: `signUp()` always
+  returned a uniform "success," but Supabase projects default to
+  "Confirm email" ON, meaning `auth.signUp()` succeeds while
+  `data.session` stays `null` — no cookie, no real session — and
+  `AuthDialog` would show a false "account created!" toast and refresh
+  into a still-logged-out shell, silently doing nothing for every real
+  user's first sign-up. Fixed with `needsEmailConfirmation:
+  !data.session` threaded through `signUp()`/`signUpAction`, a new
+  `authCopy.confirmEmailSent` in `microcopy.ts`, and a branch in
+  `AuthDialog` that shows the honest message instead of refreshing.
+  Consolidated a real, grep-confirmed duplication (4 independent copies
+  of the same `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY` presence check) into
+  `src/vo-tri/server/supabase/env.ts`, reused by `server-client.ts`/
+  `middleware.ts`/`session.ts` (Edge-runtime-safe, plain `process.env`
+  reads only). New `docs/INTEGRATION_CHECKLIST.md` is the canonical,
+  step-by-step answer to "owner creates a Supabase project today — what's
+  left" (env vars, migrations, Auth URL/SMTP configuration gotchas,
+  end-to-end verification including replaying the exact exploit above
+  against the live project, then UI wiring last). New
+  `docs/OPERATIONS.md` documents backup/migration/recovery/logging/
+  monitoring strategy and a deployment checklist, honest about what
+  Supabase's free tier does and doesn't include (no automatic PITR —
+  manual `pg_dump` scheduling instead, per CLAUDE.md's own cost rule).
+  `docs/PROJECT_HANDOFF.md` §12 gained the two RLS lessons above as
+  reusable "giả định production" entries for any future table, plus new
+  known-limitations entries (reactions/comments' polymorphic FK gap,
+  `milestone_progress.reached_at` redundancy, no APM/error-tracking yet,
+  a future `CRON_SECRET` for the still-unbuilt snapshot job). Verified:
+  `tsc`, lint, `vitest run` (**103/103**, +3 for `env.ts`), migrations
+  re-applied clean to a fresh local Postgres stub, every exploit/fix
+  pair proven live via the impersonation technique above, `next build`
+  ×2 (with/without credentials — zero route regression), full Playwright
+  suite (18/18). No live Supabase integration performed and no UI wiring
+  changed beyond `AuthDialog`'s sign-up confirmation branch.
