@@ -748,3 +748,59 @@ sessions don't re-litigate it from scratch.
   (18/18 on CI; one `accessibility.spec.ts` case flaked locally in this
   sandbox under system load, reproduced identically against the
   untouched prior commit, confirmed unrelated to this round's changes).
+- **Backend Foundation — architecture-hardening pass: contract audit,
+  error taxonomy, transaction/concurrency review, N+1 documentation, tech
+  debt register.** Full reference: `docs/BACKEND_ARCHITECTURE.md` §17,
+  `docs/PROJECT_HANDOFF.md` §12. Owner asked for a dedicated hardening
+  round across 6 areas before any live Supabase integration begins.
+  Contract Audit found the layer boundaries already sound (100%
+  error-code↔copy match, zero `any` at any boundary, `ServiceResult<T>`
+  evolved only additively) — documented, no code changes needed. Error
+  Taxonomy is a real new implementation, not just docs: `errors.ts` gained
+  a closed 9-value `ServiceErrorCategory` union (authentication/
+  authorization/validation/not_found/conflict/rate_limit/
+  business_rule_violation/infrastructure_failure/unexpected_failure) and
+  every `ServiceResult` error now carries one, computed centrally in
+  `fail()`/`validationFail()`/`mapSupabaseError()` — `authorization` is
+  deliberately unused today since RLS enforces that boundary by returning
+  zero rows rather than a distinct error, not a gap. Transaction Boundary
+  audit concluded 100% of write paths are already atomic by construction
+  (single-statement writes atomic by Postgres; multi-table writes atomic
+  because they live inside one `security definer` RPC call) — documented,
+  no code changes needed. Concurrency Review is where real bugs surfaced,
+  found only by actually executing the SQL against a local Postgres
+  stub, not by reading it: (1) `claim_quest` and (2) `claim_milestone`
+  both had a check-then-act double-claim race (a plain `SELECT` guard
+  followed by an unguarded write let two concurrent claims both pass and
+  both award the reward) — fixed by moving the guard onto the write
+  itself (`UPDATE ... WHERE claimed_at IS NULL` /
+  `ON CONFLICT DO UPDATE ... WHERE claimed_at IS NULL`) and checking
+  PL/pgSQL's automatic `FOUND` variable to raise `*_ALREADY_CLAIMED` for
+  the race loser; (3) `claim_milestone` separately had a genuine
+  ambiguous-column bug (`points = points + ...` with no table alias,
+  rejected by Postgres because `returns table (points integer, ...)`
+  already declares `points` as a PL/pgSQL variable in scope) — fixed with
+  an explicit alias, same pattern `claim_quest` already used correctly;
+  (4) `toggle_follow` had a lower-severity TOCTOU (the primary key already
+  prevented data corruption, but the race loser hit a raw unique-violation
+  instead of a graceful result) — fixed with
+  `ON CONFLICT DO NOTHING` + a `FOUND` check. All three fixes proved live,
+  not just read: two real concurrent `psql` sessions (one holding a
+  transaction open via `pg_sleep` to force genuine overlap) against a
+  rebuilt local-Postgres stub, observing actual `UPDATE 0`/`INSERT 0 0`
+  row-counts as the race loser's outcome, plus full happy-path
+  re-verification (correct points/XP awarded exactly once, correct
+  `*_ALREADY_CLAIMED` on the second call). Performance Audit documented
+  (no code changes, per the prompt's own "do not optimize prematurely"
+  instruction) two real future N+1 hotspots — `/profile/page.tsx`'s 4
+  round-trips and `getMyGlobalPosition`'s 3 round-trips — and confirmed
+  comment/feed/badge/achievement queries are not N+1. Technical Debt
+  Register is a new `PROJECT_HANDOFF.md` §12 (known limitations,
+  intentionally postponed improvements, production assumptions, future
+  optimization opportunities) as the authoritative engineering backlog
+  going forward. Verified: `tsc`, lint, `vitest run` (100/100, +15 for the
+  new taxonomy tests), migrations re-applied clean to a fresh local
+  Postgres stub, concurrency fixes proven live via the dual-session
+  method above, `next build` ×2 (with/without credentials), full
+  Playwright suite. No live Supabase integration performed and no UI
+  wiring changed, per the round's explicit constraint.

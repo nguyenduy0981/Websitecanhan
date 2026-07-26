@@ -856,3 +856,80 @@ bị bỏ sót).
   trước khi hành động, đặc biệt với: đổi màu/token thương hiệu, xoá code
   mà không rõ mục đích, nâng cấp dependency lớn (Next.js major version),
   và bất kỳ điều gì cần tài khoản/API key/thanh toán thật.
+
+---
+
+## 12. Technical Debt Register
+
+Danh sách chính thức — cập nhật mỗi khi phát hiện thêm hoặc giải quyết
+một mục. Đây là backlog kỹ thuật thật, không phải danh sách ý tưởng.
+Nguồn chi tiết đầy đủ cho mỗi mục nằm ở `docs/BACKEND_ARCHITECTURE.md`
+(dẫn link cụ thể bên dưới).
+
+### Giới hạn đã biết (known limitations)
+
+- **`authorization` là một category lỗi tồn tại trong taxonomy nhưng
+  chưa có mã lỗi nào dùng tới** — hệ thống hiện chỉ phân biệt "chưa đăng
+  nhập" (`authentication`) vs RLS âm thầm trả 0 dòng cho request không
+  đủ quyền, không có lỗi "đã đăng nhập nhưng không đủ quyền" tường minh.
+  Đây là lựa chọn phòng thủ chuẩn (không tiết lộ sự tồn tại của tài
+  nguyên cho người không có quyền), nhưng có nghĩa là ngày cần một hành
+  động cần kiểm tra role thật (vd. moderation), sẽ cần mã lỗi mới. Xem
+  `BACKEND_ARCHITECTURE.md` §17.2.
+- **`RankChange`/leaderboard snapshot chưa có job nào chạy** — bảng
+  `leaderboard_rank_snapshots` đã có schema, `getMostRecentSnapshotsForScope`
+  đã viết sẵn trong repository nhưng chưa service nào gọi. Cố tình chờ
+  traffic thật (§10 gốc).
+- **Storage (avatar upload) chưa verify được từ môi trường làm việc
+  này** — bucket `avatars` + policy đã có trong migration, nhưng
+  `storage.buckets`/`storage.objects` chỉ tồn tại thật trên một project
+  Supabase, không mô phỏng được bằng local Postgres như 12 migration
+  còn lại. Sẽ verify lần đầu khi `supabase db push` chạy thật.
+- **Achievement/Badge granting rules chưa thiết kế** — catalog + bảng +
+  read path đã đầy đủ (`unlocks-service.ts`), nhưng luật "khi nào một
+  hành động thật cấp một achievement/badge cụ thể cho user" là quyết
+  định game-design riêng, chưa làm. Mọi user thật sẽ thấy danh sách rỗng
+  cho tới khi luật này được thiết kế — rỗng đúng lý do, không phải thiếu
+  code đọc dữ liệu.
+
+### Cải tiến đã cố tình hoãn lại (intentionally postponed)
+
+- **`getMyGlobalPosition` (leaderboard) làm 3 round-trip tuần tự** thay
+  vì 1 query/RPC dùng window function — hoãn vì bảng `profiles` còn nhỏ,
+  chưa có traffic thật để đo tác động. Xem §17.5.
+- **`/profile/page.tsx` gọi 4 round-trip riêng biệt** cho cùng 1 dòng
+  `profiles` (identity/stats/level/streak) — hotspot N+1-kiểu rõ nhất
+  hiện có, dễ gộp thành `getProfileBundle()` khi cần. Xem §17.5.
+- **Không có UI wiring nào cho Profile/XP/Retention/Leaderboard/Social**
+  ngoài Auth + Profile cơ bản (Phase 3) — cố tình chờ chủ dự án xác nhận
+  migration đã áp dụng thành công trước khi nối, theo đúng chỉ đạo hiện
+  tại. Toàn bộ tầng dữ liệu đã sẵn sàng, đây là việc nối dây thuần tuý.
+
+### Giả định production (production assumptions)
+
+- **Ceiling-clamp anti-cheat, không phải exact replay** — `record_activity_session`
+  tin điểm/XP client báo cáo tới một trần hào phóng (`reward/xp × 3`)
+  thay vì tính lại chính xác từ log sự kiện gameplay (`GameFrame` chưa
+  ghi log đủ chi tiết để làm việc đó). Đủ tốt cho một nền kinh tế thưởng
+  chưa có giá trị tiền thật quy đổi; cần nâng cấp nếu tương lai có.
+  Xem `BACKEND_ARCHITECTURE.md` §7.
+- **`plpgsql.variable_conflict` mặc định của Postgres đủ nghiêm để bắt
+  lỗi cột mơ hồ lúc chạy (đã bắt được bug thật ở `claim_milestone`, xem
+  §17.4) nhưng không bắt được lúc viết code** — mọi hàm SQL mới có
+  `returns table (...)` phải luôn dùng table alias tường minh cho mọi
+  câu `UPDATE`/`DELETE` chạm đúng tên cột trùng với tên field trả về,
+  không dựa vào việc tự nhớ.
+- **RLS là lớp phòng thủ cuối, `security definer` function là lớp thật
+  thi hành business rule** — giả định này xuyên suốt toàn bộ schema
+  (§6.1), không đổi.
+
+### Cơ hội tối ưu tương lai (future optimization opportunities)
+
+- Gộp `getMyGlobalPosition`'s 3 query thành 1 RPC dùng `rank() over
+  (order by points desc)` khi bảng `profiles` đủ lớn.
+- Gộp `/profile/page.tsx`'s 4 round-trip thành `getProfileBundle()` khi
+  có traffic thật để đo tác động thật (không đoán).
+- Materialized view/snapshot job cho `RankChangeIcon` khi có traffic
+  thật (§10 gốc).
+- Presence thật (`ProfileIdentity.online`) qua Supabase Realtime khi
+  milestone xã hội tiếp theo cần tới.

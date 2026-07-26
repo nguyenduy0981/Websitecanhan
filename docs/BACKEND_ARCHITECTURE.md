@@ -1438,6 +1438,199 @@ contract, đúng chỉ đạo "chỉ dừng khi cần xác nhận migration".
 
 ---
 
+## 17. Hardening kiến trúc: contract audit, error taxonomy, transaction/concurrency, N+1
+
+Chủ dự án chỉ đạo một lượt hardening riêng — không thêm tính năng, mục
+tiêu là loại bỏ mọi bất định kiến trúc **trước khi** nối Supabase thật.
+6 phần dưới đây theo đúng 6 mục chủ dự án yêu cầu.
+
+### 17.1 Contract Audit — Repository ↔ Service ↔ Server Action ↔ UI
+
+Đọc lại toàn bộ 6 repository + 7 service + 8 action file, kiểm 4 tiêu
+chí: deterministic, fully typed, backward compatible, documented.
+
+- **Deterministic + fully typed:** mọi hàm `repositories/*.ts` trả thẳng
+  Supabase query builder (không tự transform) — kiểu suy ra từ
+  `database.types.ts`, xác nhận `tsc --noEmit` sạch và **không có bất kỳ
+  `any`/`as any` nào** trong toàn bộ `src/vo-tri/server/` (grep xác
+  nhận). Mọi hàm `services/*.ts` trả `ServiceResult<T>` — không có chỗ
+  nào trả raw Row/`data` chưa qua adapter (xác nhận bằng cách grep toàn
+  bộ `return ok(` và đọc từng dòng — không có ngoại lệ).
+- **Documented:** grep toàn bộ `fail("...")`/`raise exception '...'`
+  trong SQL, đối chiếu với `serverErrorCopy` — **khớp 100%, cả 11 mã lỗi
+  SQL đều có bản dịch tiếng Việt tương ứng**, không mã nào rơi vào
+  fallback generic ngoài ý muốn.
+- **Backward compatible:** không consumer nào destructure error object
+  theo đúng shape cố định (luôn truy cập từng field như `.error.title`),
+  nên thêm field mới vào `ServiceResult` (như `category` ở §17.2) là
+  thay đổi an toàn, cộng dồn — quy tắc chính thức cho mọi thay đổi
+  `ServiceResult` sau này: chỉ thêm field, không đổi tên/kiểu field đã
+  có.
+
+### 17.2 Error Taxonomy — một mô hình lỗi thống nhất
+
+Trước vòng này, `fail(code: string)` nhận bất kỳ chuỗi nào, không có
+khái niệm "loại lỗi" — chỉ có `code` (định danh máy đọc) và
+`title`/`description` (copy hiển thị). Đã thêm `category` — 9 giá trị
+cố định, mọi lỗi trong hệ thống rơi vào đúng 1 trong 9:
+
+| Category | Ý nghĩa | Mã lỗi thật thuộc nhóm này |
+|---|---|---|
+| `authentication` | Chưa đăng nhập | `NOT_AUTHENTICATED` |
+| `authorization` | Đã đăng nhập nhưng không được phép | *(chưa mã nào dùng — xem dưới)* |
+| `validation` | Input sai định dạng, chặn trước khi chạm DB | `VALIDATION_ERROR` (từ `validationFail`) |
+| `not_found` | Id tham chiếu không tồn tại | `UNKNOWN_ACTIVITY`/`UNKNOWN_QUEST`/`UNKNOWN_MILESTONE` |
+| `conflict` | Request hợp lệ nhưng trạng thái đích đã đúng như vậy rồi | `QUEST_ALREADY_CLAIMED`/`MILESTONE_ALREADY_CLAIMED` |
+| `rate_limit` | Giới hạn tần suất/số lần dùng | `DAILY_LIMIT_EXCEEDED`/`COOLDOWN_ACTIVE` |
+| `business_rule_violation` | Luật game/sản phẩm thật từ chối request | `QUEST_NOT_COMPLETE`/`MILESTONE_NOT_REACHED`/`CANNOT_FOLLOW_SELF` |
+| `infrastructure_failure` | Lỗi Postgres/mạng thật, không khớp mã nào đã biết | fallback của `mapSupabaseError` |
+| `unexpected_failure` | `fail()` gọi với mã lạ, không phải qua `mapSupabaseError` | fallback của `fail()` |
+
+**`authorization` cố tình chưa có mã nào** — RLS xử lý việc "không được
+phép" bằng cách trả về **0 dòng** thay vì một lỗi riêng biệt (đúng thiết
+kế phòng thủ chuẩn: không tiết lộ cho người không có quyền biết một tài
+nguyên có tồn tại hay không). Category này tồn tại sẵn trong taxonomy để
+có chỗ dùng ngay khi có nhu cầu thật (vd. một hành động moderation cần
+kiểm tra role, không thể dựa hoàn toàn vào RLS).
+
+Implementation: `ERROR_CATEGORY: Record<ServerErrorCode, ServiceErrorCategory>`
+trong `errors.ts`, `fail()`/`validationFail()`/`mapSupabaseError()` đều
+tự gắn `category` đúng — không cần sửa bất kỳ service/action nào đang
+gọi 3 hàm này, vì category được suy ra tập trung. 15 test mới trong
+`errors.test.ts` xác nhận toàn bộ 11 mã + fallback + validation +
+infra đều map đúng category.
+
+### 17.3 Transaction Boundaries — audit từng write path
+
+Kết luận sau khi đọc lại toàn bộ `services/*.ts` + `functions.sql`:
+**100% write path trong toàn bộ codebase này đã atomic theo đúng nghĩa
+transaction, không có write path nào cần sửa để atomic hoá** — vì kiến
+trúc chỉ có 2 loại write, cả 2 đều atomic theo đúng bản chất:
+
+1. **Single-statement repository write** (`postComment`, `updateProfile`,
+   `setReaction`/`upsertReaction`, `clearReaction`, `markNotificationRead`)
+   — đúng 1 câu SQL (`insert`/`update`/`delete`/`upsert`), Postgres tự
+   đảm bảo atomic cho một câu lệnh, không cần transaction tường minh.
+2. **`security definer` RPC** (`record_activity_session`, `claim_quest`,
+   `claim_milestone`, `toggle_follow`) — nhiều bảng, nhiều bước, nhưng
+   toàn bộ thân hàm chạy trong **đúng 1 transaction** (một lời gọi hàm
+   PL/pgSQL = một transaction ngầm định của Postgres, trừ khi tự
+   `COMMIT` bên trong — không hàm nào ở đây làm vậy). `record_activity_session`
+   là ví dụ phức tạp nhất: ghi `activity_sessions` + `xp_ledger` +
+   `daily_activity_log` + 2 lần `update profiles` + có thể
+   `journey_events`/`notifications`/`feed_items` + gọi
+   `advance_quest_progress` (ghi tối đa 7 dòng `quest_progress`) — **tất
+   cả trong 1 transaction**, hoặc thành công toàn bộ hoặc rollback toàn
+   bộ (vd. nếu bước cuối lỗi, `activity_sessions`/`xp_ledger` đã insert
+   trước đó cũng bị rollback theo).
+
+Không có write path nào gọi 2+ RPC/lượt round-trip riêng biệt cho một
+thao tác logic — nếu tương lai có (vd. "hoàn thành hoạt động VÀ claim
+quest trong 1 hành động UI"), đó là lúc cần gộp thành 1 RPC mới thay vì
+để client gọi tuần tự 2 action riêng (tuần tự = không atomic, có thể
+thành công nửa chừng).
+
+### 17.4 Concurrency Review — 3 bug thật tìm được, sửa, và **verify bằng 2 phiên Postgres chạy song song thật**
+
+Đọc kỹ từng RPC tìm race condition thật, không chỉ đọc lướt kiểu code.
+Với 2 bug đầu, **đã tự chứng minh bằng cách chạy 2 session Postgres đồng
+thời thật** (không phải giả định) — session A mở transaction, giữ lock
+2 giây bằng `pg_sleep`, session B chạy đúng câu lệnh tương tự trong lúc
+A chưa commit, quan sát session B có đúng 0 dòng bị ảnh hưởng sau khi A
+commit hay không.
+
+1. **`claim_quest` — double-claim race có thật.** Bản gốc: `select ...
+   into v_progress` (đọc, không lock) → kiểm `claimed_at is not null` →
+   `update ... set claimed_at = now()` (không có `where claimed_at is
+   null`). Hai request đồng thời (double-click, retry sau timeout, 2 tab)
+   đều có thể đọc thấy `claimed_at IS NULL` trước khi bên nào ghi, rồi cả
+   hai đều vượt qua điều kiện và cùng cộng thưởng — **double-spend thật
+   trên nền kinh tế thưởng**. Đã sửa: thêm `and claimed_at is null` vào
+   chính câu `UPDATE`, dùng biến `FOUND` tự động của PL/pgSQL sau câu
+   lệnh để phát hiện "thua cuộc đua" và raise đúng `QUEST_ALREADY_CLAIMED`
+   y hệt lỗi cũ (client không thấy khác gì). **Verify thật:** session A
+   update thành công (`UPDATE 1`), session B chạy đúng update trong lúc A
+   chưa commit → session B nhận `UPDATE 0` sau khi A commit — đúng như
+   thiết kế.
+2. **`claim_milestone` — race y hệt, cộng thêm 1 bug thật khác.** Cùng
+   loại race (check-then-act không lock) trên `insert ... on conflict do
+   update` (không có `where claimed_at is null` trong `do update`). Sửa
+   bằng `on conflict (...) do update set ... where milestone_progress.claimed_at
+   is null` + kiểm `FOUND`. **Verify thật:** cùng phương pháp 2-session,
+   session B nhận `INSERT 0 0`. **Bug thứ hai tìm được khi chạy thử (không
+   phải đọc code):** `update public.profiles set points = points + ...`
+   — không có table alias — lỗi thật `column reference "points" is
+   ambiguous` vì `returns table (points integer, xp integer)` của hàm
+   này tự động khai báo `points`/`xp` như biến PL/pgSQL, xung đột với cột
+   `profiles.points` khi viết trần không alias. `claim_quest` đã dùng
+   alias đúng từ đầu (không dính bug này); `claim_milestone` thì không —
+   sửa bằng alias `p`, verify lại bằng cách chạy thật function (không
+   chỉ đọc SQL) — happy path đúng, double-claim bị chặn đúng.
+3. **`toggle_follow` — TOCTOU nhẹ hơn, đã cải thiện.** PK
+   `(follower_id, followee_id)` trên `follows` vốn đã chặn double-insert
+   dữ liệu sai (không phải data-corruption bug), nhưng bên thua cuộc đua
+   sẽ nhận lỗi unique-violation thô thay vì kết quả gọn gàng. Sửa bằng
+   `on conflict (...) do nothing` + kiểm `FOUND` — bên thua cuộc đua giờ
+   trả về `true` (đã follow, đúng trạng thái thật trong DB) thay vì lỗi.
+
+**Đã xác nhận an toàn, không cần sửa (relative update + atomic upsert
+theo đúng thiết kế từ đầu):**
+- `record_activity_session`/`claim_quest`'s cộng điểm dùng
+  `points = p.points + X` (cộng dồn tương đối, không phải đọc-rồi-ghi-đè)
+  — Postgres tự lock dòng khi `UPDATE`, 2 request đồng thời cho cùng
+  user tự tuần tự hoá đúng, không mất update nào.
+- `advance_quest_progress` dùng `on conflict (...) do update set
+  current_value = least(current_value + N, target)` — upsert atomic
+  theo đúng cơ chế Postgres, 2 request đồng thời cộng tiến độ đúng, không
+  mất update nào.
+- `upsertReaction` (`reactions` table) dùng `.upsert(row, {onConflict:
+  "user_id,target_type,target_id"})` — atomic theo unique constraint,
+  không cần RPC riêng.
+
+### 17.5 Performance Audit — N+1/hotspot đã biết trước (chưa tối ưu, chỉ ghi lại)
+
+Đúng chỉ đạo "không tối ưu sớm, chỉ ghi lại" — không có thay đổi code ở
+mục này:
+
+- **`/profile/page.tsx` gọi 4 hàm service riêng biệt
+  (`getProfileIdentity`/`getProfileStats`/`getLevelProgress`/`getStreakData`)
+  qua `Promise.all`, mỗi hàm tự `fetchProfileRow` — 4 round-trip riêng
+  biệt cùng đọc **đúng 1 dòng `profiles`** (cộng thêm round-trip thứ 5
+  của `getStreakData` cho `daily_activity_log`).** Hotspot rõ nhất tìm
+  được ở vòng này — dễ gộp thành 1 hàm `getProfileBundle()` đọc 1 lần,
+  dựng cả 4 kiểu trả về từ cùng 1 row, khi có traffic thật để đo tác
+  động. Chưa gộp ở vòng này vì `/profile` đã hoạt động đúng, đã test, và
+  "không tối ưu sớm" là chỉ đạo tường minh.
+- **`getMyGlobalPosition`** (leaderboard) gọi 3 round-trip tuần tự
+  (`getProfileById` → `countProfilesAbove` → `getNextHigherProfile`) cho
+  một phép tính logic duy nhất ("vị trí của tôi"). Có thể gộp thành 1
+  RPC dùng window function (`rank() over (order by points desc)`) khi
+  bảng `profiles` đủ lớn để 2 query `count`/`order+limit` rời rạc thật
+  sự chậm — hiện tại (bảng nhỏ) không đáng lo.
+- **`listComments`/`toCommentTree`, `listAllBadgesWithUnlockStatus`,
+  `listUnlockedAchievements`, `getRecentFeed`** — đã xác nhận **không**
+  N+1: mỗi hàm dùng đúng 1 query với embedded join
+  (`select("*, author:profiles(*)")` hoặc `select("*, user_badges!left(...)")`),
+  không loop gọi lại DB theo số dòng kết quả.
+- **`getMostRecentSnapshotsForScope`** (`leaderboard-repository.ts`) —
+  đã viết sẵn từ trước nhưng **chưa có service nào gọi** — chuẩn bị cho
+  `RankChange`/snapshot job, đúng như đã ghi ở §10 là cố tình chưa xây.
+  Không phải dead code cần xoá, là code chờ đúng tính năng của nó.
+
+### 17.6 Đã verify sau vòng này
+
+`tsc`, `eslint`, `vitest run` (**100/100** — +15 test cho error
+taxonomy), migration `20260724000012_functions.sql` (3 bug đã sửa) áp
+lại thật trên local Postgres 16 sạch, **race condition đã chứng minh bị
+chặn bằng 2 phiên Postgres chạy đồng thời thật** (không phải chỉ đọc
+SQL) cho cả `claim_quest` và `claim_milestone`, happy path của cả 3 RPC
+đã sửa (`claim_quest`/`claim_milestone`/`toggle_follow`) chạy lại thành
+công sau khi vá. Không route/behavior nào ở UI thay đổi — toàn bộ vòng
+này là hardening tầng dữ liệu + SQL, đúng chỉ đạo "chưa nối Supabase
+thật".
+
+---
+
 ## Phụ lục: cách migration đã được verify thật (không chỉ đọc bằng mắt)
 
 Kế hoạch ban đầu là dựng một Supabase local stack đầy đủ qua Docker để

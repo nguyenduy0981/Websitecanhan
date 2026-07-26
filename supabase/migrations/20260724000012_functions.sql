@@ -261,8 +261,21 @@ begin
     raise exception 'QUEST_ALREADY_CLAIMED';
   end if;
 
+  -- The `claimed_at is not null` check above is a plain SELECT — it
+  -- doesn't lock the row, so two concurrent calls (double-click, a
+  -- client retry after a slow response, two open tabs) can both read
+  -- claimed_at IS NULL before either writes, then both fall through and
+  -- award the reward twice. The `and claimed_at is null` guard here makes
+  -- the UPDATE itself the real, atomic gate: only the first of two
+  -- concurrent calls actually flips a row from unclaimed to claimed, and
+  -- `if not found` (PL/pgSQL's automatic post-statement row-count flag)
+  -- catches the race loser with the exact same error the pre-check
+  -- above already gives the normal, non-racing case.
   update public.quest_progress set claimed_at = now()
-    where user_id = v_user_id and quest_id = p_quest_id and period_key = p_period_key;
+    where user_id = v_user_id and quest_id = p_quest_id and period_key = p_period_key and claimed_at is null;
+  if not found then
+    raise exception 'QUEST_ALREADY_CLAIMED';
+  end if;
 
   insert into public.xp_ledger (user_id, source, source_id, points, xp) values (v_user_id, 'quest_claim', null, v_quest.reward, v_quest.xp);
 
@@ -348,9 +361,19 @@ begin
     raise exception 'MILESTONE_ALREADY_CLAIMED';
   end if;
 
+  -- Same race as claim_quest above: the SELECT check a few lines up
+  -- doesn't lock the row, so the real guard has to live on the write
+  -- itself. `DO UPDATE ... WHERE claimed_at is null` makes the upsert
+  -- a no-op (0 rows affected, `FOUND` = false) for whichever concurrent
+  -- call loses the race, instead of letting both award the bonus.
   insert into public.milestone_progress (user_id, milestone_id, reached_at, claimed_at)
   values (v_user_id, p_milestone_id, now(), now())
-  on conflict (user_id, milestone_id) do update set claimed_at = now(), reached_at = coalesce(public.milestone_progress.reached_at, now());
+  on conflict (user_id, milestone_id) do update
+    set claimed_at = now(), reached_at = coalesce(public.milestone_progress.reached_at, now())
+    where public.milestone_progress.claimed_at is null;
+  if not found then
+    raise exception 'MILESTONE_ALREADY_CLAIMED';
+  end if;
 
   -- Milestones award a flat, generous bonus proportional to their
   -- threshold rather than a per-milestone hand-authored reward table —
@@ -359,10 +382,18 @@ begin
   insert into public.xp_ledger (user_id, source, source_id, points, xp)
   values (v_user_id, 'milestone_claim', null, v_milestone.threshold * 2, v_milestone.threshold);
 
-  update public.profiles set
-    points = points + v_milestone.threshold * 2,
-    total_xp_earned = total_xp_earned + v_milestone.threshold
-  where id = v_user_id;
+  -- Table alias required here — `returns table (points integer, xp
+  -- integer)` on this function implicitly declares `points`/`xp` as
+  -- PL/pgSQL OUT-parameter variables in scope for the whole function
+  -- body, so a *bare* `points` in an UPDATE is genuinely ambiguous
+  -- between that variable and `profiles.points` (Postgres error:
+  -- "column reference \"points\" is ambiguous") — caught by actually
+  -- executing this function, not by reading the SQL. `claim_quest`
+  -- already used an alias for the same reason; this one hadn't.
+  update public.profiles p set
+    points = p.points + v_milestone.threshold * 2,
+    total_xp_earned = p.total_xp_earned + v_milestone.threshold
+  where p.id = v_user_id;
 
   insert into public.journey_events (user_id, type, label) values (v_user_id, 'milestone', 'Đạt milestone: ' || p_milestone_id);
   insert into public.feed_items (actor_id, event_type, text)
@@ -401,11 +432,23 @@ begin
     delete from public.follows where follower_id = v_user_id and followee_id = p_target_id;
     v_now_following := false;
   else
-    insert into public.follows (follower_id, followee_id) values (v_user_id, p_target_id);
+    -- `follows`'s primary key (follower_id, followee_id) already stops two
+    -- concurrent "follow" taps from creating two rows, but without this
+    -- guard the loser of that race would hit a raw unique-violation
+    -- exception instead of a clean result. `on conflict do nothing` + a
+    -- `FOUND` check turns the same constraint into a graceful idempotent
+    -- outcome: whoever loses the race just observes "already following"
+    -- (true), matching what actually ended up true in the database,
+    -- instead of surfacing an infra error for a state that RLS/the PK
+    -- already resolved correctly.
+    insert into public.follows (follower_id, followee_id) values (v_user_id, p_target_id)
+    on conflict (follower_id, followee_id) do nothing;
     v_now_following := true;
-    insert into public.notifications (user_id, type, title, description)
-    select p_target_id, 'friend', 'Có người theo dõi bạn', p.display_name || ' vừa theo dõi bạn.'
-    from public.profiles p where p.id = v_user_id;
+    if found then
+      insert into public.notifications (user_id, type, title, description)
+      select p_target_id, 'friend', 'Có người theo dõi bạn', p.display_name || ' vừa theo dõi bạn.'
+      from public.profiles p where p.id = v_user_id;
+    end if;
   end if;
 
   return v_now_following;
