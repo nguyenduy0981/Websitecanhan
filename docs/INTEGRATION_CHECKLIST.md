@@ -130,3 +130,87 @@ of it is called from a real page yet except Auth (`AuthDialog`/
 
 Each of these is additive UI wiring only — no further schema/service
 changes are expected to be needed for any of them.
+
+## 7. Known risk points (static dry-run analysis)
+
+No live Supabase project exists to test against, so this section is a
+static walk-through of steps 1–6 above, asking "what could genuinely go
+wrong here that isn't already handled?" for each. Ordered by severity.
+
+- **Anon key / service role key mixup (high severity).** Both are JWTs
+  that look superficially similar when copy-pasting from Settings → API.
+  Pasting the service role key into `NEXT_PUBLIC_SUPABASE_ANON_KEY` would
+  ship a full-RLS-bypass credential into every client bundle — the single
+  worst possible outcome of this whole checklist. Concrete mitigation:
+  after deploying, open the deployed site, view source / the network tab,
+  and confirm the key embedded in the client JS decodes (any JWT
+  debugger) to a payload with `"role": "anon"`, not `"role":
+  "service_role"`. Do this once, immediately after every env var change.
+- **Testing the exploit from §18.2 while not actually logged in as the
+  target row's owner (medium severity, false sense of security).** The
+  verification step in §5 above only proves `restrict_update_columns()`
+  works if the UPDATE actually reaches the trigger — if run from a
+  browser console without a real session, RLS's row-visibility check
+  (`auth.uid() = id`) rejects it first because no row matches an
+  unauthenticated `auth.uid()`, which looks like "blocked" for the wrong
+  reason. Be logged in as the real test account, targeting that same
+  account's own `id`, when running this check.
+- **Manual SQL Editor fixes bypass RLS row-scoping but NOT the
+  column-guard triggers (medium severity, worth understanding before it
+  surprises anyone).** The Supabase SQL Editor typically connects with
+  elevated privileges that bypass RLS's row-visibility entirely — but
+  `restrict_update_columns()` is a plain trigger, not an RLS policy, and
+  triggers fire for every role including `postgres`/`service_role` (this
+  was directly proven while building the guard: the local Postgres
+  superuser was blocked by it just like `authenticated` was). A manual
+  "fix" like `update profiles set points = 500` in the SQL Editor will
+  fail with `COLUMN_NOT_UPDATABLE` too — this is intentional, not a bug.
+  The one legitimate way to manually adjust an economy field is
+  `select set_config('vo_tri.bypass_column_guard', 'on', true);`
+  immediately before the fix, in the same transaction, exactly like the
+  RPCs do.
+- **Manual copy-paste into the SQL Editor can silently truncate a long
+  file (medium severity).** `20260724000012_functions.sql` is the
+  largest migration (459 lines). If the SQL Editor's paste buffer or a
+  clipboard tool truncates it, the file may "succeed" partially (e.g.
+  `advance_quest_progress` created, but a later function silently
+  missing) rather than failing outright. Mitigation: prefer `supabase db
+  push` over manual paste wherever CLI access is available; if paste is
+  the only option, always run `docs/MIGRATION_VALIDATION.md`'s
+  post-migration verification queries afterward — the exact function-name
+  list check would catch a truncated file immediately.
+- **Supabase's default email-sending rate limit could make the first
+  few signup tests in §5 look broken when they're actually just delayed
+  or throttled (low-medium severity).** Already handled at the UI level
+  (`AuthDialog` never claims false success), but worth setting
+  expectations before testing: a delayed confirmation email is not a
+  integration bug.
+- **Vercel environment-variable scoping (low severity).** Vercel lets env
+  vars be scoped to Production/Preview/Development independently — setting
+  them only for Production and then testing on a Preview deployment URL
+  will look identical to "not configured yet" (the app degrades gracefully
+  either way, per §2's design, so this fails safe — but it can still cost
+  debugging time if not expected).
+- **`/leaderboard`'s Server-Component-calls-Server-Action-directly risk**
+  — already flagged in §6 above, restated here because it's the one UI
+  wiring step with a known failure mode from this project's own history
+  (the same class of bug `RootLayout` had before `getOptionalSession()`
+  existed).
+- **`next.config.ts`'s CSP (`connect-src 'self'`) will silently block a
+  direct browser→Supabase Storage upload, if avatar upload is ever
+  implemented that way (medium severity, found by static review of
+  `next.config.ts` against the planned Storage feature).** Every Supabase
+  call in this codebase today is server-side (`createServerSupabaseClient()`
+  inside a Server Component/Action) — the browser only ever talks to the
+  Next.js server itself (same-origin), so `connect-src 'self'` is
+  correct as-is. If `EditProfileSheet`'s eventual avatar-upload wiring
+  uploads directly from the browser to Supabase Storage's REST endpoint
+  (a common pattern, avoids proxying binary data through the app server),
+  that request would be silently blocked by this CSP — appearing as a
+  mysterious upload failure with **no server-side error at all** (CSP
+  violations are enforced entirely client-side). If that pattern is
+  chosen, add the project's own Storage origin to `connect-src` in
+  `next.config.ts` at the same time (e.g. `connect-src 'self'
+  https://<project-ref>.supabase.co`) — or avoid the whole class of bug
+  by routing the upload through a Server Action instead, keeping the
+  existing CSP untouched.

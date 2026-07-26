@@ -1,12 +1,19 @@
 # VÔ TRI — Backend Architecture (Design)
 
-> **Trạng thái:** thiết kế hoàn chỉnh, chưa triển khai lên hạ tầng thật.
-> Toàn bộ SQL trong tài liệu này đã được viết ra thành migration thật ở
-> `supabase/migrations/` và **verify cú pháp bằng cách chạy trên một
-> Postgres 16 container tạm** (không phải chỉ đọc bằng mắt) — xem §9. Việc
-> còn lại cần chủ dự án: tạo project Supabase thật, cung cấp Project URL/
-> Anon Key/Service Role Key, rồi mới `supabase db push` migration thật lên
-> đó và nối Auth vào frontend.
+> **Trạng thái (cập nhật §18):** thiết kế + toàn bộ code tầng backend đã
+> hoàn chỉnh và hardening xong (contract audit, error taxonomy, concurrency,
+> production-readiness + security review — §17/§18), nhưng **vẫn chưa
+> triển khai lên hạ tầng thật**. Chủ dự án đã cung cấp Project URL/Anon
+> Key/Service Role Key (§14), Auth đã nối vào frontend thật
+> (`AuthDialog`/`UserMenu`) — nhưng **migration chưa được áp lên project
+> thật** (session này bị chặn egress tới Supabase, xem §14) và **chưa
+> component nào khác ngoài Auth được nối dữ liệu thật**. Toàn bộ SQL
+> trong tài liệu này đã được viết ra thành migration thật ở
+> `supabase/migrations/` và **verify cú pháp + hành vi bằng cách chạy
+> trên một Postgres 16 container tạm nhiều lần** (không phải chỉ đọc
+> bằng mắt) — xem §9 và Phụ lục. Việc còn lại cần chủ dự án: chạy
+> `supabase db push` migration thật lên project đã tạo, rồi làm theo
+> `docs/INTEGRATION_CHECKLIST.md` để nối phần UI còn lại.
 >
 > Tài liệu này giả định người đọc đã đọc
 > [`PROJECT_HANDOFF.md`](./PROJECT_HANDOFF.md) (đặc biệt §7 "Extension
@@ -881,7 +888,16 @@ cấu trúc component.
 
 ---
 
-## 11. Cần chủ dự án trước khi đi tiếp
+## 11. Cần chủ dự án trước khi đi tiếp (LỊCH SỬ — đã hoàn thành, xem §14)
+
+> Giữ nguyên phần dưới đây làm lịch sử quyết định, nhưng **mọi mục ở đây
+> đã xong** kể từ §14 (Phase 3, 2026-07-24): chủ dự án đã tạo project
+> Supabase thật và cung cấp cả 3 giá trị (Project URL/Anon Key/Service
+> Role Key), Auth UI thật đã nối vào `LoginButton`/`Header`
+> (`AuthDialog`/`UserMenu`). Việc còn thiếu hôm nay không phải "chờ chủ
+> dự án cung cấp gì" nữa, mà là "áp migration lên project đó" (bị chặn
+> bởi egress policy của chính session làm việc, xem §14) — theo dõi ở
+> `docs/INTEGRATION_CHECKLIST.md`, không phải danh sách dưới đây.
 
 Thiết kế + migration SQL (đã verify cú pháp, xem §12) đã sẵn sàng, nhưng
 **không thể áp dụng lên hạ tầng thật hay nối Auth vào frontend** cho tới

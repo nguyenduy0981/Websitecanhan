@@ -13,7 +13,11 @@ quản dự án mà không có ngữ cảnh trước đó —
 thiết kế backend (Supabase: schema, RLS, migration, API, security review)
 đã hoàn chỉnh nhưng chưa nối vào project thật,
 [`docs/INTEGRATION_CHECKLIST.md`](./docs/INTEGRATION_CHECKLIST.md) — các
-bước chính xác còn lại một khi có project Supabase thật, và
+bước chính xác còn lại một khi có project Supabase thật (kèm risk
+register ở §7),
+[`docs/MIGRATION_VALIDATION.md`](./docs/MIGRATION_VALIDATION.md) — thứ
+tự/idempotency/rollback/thời gian chạy/câu query verify+health-check cho
+lần `supabase db push` đầu tiên, và
 [`docs/OPERATIONS.md`](./docs/OPERATIONS.md) cho chiến lược backup/
 migration/recovery/logging/monitoring và checklist deploy production.
 
@@ -104,7 +108,10 @@ them today.
   unit-tested ahead of having a live Supabase project (see
   `docs/BACKEND_ARCHITECTURE.md` §13). `require-auth.ts` is the single
   shared entry point every action uses to get an authenticated/optional
-  client. None of it is wired into a Client Component yet.
+  client. Auth (`AuthDialog`/`UserMenu`) and a partial `/profile` are
+  wired to real data (§14); every other domain's actions exist and are
+  unit-tested but aren't called from a Client Component yet — see
+  `docs/INTEGRATION_CHECKLIST.md` §6 for the exact remaining wiring steps.
 - `src/middleware.ts` — refreshes the Supabase session cookie; a no-op
   until the Supabase env vars are set.
 - `tests/e2e/` — Playwright E2E suite (navigation, accessibility, Explore
@@ -117,8 +124,9 @@ them today.
   Runs in CI alongside the E2E suite.
 
 Backend design and the full repository/service/action layer are complete
-(`docs/BACKEND_ARCHITECTURE.md`) but not yet connected to a live Supabase
-project — every route still shows the honest logged-out/empty state
-(design system, shell, Home, Explore, Profile, Leaderboard, Gameplay
-Framework, Social Foundation are otherwise fully built). See that doc's
-§11 for exactly what's needed from the project owner to go further.
+and production-readiness-reviewed (`docs/BACKEND_ARCHITECTURE.md` §17–18).
+The owner has provided real Supabase credentials, but migrations haven't
+been applied to the live project yet (blocked by this environment's
+egress policy — see §14) and no domain beyond Auth is wired to real data
+yet — every other route still shows the honest logged-out/empty state.
+See `docs/INTEGRATION_CHECKLIST.md` for the exact remaining steps.

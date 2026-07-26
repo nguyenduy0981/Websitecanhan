@@ -26,7 +26,11 @@
 > - [`docs/BACKEND_ARCHITECTURE.md`](./BACKEND_ARCHITECTURE.md) — thiết kế
 >   backend đầy đủ (schema/RLS/migration/API/security review).
 > - [`docs/INTEGRATION_CHECKLIST.md`](./INTEGRATION_CHECKLIST.md) — các
->   bước chính xác còn lại một khi có project Supabase thật.
+>   bước chính xác còn lại một khi có project Supabase thật, kèm risk
+>   register.
+> - [`docs/MIGRATION_VALIDATION.md`](./MIGRATION_VALIDATION.md) — thứ tự/
+>   idempotency/rollback/thời gian chạy/câu query verify+health-check cho
+>   migration.
 > - [`docs/OPERATIONS.md`](./OPERATIONS.md) — backup/migration/recovery/
 >   logging/monitoring strategy + checklist deploy production.
 > - [`README.md`](../README.md) — hướng dẫn chạy dự án, verify commands.
@@ -984,3 +988,31 @@ Nguồn chi tiết đầy đủ cho mỗi mục nằm ở `docs/BACKEND_ARCHITEC
   thật (§10 gốc).
 - Presence thật (`ProfileIdentity.online`) qua Supabase Realtime khi
   milestone xã hội tiếp theo cần tới.
+
+---
+
+## 13. Launch Readiness Score
+
+Đánh giá kỹ thuật trung thực tại thời điểm kết thúc giai đoạn
+pre-integration (trước khi nối Supabase thật) — điểm số phản ánh đúng
+trạng thái, không thổi phồng, không tự hạ thấp. Thang 10 điểm mỗi hạng
+mục; phần "điều gì ngăn điểm tuyệt đối" là phần quan trọng nhất của mỗi
+mục, không phải con số.
+
+| Hạng mục | Điểm | Điều gì ngăn điểm tuyệt đối |
+|---|---|---|
+| **Architecture** | 9/10 | 3 tầng repository→service→action tách bạch, `ServiceResult<T>` nhất quán, mọi RSC-serialization bug đã gặp đều có pattern sửa chuẩn tái dùng được (client-side catalog lookup). Trừ điểm vì: kiến trúc mới chỉ được verify trên local Postgres stub, chưa một lần chạy thật trên Supabase managed Postgres/PostgREST thật — hành vi PostgREST thật (vd. upsert SQL chính xác) được suy luận, chưa quan sát trực tiếp. |
+| **Security** | 9/10 | RLS bật 100% bảng, `restrict_update_columns()` đóng đúng lỗ hổng nghiêm trọng nhất (tự sửa cột kinh tế), 2 race condition thật đã tìm+sửa+chứng minh sống, ceiling-clamp anti-cheat + audit log. Trừ điểm vì: category lỗi `authorization` chưa từng được thực thi (chưa có tính năng cần role thật), khoảng trống FK polymorphic (reactions/comments) chưa có cleanup job, và — quan trọng nhất — toàn bộ guard trigger mới **chưa từng chạy trên Supabase thật**, chỉ trên stub giả lập. |
+| **Maintainability** | 9/10 | Nhật ký quyết định (`CLAUDE.md`) đầy đủ theo từng vòng, kỷ luật "refactor trước khi thêm tính năng" được áp dụng nhất quán xuyên suốt (bằng chứng: vòng này tự tìm và gộp `toDateOnlyString` dù không ai yêu cầu). Trừ điểm vì: `CLAUDE.md` đã dài hơn 800 dòng — lịch sử tốt nhưng là gánh nặng đọc thật cho người mới; một vài trùng lặp nhỏ (như `toISOString().slice(0,10)` vừa gộp) vẫn lọt qua nhiều vòng trước khi bị bắt, nghĩa là quy trình audit chưa hoàn toàn bắt hết ngay từ vòng đầu. |
+| **Testability** | 8.5/10 | 104 unit test (Vitest) + 18 E2E test (Playwright), cả hai chạy trong CI; các race condition/RLS bug được chứng minh sống qua kỹ thuật 2-phiên-Postgres-song-song thay vì chỉ đọc code. Trừ điểm vì: service function nào gọi trực tiếp Supabase client thì chưa có unit test riêng (chỉ có adapter/validation/pure-logic được unit test — cần fake client mới test được, chưa làm); hành vi RLS/trigger chỉ verify được thủ công qua session psql, chưa có bộ test tự động lặp lại được (không có pgTAP hay tương đương trong CI). |
+| **Performance** | 8/10 | Index đã thêm đúng theo query shape thật đang dùng (không đoán), N+1 đã audit toàn diện và 2 hotspot thật được ghi nhận có chủ đích (không tối ưu sớm khi chưa có traffic). Trừ điểm vì: `getMyGlobalPosition` (3 round-trip) và `/profile` (4 round-trip) vẫn chưa gộp — đúng theo quyết định "chờ traffic thật", nhưng theo định nghĩa chưa phải trạng thái tối ưu; chưa có chiến lược cache/revalidate nào được đánh giá vì chưa có traffic thật để đo. |
+| **Documentation** | 9.5/10 | Cực kỳ đầy đủ — `CLAUDE.md` + `PROJECT_HANDOFF.md` + `BACKEND_ARCHITECTURE.md` + `VO_TRI_ARCHITECTURE.md` + `VO_TRI_DESIGN_BIBLE.md` + `VO_TRI_GAMEPLAY_ENGINE.md` + `INTEGRATION_CHECKLIST.md` + `MIGRATION_VALIDATION.md` + `OPERATIONS.md`, đã cross-link nhau và tự audit lại được (vòng này bắt được 2 đoạn banner thật sự lỗi thời trong chính `BACKEND_ARCHITECTURE.md`/`README.md`). Trừ điểm vì: khối lượng tài liệu này tự nó là một chi phí bảo trì thật — càng nhiều file càng dễ có một đoạn lệch pha với code, đã chứng minh đúng trong vòng audit này; nên cân nhắc gộp bớt sau khi tích hợp Supabase xong. |
+| **Production Readiness** | 7.5/10 | Đây là điểm trung thực nhất: rất nhiều công sức kỹ thuật thật đã đổ vào (RLS + anti-cheat + migration validation + backup/ops strategy + integration checklist + risk register) — nhưng chưa thể cao hơn vì **chưa một dòng nào trong số này từng chạy trên Supabase thật**, mọi "đã verify" đều là verify trên local Postgres stub, không phải mục tiêu thật; chưa có monitoring/error-tracking nào được nối; chưa một backup thật nào từng được chạy (chiến lược đã viết, chưa thực thi); và ngoài Auth, chưa domain nào khác nối dữ liệu thật. Đây là điểm số **đúng theo thiết kế** — phạm vi công việc rõ ràng cấm nối Supabase thật ở giai đoạn này — không phải một điểm yếu bị bỏ sót. |
+
+**Điểm trung bình không trọng số: ~8.6/10.** Diễn giải đúng: kiến trúc,
+bảo mật, và tài liệu đã ở mức gần hoàn thiện cho một hệ thống **chưa
+từng chạy thật**; khoảng cách duy nhất thật sự quan trọng trước khi launch
+là chính "chưa từng chạy thật" đó — không phải một lỗ hổng thiết kế nào
+còn sót lại. `docs/INTEGRATION_CHECKLIST.md` + `docs/MIGRATION_VALIDATION.md`
+là con đường trực tiếp để đóng khoảng cách đó, không phải công việc kiến
+trúc thêm.

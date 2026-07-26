@@ -9,6 +9,7 @@ import {
   updateProfileRow,
 } from "@/vo-tri/server/repositories/profile-repository";
 import { updateProfileSchema, type UpdateProfileInput } from "@/vo-tri/server/validation/profile";
+import { toDateOnlyString } from "@/vo-tri/lib/time";
 import type { Database } from "@/vo-tri/server/supabase/database.types";
 import type { ProfileIdentity, ProfileStats, LevelProgress } from "@/vo-tri/profile/types";
 import type { StreakData } from "@/vo-tri/retention/types";
@@ -62,7 +63,7 @@ export async function getStreakData(client: Client, userId: string): Promise<Ser
 
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 6);
-  const { data: activeDateRows, error } = await getRecentActiveDates(client, userId, since.toISOString().slice(0, 10));
+  const { data: activeDateRows, error } = await getRecentActiveDates(client, userId, toDateOnlyString(since));
   if (error) return mapSupabaseError(error);
 
   const activeDates = new Set((activeDateRows ?? []).map((r) => r.activity_date));
@@ -75,7 +76,7 @@ export async function getTodayStats(client: Client, userId: string, questTitle?:
 
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 6);
-  const { data: activeDateRows, error: activeError } = await getRecentActiveDates(client, userId, since.toISOString().slice(0, 10));
+  const { data: activeDateRows, error: activeError } = await getRecentActiveDates(client, userId, toDateOnlyString(since));
   if (activeError) return mapSupabaseError(activeError);
   const activeDates = new Set((activeDateRows ?? []).map((r) => r.activity_date));
   const streak = toStreakData(row, activeDates);

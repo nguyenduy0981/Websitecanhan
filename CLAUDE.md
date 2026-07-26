@@ -892,3 +892,61 @@ sessions don't re-litigate it from scratch.
   ×2 (with/without credentials — zero route regression), full Playwright
   suite (18/18). No live Supabase integration performed and no UI wiring
   changed beyond `AuthDialog`'s sign-up confirmation branch.
+- **Final pre-integration phase.** Owner declared architecture/security/
+  docs/production-prep "substantially complete for current scope" and
+  asked for one last pass before waiting on real Supabase credentials —
+  explicitly: stop adding architecture work after this round. New
+  `docs/MIGRATION_VALIDATION.md` (migration order/idempotency/rollback
+  considerations/measured execution time — ~1.2s total applying all 13
+  files locally/post-migration verification queries/health-check
+  queries, all numbers measured against a fresh local Postgres stub, not
+  estimated). Supabase Connection Readiness re-audited: confirmed
+  exactly 3 real consumers of the URL/anon/service-role keys
+  (`env.ts`'s `getSupabasePublicEnv()` for the public pair,
+  `admin-client.ts` for the service-role key), each fails gracefully
+  with a specific diagnostic (middleware no-ops, `createServerSupabaseClient`/
+  `admin-client` throw actionable Vietnamese errors, `getOptionalSession`
+  degrades to guest) — no code changes needed, already correct from the
+  prior round's env.ts consolidation. Integration Dry Run added as
+  `docs/INTEGRATION_CHECKLIST.md` §7, a static risk register: anon/
+  service-role key mixup (highest severity — a pasted-backwards key
+  would ship a full-RLS-bypass credential into the client bundle),
+  testing the exploit while not logged in as the target row's owner
+  (gives a false "blocked" reading for the wrong reason), manual SQL
+  Editor fixes needing the same `bypass_column_guard` flag the RPCs use
+  (triggers fire for every role, proven directly while building the
+  guard — this is intentional, not a bug to work around), copy-paste
+  truncation risk on the 459-line functions migration, and a real
+  forward-looking one found by static review: `next.config.ts`'s CSP
+  (`connect-src 'self'`) is correct today (every Supabase call is
+  server-side) but would silently block a future direct-browser-to-
+  Storage avatar upload with zero server-side error — flagged before it
+  has a chance to cause a confusing bug. Final Repository Audit: found
+  and fixed 2 genuinely stale documentation passages (`BACKEND_ARCHITECTURE.md`'s
+  top status banner and §11 both still said credentials/Auth-wiring were
+  pending, contradicting §14 which already recorded them as done;
+  `README.md` had the same staleness in two places) — the kind of drift
+  this round's own §18 finding (softDeleteComment) proved can hide for a
+  long time if nothing re-reads old prose against new reality. Found and
+  consolidated one genuine small duplication:
+  `.toISOString().slice(0, 10)` appeared 3 times (`profile-service.ts`
+  ×2, `adapters/profile.ts` ×1) computing the same UTC date-only string
+  — extracted `toDateOnlyString()` into `lib/time.ts` (+1 unit test).
+  Confirmed NOT dead code, explicitly left alone per the round's own
+  "don't remove future-extensibility" instruction: `admin-client.ts` and
+  every unwired Server Action file (still correctly unused pending
+  `docs/INTEGRATION_CHECKLIST.md` §6) — a grep-based orphan-file sweep
+  flagged exactly these and nothing else. Launch Readiness Score added
+  to `PROJECT_HANDOFF.md` §13 — Architecture 9/10, Security 9/10,
+  Maintainability 9/10, Testability 8.5/10, Performance 8/10,
+  Documentation 9.5/10, Production Readiness 7.5/10 (deliberately the
+  lowest — every "verified" claim so far is against a local Postgres
+  stub, not the real target; that gap is the honest reason, not a
+  design flaw). Verified: `tsc`, lint, `vitest run` (**104/104**, +1 for
+  `toDateOnlyString`), `next build` ×2 (with/without credentials — zero
+  regression), full Playwright suite (18/18). No live Supabase
+  integration performed. Per the owner's explicit stop condition: no
+  further architecture work begins until the owner provides a live
+  Supabase project and real credentials — the next session should
+  transition directly into production integration work at that point,
+  not continue hardening/auditing.

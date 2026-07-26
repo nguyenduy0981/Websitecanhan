@@ -3,6 +3,7 @@ import type { StreakData } from "@/vo-tri/retention/types";
 import type { TodayStats } from "@/vo-tri/home/TodayCard";
 import type { VoTriUser } from "@/vo-tri/shell/types";
 import type { Database } from "@/vo-tri/server/supabase/database.types";
+import { toDateOnlyString } from "@/vo-tri/lib/time";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -51,7 +52,7 @@ export function toStreakData(row: ProfileRow, activeDates: Set<string>, referenc
   for (let i = 6; i >= 0; i--) {
     const d = new Date(referenceDate);
     d.setUTCDate(d.getUTCDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = toDateOnlyString(d);
     last7Days.push(activeDates.has(key));
   }
   return {

@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { timeAgo } from "./time";
+import { timeAgo, toDateOnlyString } from "./time";
+
+describe("toDateOnlyString", () => {
+  it("returns the UTC date portion regardless of time-of-day", () => {
+    expect(toDateOnlyString(new Date("2026-06-15T23:59:59Z"))).toBe("2026-06-15");
+    expect(toDateOnlyString(new Date("2026-06-15T00:00:00Z"))).toBe("2026-06-15");
+  });
+});
 
 describe("timeAgo", () => {
   beforeEach(() => {
