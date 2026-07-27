@@ -12,6 +12,13 @@
 > giữa tài liệu này và code thật, **code luôn là nguồn sự thật** — hãy cập
 > nhật lại tài liệu, không phải ngược lại.
 >
+> **Nếu đây là phiên AI đầu tiên chạm vào repo này**, đọc
+> [`docs/AI_ENGINEERING_CONTEXT.md`](./AI_ENGINEERING_CONTEXT.md) trước
+> tài liệu này — đó là điểm vào chính thức duy nhất (canonical onboarding
+> doc), ngắn gọn hơn và luôn phản ánh stop condition/next steps hiện tại.
+> Tài liệu này (`PROJECT_HANDOFF.md`) đi sâu hơn về từng giai đoạn đã
+> hoàn thành, tech debt, và launch readiness score.
+>
 > Các tài liệu liên quan khác trong repo:
 > - [`CLAUDE.md`](../CLAUDE.md) — quy tắc bắt buộc + nhật ký quyết định
 >   chi tiết theo từng prompt (nguồn chi tiết nhất, nhưng dài và theo thứ
@@ -794,6 +801,11 @@ mới" thành "nối dữ liệu vào nhánh đã có".
 ---
 
 ## 11. Hướng dẫn cho AI mới
+
+> Bản canonical, ngắn gọn hơn của phần này là
+> [`docs/AI_ENGINEERING_CONTEXT.md`](./AI_ENGINEERING_CONTEXT.md) §8 —
+> đọc file đó trước. Phần dưới đây vẫn giữ lại vì có chi tiết bổ sung
+> (ví dụ pattern sửa lỗi RSC cụ thể) không lặp lại ở đó.
 
 Nếu bạn là một phiên Claude mới được giao tiếp tục dự án này, đọc kỹ
 phần này trước khi làm bất cứ điều gì:

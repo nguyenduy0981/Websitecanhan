@@ -1,8 +1,15 @@
 # VÔ TRI
 
 Cộng đồng giải trí vui vẻ, tinh nghịch — nơi mọi người cười, xả stress, chơi
-game nhỏ và sưu tập thành tích cùng nhau. Xem [`CLAUDE.md`](./CLAUDE.md) cho
-các quy tắc thiết kế bắt buộc, [`docs/VO_TRI_DESIGN_BIBLE.md`](./docs/VO_TRI_DESIGN_BIBLE.md)
+game nhỏ và sưu tập thành tích cùng nhau.
+
+**Phiên AI mới bắt đầu ở đây:** [`docs/AI_ENGINEERING_CONTEXT.md`](./docs/AI_ENGINEERING_CONTEXT.md)
+— tài liệu onboarding chính thức duy nhất, đọc trước khi viết bất kỳ dòng
+code nào.
+
+Xem [`CLAUDE.md`](./CLAUDE.md) cho
+các quy tắc thiết kế bắt buộc + nhật ký quyết định chi tiết,
+[`docs/VO_TRI_DESIGN_BIBLE.md`](./docs/VO_TRI_DESIGN_BIBLE.md)
 cho toàn bộ Design System, [`docs/VO_TRI_ARCHITECTURE.md`](./docs/VO_TRI_ARCHITECTURE.md)
 cho component inventory + routing map, [`docs/VO_TRI_GAMEPLAY_ENGINE.md`](./docs/VO_TRI_GAMEPLAY_ENGINE.md)
 cho lifecycle/state-flow của Gameplay Engine + cách thêm một Activity mới,

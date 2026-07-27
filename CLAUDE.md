@@ -1,5 +1,12 @@
 # CLAUDE.md — VÔ TRI Project Instructions
 
+> **New session, current project status, or "where do I start?"** →
+> read [`docs/AI_ENGINEERING_CONTEXT.md`](./docs/AI_ENGINEERING_CONTEXT.md)
+> first. It's the canonical, structured onboarding doc (current status,
+> stop condition, next steps, rules) — this file is the full
+> chronological decision log underneath it, useful once you need the
+> detailed *why* behind a specific past decision.
+
 VÔ TRI is a Vietnamese entertainment/community product — not a business dashboard,
 not a landing page. Users open it to relax, laugh, do silly things, collect
 achievements, and meet interesting people. Tone: hài hước, thông minh, châm biếm
@@ -950,3 +957,39 @@ sessions don't re-litigate it from scratch.
   Supabase project and real credentials — the next session should
   transition directly into production integration work at that point,
   not continue hardening/auditing.
+- **Production integration attempt — credentials present, network still
+  blocked; canonical AI onboarding doc created.** Owner populated
+  `.env.local` with real Project URL/Anon Key/Service Role Key for
+  project `msmnnosshwsemlszempd` and asked to begin production
+  integration in a specific 12-step order. Verified the keys aren't
+  swapped (decoded both JWTs: anon key carries `"role":"anon"`, service
+  role key carries `"role":"service_role"`) — but re-confirmed this
+  working environment still cannot reach Supabase at all: `curl` to the
+  REST API, Auth settings endpoint, Management API, and a direct
+  Postgres connection all fail identically with `CONNECT tunnel failed,
+  response 403`, the same class of deliberate egress block already
+  documented for Docker Hub/Supabase in earlier phases — not routed
+  around, per the standing instruction to never disable TLS verification
+  or unset `HTTPS_PROXY`. Generated the combined migration SQL (all 13
+  files concatenated in order) and delivered it directly to the owner as
+  a file, since running it is now blocked on them (either paste it into
+  the Supabase SQL Editor, or `supabase db push` from a machine that can
+  reach the project) — this is the same playbook Phase 3 already used
+  for the same class of block. Separately, owner asked for a single
+  canonical AI onboarding document so any future session (with or
+  without this conversation's history) can resume with minimal context
+  loss: added `docs/AI_ENGINEERING_CONTEXT.md` (project overview,
+  repository map, permanent engineering rules, current status, current
+  stop condition, the owner's exact next-execution-plan order, only the
+  architectural decisions that actually affect future work, a future-AI
+  session guide, and living-document rules for keeping it in sync).
+  Cross-linked as the first thing to read from `CLAUDE.md`'s own top (a
+  short pointer, since `CLAUDE.md` is auto-loaded into every session's
+  context by the harness and is a chronological log, not a structured
+  summary), `README.md`, and `PROJECT_HANDOFF.md` (both its own top
+  banner and §11's "AI mới" section, which now defers to the new doc's
+  §8 as canonical while keeping its own extra implementation-pattern
+  detail). Verified: `tsc`, lint, `vitest run` (104/104, unchanged — pure
+  documentation addition). No live Supabase integration performed; the
+  stop condition from the prior round is unchanged, now documented in
+  the new canonical doc's §5 instead of only here.
