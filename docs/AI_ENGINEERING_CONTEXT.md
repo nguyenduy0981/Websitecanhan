@@ -5,9 +5,10 @@
 > engineer) picking up this repository cold. Everything else in `docs/`
 > is detail you pull in only when this file points you to it.
 >
-> **Last updated:** 2026-07-26, immediately after the final
-> pre-integration hardening phase and the discovery that this working
-> environment cannot reach the live Supabase project (see §5).
+> **Last updated:** 2026-07-27, after adding §8's formal AI Onboarding
+> Protocol + Pre-flight Checklist. The stop condition (§5) is unchanged
+> from 2026-07-26: real credentials exist, this environment still
+> cannot reach the live Supabase project.
 
 ---
 
@@ -322,21 +323,99 @@ and the job is to connect it, not rethink it.
 
 ---
 
-## 8. Future AI Session Guide
+## 8. AI Onboarding Protocol
 
-**You have never seen this repository before. Do this, in order:**
+**Every brand-new AI session's first task on this repository follows
+this exact sequence — not an approximation of it, not a subset picked by
+judgment call.** This exists so any session starts from the same
+engineering baseline regardless of what conversation history it does or
+doesn't have.
 
-1. Read this file completely.
-2. Check `.env.local` for whether real Supabase credentials exist, and
-   try a basic connectivity check (e.g. `curl` the project's `/rest/v1/`
-   endpoint) to see if §5's blocker still applies or has been resolved.
-3. Read `docs/PROJECT_HANDOFF.md` §9–13 (remaining work, AI guide, tech
-   debt, launch score) for more operational detail than this file carries.
-4. Only pull in `BACKEND_ARCHITECTURE.md`, `VO_TRI_DESIGN_BIBLE.md`,
-   `VO_TRI_ARCHITECTURE.md`, `VO_TRI_GAMEPLAY_ENGINE.md`,
-   `INTEGRATION_CHECKLIST.md`, `MIGRATION_VALIDATION.md`, `OPERATIONS.md`,
-   or `CLAUDE.md`'s full log when the task at hand actually needs that
-   level of detail — not by default.
+1. **Read this file (`docs/AI_ENGINEERING_CONTEXT.md`) completely,
+   start to finish**, before reading anything else and before writing
+   any code.
+2. **Read every document this file references, in this order** (skip a
+   document only if the task at hand genuinely can't touch that area —
+   don't skip for convenience):
+   1. `docs/PROJECT_HANDOFF.md` — §9–13 at minimum (remaining work, AI
+      guide, tech debt register, launch readiness score).
+   2. `docs/INTEGRATION_CHECKLIST.md` and `docs/MIGRATION_VALIDATION.md`
+      — required reading if the task touches Supabase/migrations/UI
+      wiring at all; §5/§6 of this file tell you whether that's the
+      current focus.
+   3. `docs/BACKEND_ARCHITECTURE.md` — required if the task touches
+      schema, RLS, a security-definer function, or any server-side code.
+   4. `docs/VO_TRI_DESIGN_BIBLE.md` / `docs/VO_TRI_ARCHITECTURE.md` /
+      `docs/VO_TRI_GAMEPLAY_ENGINE.md` — required if the task touches
+      design tokens/brand, frontend component structure, or gameplay
+      mechanics respectively.
+   5. `docs/OPERATIONS.md` — required if the task touches deployment,
+      backup, or monitoring.
+   6. `CLAUDE.md`'s full decision log — consult when you need the
+      detailed *why* behind a specific past decision this file only
+      summarizes (§7), or before "fixing" something that looks wrong but
+      may be intentional.
+3. **Inspect the current repository structure directly** — don't trust
+   memory or a stale mental model from a prior session. Run something
+   equivalent to `find src -maxdepth 3 -type d` and skim `package.json`,
+   `supabase/migrations/`, and `.github/workflows/ci.yml` to see the real
+   current shape, not the shape this document describes in prose.
+4. **Compare documentation against the current codebase.** Spot-check at
+   least: does §4's "Current Project Status" match what's actually wired
+   (e.g. grep for whether a domain claimed as "not wired yet" really has
+   no Client Component calling its Server Actions)? Does §5's stop
+   condition still hold (re-run the connectivity check in step 2 of the
+   old guide, now folded into this protocol — see the checklist below)?
+5. **Report any inconsistencies found in step 4 before making any other
+   change.** If this file or another doc disagrees with the real code,
+   say so explicitly and fix the documentation in the same pass — per
+   §10's rule that code is always the source of truth.
+6. **Summarize the current project state** back to whoever is present
+   (owner or the task at hand) in a few sentences — what's built, what
+   isn't, drawing from §4, not restating this whole file.
+7. **Identify the active stop condition** (§5) precisely — what exactly
+   is blocking further progress, and what would unblock it.
+8. **Propose the next engineering step**, drawn from §6's execution plan
+   if the stop condition is the Supabase integration one, or from
+   whatever the actual task/request is otherwise.
+9. **Wait for owner approval only if the active stop condition requires
+   it** (e.g. still blocked on credentials/network access/a live
+   decision only the owner can make — see §3 rule #9). If the stop
+   condition has already been satisfied and the task is clear, proceed
+   without waiting for redundant confirmation.
+10. **Begin implementation** — following the Engineering Rules in §3 and
+    the Important Architectural Decisions in §7 throughout.
+
+### Pre-flight Checklist
+
+Every future AI session must be able to check off every item below
+before writing the first line of code. If any item can't be honestly
+checked, go back and do the corresponding step above first.
+
+- [ ] Documentation reviewed — this file completely, plus every relevant
+      referenced doc per step 2's recommended order.
+- [ ] Stop condition understood — §5's current blocker, and exactly what
+      resolves it.
+- [ ] Architecture understood — the 3-layer backend stack, RLS +
+      security-definer boundary, and the RSC serialization rule (§7) —
+      the three most common places a change goes wrong if
+      misunderstood.
+- [ ] Existing implementation inspected — the real repository structure
+      and CI config (step 3), not assumed from this document's prose.
+- [ ] CI expectations understood — `tsc`/lint/`vitest run`/`next build`/
+      `test:e2e` all must stay green; know how to check the real GitHub
+      Actions result, not guess it.
+- [ ] No conflicting assumptions detected — any mismatch found in step 4
+      has been reported (step 5) before proceeding, not silently
+      "corrected" by assumption.
+
+---
+
+## 9. Future AI Session Guide
+
+**You have never seen this repository before.** §8 above is the
+mechanical first-task sequence; this section is the standing guidance
+that applies for the rest of the session, after onboarding completes.
 
 **Never change without explicit, fresh owner approval:**
 - Brand colors/tokens/dark-mode-first rule (`CLAUDE.md`'s "Non-negotiable
@@ -376,7 +455,7 @@ and the job is to connect it, not rethink it.
 
 ---
 
-## 9. Living Document Rules
+## 10. Living Document Rules
 
 This document must always stay synchronized with the repository. Update
 it, in the same commit/round as the triggering change, whenever:
@@ -396,3 +475,11 @@ a pointer here. The full chronological history belongs in `CLAUDE.md`,
 not here. If this file and the actual code/repository state ever
 disagree, **the code is the source of truth** — fix this file to match,
 never the reverse.
+
+**If a new section is inserted (not just appended), re-check every
+cross-reference in this file and in `PROJECT_HANDOFF.md`/`CLAUDE.md`/
+`README.md` that points to a section number** — a shifted number is
+exactly the kind of stale-but-plausible-looking reference that's easy to
+miss and hard to notice later (this happened once already: adding §8
+here pushed the old §8/§9 to §9/§10, and `PROJECT_HANDOFF.md` §11 had to
+be updated to match in the same round).

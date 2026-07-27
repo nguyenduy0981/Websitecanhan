@@ -993,3 +993,28 @@ sessions don't re-litigate it from scratch.
   documentation addition). No live Supabase integration performed; the
   stop condition from the prior round is unchanged, now documented in
   the new canonical doc's §5 instead of only here.
+- **AI Onboarding Protocol added to `docs/AI_ENGINEERING_CONTEXT.md`.**
+  Owner asked for a formal, mechanical first-task sequence so every
+  future session starts from the same baseline regardless of prior
+  chat history — added as a new §8 (10-step protocol: read this file
+  completely → read every referenced doc in a concrete recommended
+  order → inspect the real repo structure directly, don't trust a
+  stale mental model → compare docs against actual code → report any
+  inconsistency found *before* other changes → summarize current state
+  → identify the active stop condition → propose the next step → wait
+  for approval only if the stop condition requires it → begin
+  implementation) plus a literal Pre-flight Checklist (6 checkboxes:
+  documentation reviewed, stop condition understood, architecture
+  understood, existing implementation inspected, CI expectations
+  understood, no conflicting assumptions detected). Inserting a new
+  section mid-document shifted the old §8/§9 (Future AI Session Guide,
+  Living Document Rules) down to §9/§10 — caught and fixed every
+  cross-reference to the old numbers in this same file and in
+  `PROJECT_HANDOFF.md` §11's pointer, and added an explicit new rule to
+  §10 (Living Document Rules) itself: whenever a section is *inserted*
+  rather than appended, re-check every cross-reference across all 4
+  files that reference this doc by section number, since a shifted
+  number is exactly the kind of stale-but-plausible reference that's
+  easy to miss. Verified: `tsc`, lint, `vitest run` (104/104, unchanged
+  — pure documentation addition). No live Supabase integration
+  performed; stop condition unchanged from the prior round.

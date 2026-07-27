@@ -803,9 +803,11 @@ mới" thành "nối dữ liệu vào nhánh đã có".
 ## 11. Hướng dẫn cho AI mới
 
 > Bản canonical, ngắn gọn hơn của phần này là
-> [`docs/AI_ENGINEERING_CONTEXT.md`](./AI_ENGINEERING_CONTEXT.md) §8 —
-> đọc file đó trước. Phần dưới đây vẫn giữ lại vì có chi tiết bổ sung
-> (ví dụ pattern sửa lỗi RSC cụ thể) không lặp lại ở đó.
+> [`docs/AI_ENGINEERING_CONTEXT.md`](./AI_ENGINEERING_CONTEXT.md) §8
+> (AI Onboarding Protocol — trình tự bắt buộc + Pre-flight Checklist) và
+> §9 (Future AI Session Guide) — đọc file đó trước. Phần dưới đây vẫn
+> giữ lại vì có chi tiết bổ sung (ví dụ pattern sửa lỗi RSC cụ thể) không
+> lặp lại ở đó.
 
 Nếu bạn là một phiên Claude mới được giao tiếp tục dự án này, đọc kỹ
 phần này trước khi làm bất cứ điều gì:
