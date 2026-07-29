@@ -1,4 +1,4 @@
-# VÔ TRI — Gameplay Vision: From Games to Moments to Culture
+# VÔ TRI — Gameplay Vision: From Games to Moments to Culture to Evolution
 
 > **Revision history:**
 > - **Rev 1** asked "what games should VÔ TRI have?" — a catalog of nine
@@ -6,12 +6,22 @@
 > - **Rev 2** shifted to "what moments can only happen inside VÔ TRI?" —
 >   five Signature Moments, designed emotion-first. The old game catalog
 >   survives as supporting content that feeds those five, not as identity.
-> - **Rev 3 (this one)** pushes one level further: moments alone don't
->   make a product irreplaceable — a moment happens once. What compounds
->   over months is the *language and mythology* that grows around those
+> - **Rev 3** pushed one level further: moments alone don't make a
+>   product irreplaceable — a moment happens once. What compounds over
+>   months is the *language and mythology* that grows around those
 >   moments once real friend groups have lived through enough of them.
->   Parts 1–9 are unchanged from Rev 2. Parts 10–13 are new. The Final
->   Challenge at the end is rewritten to reflect this.
+>   Added Parts 10–13 and rewrote the Final Challenge.
+> - **Rev 4 (this one)** adds the fifth and final layer: **evolution.** A
+>   living product shouldn't feel finished — it should feel like it's
+>   changing because the *community* changed, not because a changelog
+>   shipped. Adds Parts 14–17: how the product should feel at 100 users
+>   vs. 10 million, how the mythology itself ages rather than resolves,
+>   how legendary moments become preserved *history* instead of buried
+>   posts, and how a newcomer years from now should sense depth on
+>   arrival. Closes with a companion document —
+>   `docs/VO_TRI_NORTH_STAR.md` — describing how the product should
+>   *feel* after five years, meant to outlive every specific feature in
+>   this vision.
 >
 > Still a creative/product document, not an engineering spec. No code
 > changes accompany it.
@@ -521,6 +531,188 @@ single source has the whole picture* is. That's what turns "curious"
 into "let's compare notes with a friend," which is the mythology doing
 exactly the same job the language layer does — creating a reason for two
 users to talk to each other about the product.
+
+---
+
+## Part 14 — Community Evolution
+
+Not "what content ships at each user-count milestone" — what *feels
+different* because the population changed, independent of anything the
+team builds.
+
+### 100 users
+There's no real distinction yet between "the Chronicle" (Part 16) and a
+single friend group's own private tally — the whole userbase is small
+enough that everyone basically recognizes everyone's username. Every
+Court verdict is functionally front-page news. The earliest users become
+the founding cast of every story told later, whether or not the product
+ever calls them that. The mythology is thin here, almost by necessity —
+there isn't enough volume of fragments yet for real ambiguity to form,
+only the promise of what it'll become. Feels like a clubhouse with a
+door, not a platform with a front page.
+
+### 1,000 users
+The first genuinely exciting milestone: a phrase crosses a friend-group
+boundary for the first time. Someone hears "để Toà xử" from a total
+stranger and realizes, in real time, that the joke was never only
+theirs. That specific realization — *the culture is bigger than me now*
+— is worth treating as a real event, possibly even the first entry a
+community would nominate into the Chronicle on its own. This is also
+where the mythology gets its first genuine disagreement: not "we don't
+know" anymore, but "some people think X, some people think Y" — the
+first sign there's enough surface area to actually be mythologized
+about.
+
+### 100,000 users
+No single person can plausibly know all the legendary moments by heart
+anymore — this is the exact threshold where the Chronicle stops being a
+nice touch and becomes structurally necessary, because tribal memory
+alone can no longer carry the history. Distinct regional or subcultural
+inflections of the language start to emerge — a specific school, city,
+or fandom cluster develops its own slight variant that doesn't fully
+travel to everyone else. That's a healthy sign of a real dialect
+forming, not something to standardize away. Creator-submitted content
+stops being a bonus feature and becomes load-bearing, because no small
+team can hand-author enough Oracle lines and dilemmas for this many
+people without either repeating content noticeably or spending
+resources disproportionate to what CLAUDE.md's own cost discipline would
+tolerate. The mythology genuinely bifurcates here: a thin official canon
+versus a much richer, often-contradictory fan folklore that most users
+actually engage with more than anything the team wrote — the job shifts
+from *authoring* the mythology to lightly seeding it and letting the
+community out-write it.
+
+### 10,000,000 users
+The single biggest risk at this scale is losing the 100-user feeling
+entirely — and the only real defense is structural, not aspirational:
+every signature mechanic (the Court, the Contagion dare, the Mirror, the
+Hour, the Weekly lowlight) has to stay scoped to real, small, *known*
+relationships. Friends, never "everyone." Done right, an individual
+user's lived experience of the product should feel exactly like the
+100-user version regardless of how large the aggregate is — scale should
+be invisible at the point of use. The language will have genuinely
+leaked outside the app into wider youth vocabulary by now, which is
+simultaneously the strongest possible proof of cultural success and a
+real identity risk worth naming honestly rather than only celebrating:
+once anyone can say "để Toà xử" without ever having opened the app, the
+phrase stops signaling "I'm one of us" quite as cleanly as it once did.
+The Chronicle is now a genuine institution with its own internal
+disputes — what counts as canon, who "really" started a tradition,
+revisionist theories about the early years — which means the "if a
+mystery is fully solved, it has failed" principle from Part 13 has
+become an ongoing stewardship job, not a one-time design decision.
+
+---
+
+## Part 15 — Living Mythology (how it ages instead of resolves)
+
+The operating rule from Part 13 — every question deepens the mystery
+instead of closing it — needs a concrete shape over time, not just a
+one-time design choice. Two examples of how a single thread should
+evolve across years, shown rather than asserted:
+
+**"Who is the Court?"**
+- Early: *"Toà không thuộc về ai. Toà chỉ lắng nghe."* (The Court
+  belongs to no one. It only listens.)
+- Later, a rare fragment deepens rather than answers: *"Toà đã xử trước
+  khi có Vô Tri."* (The Court was already ruling before Vô Tri existed.)
+  — reopens what "the Court" even refers to, rather than confirming it.
+- Later still, a fragment introduces real tension: *"Không phải chỉ có
+  một Toà."* (There was never only one Court.) — undermines the
+  assumption of a single, singular entity that the earlier fragments let
+  people quietly settle into.
+
+**"Is there really an unseen spirit?"**
+- Early: left open, including in the Mascot's own in-character refusal
+  to confirm or deny.
+- Later, a fragment adds stakes without specifics: *"Đấng đang ngủ, đừng
+  đánh thức."* (The Entity is sleeping — don't wake it.) — never
+  explains what waking it would mean.
+- Much later, a rare, quiet fragment gestures at the most thematically
+  resonant possibility without ever confirming it: *"Có lẽ Đấng chưa
+  từng là một người."* (Maybe the Entity was never a single person at
+  all.) — a hint that it might be the community itself, personified —
+  which would be a satisfying answer if it were ever confirmed, and
+  precisely for that reason should never be.
+
+**The maintenance principle:** new fragments arrive irregularly, never
+on a schedule predictable enough to anticipate (the same discipline the
+Ambush moment itself depends on). If community consensus ever settles
+too comfortably on one theory, that's the signal a new, quietly
+contradicting fragment is due — not because the "truth" changed, but
+because a settled mystery has stopped being worth talking about. Old
+threads should deepen faster than new ones are introduced; a mythology
+that reopens everything at once reads as arbitrary rather than alive.
+
+---
+
+## Part 16 — Community-Created History (not screenshots, not posts)
+
+**Biên Niên Sử Vô Tri** (The Vô Tri Chronicle) — a permanent, dated,
+append-only public archive, deliberately *not* a feed: old entries stay
+exactly as visible and prominent as new ones, with no algorithmic decay
+burying last year's legendary verdict under this week's content. A
+museum, not a timeline.
+
+- **Entries get proper names**, the way real communities name notable
+  events or memes after the fact — "Vụ Toà Xử Tết 2027," not "Court
+  verdict #48291." Naming is itself what turns an event into history
+  instead of content.
+- **Canonization is curated, not purely engagement-ranked.** A pure
+  likes-based archive would just reward virality and luck; some light
+  editorial judgment alongside community nomination is what makes the
+  Chronicle feel like considered historiography rather than a
+  leaderboard wearing a museum's clothes.
+- **Anniversaries.** The product marks the anniversary of its own real
+  milestones — "one year since the first Court verdict" — the same way
+  Xin Xăm Vô Tri (Part 5) borrows a real external calendar tradition, but
+  now anchored to the product's *own* history repeating annually. This
+  is what makes the product's past feel like something with a calendar
+  of its own, not just an archive to browse once.
+- **One Hall, cross-mechanic.** The existing word-chain "hall of
+  authors" (Part 8) becomes one wing of a larger Chronicle spanning every
+  mechanic: the first legendary Court verdict, the funniest Oracle line
+  ever generated, the most famous dare, the rarest mystery-box pull.
+  Explicitly not a leaderboard — nothing here should carry competitive
+  ranking pressure, only the fact that it happened and is remembered.
+
+---
+
+## Part 17 — Legacy: Designing for Someone Who Joins in 2032
+
+The goal stated plainly: a newcomer should sense, within the first few
+minutes, that they're walking into a place that already has a history —
+without a tutorial ever having to say so.
+
+- **The Chronicle is browsable from the very first session** — a new
+  user can scroll years back immediately. Depth should be something they
+  *discover*, not something onboarding explains to them.
+- **Unexplained callbacks in ordinary content.** An Oracle line that
+  casually references "the way it happened back in Vụ Toà Xử Tết 2027"
+  with no footnote, no tooltip. The correct feeling is walking into a
+  room mid-conversation — appropriately disorienting, not unwelcoming.
+- **A visible, non-elitist "here since [year]" marker** on long-time
+  users' profiles — not a status flex, just enough to make a newcomer
+  curious enough to ask a veteran about the early days. The story gets
+  told person-to-person, not read off a wiki page.
+- **The mythology being already unresolved on arrival is itself the
+  strongest proof of age.** A newcomer genuinely cannot fully parse who
+  or what Đấng Vô Tri is on day one, precisely because years of
+  deliberately-unresolved fragments already exist — that confusion
+  should never be smoothed away with a convenient explainer for their
+  benefit. Confusion, here, is evidence of a real past.
+- **Overhearing the language before understanding it.** The correct
+  early experience is hearing "để Toà xử" used casually by veterans (or
+  by people outside the app entirely, per Part 14's 10-million-user
+  stage) before fully knowing what it means — mildly, pleasantly behind,
+  not caught up instantly. Belonging should feel earned within the first
+  week, not granted on signup.
+
+A companion document, `docs/VO_TRI_NORTH_STAR.md`, distills everything
+above (and everything in this vision) into a single description of how
+the product should *feel* five years from now — written to outlive any
+specific mechanic named in this document, and meant to function as the
+actual governing reference for future product decisions.
 
 ---
 
