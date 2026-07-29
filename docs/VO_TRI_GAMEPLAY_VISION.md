@@ -23,6 +23,12 @@
 >   *feel* after five years, meant to outlive every specific feature in
 >   this vision.
 >
+> **Superseded as the primary reference by `docs/VO_TRI_PRODUCT_BIBLE.md`,**
+> which turns everything below into a single inventory, a concrete
+> architecture, an MVP, and a release plan. This document and
+> `VO_TRI_NORTH_STAR.md` remain the detailed rationale underneath the
+> Bible — read them for the *why*, read the Bible for *what ships when*.
+>
 > Still a creative/product document, not an engineering spec. No code
 > changes accompany it.
 
