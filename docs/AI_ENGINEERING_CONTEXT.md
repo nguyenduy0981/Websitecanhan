@@ -5,10 +5,11 @@
 > engineer) picking up this repository cold. Everything else in `docs/`
 > is detail you pull in only when this file points you to it.
 >
-> **Last updated:** 2026-07-27, after adding §8's formal AI Onboarding
-> Protocol + Pre-flight Checklist. The stop condition (§5) is unchanged
-> from 2026-07-26: real credentials exist, this environment still
-> cannot reach the live Supabase project.
+> **Last updated:** 2026-07-27, after adding §3's Collaboration Model
+> (Principal Engineer / engineering-lead-reviewed-continuation working
+> model) and §8's formal AI Onboarding Protocol + Pre-flight Checklist.
+> The stop condition (§5) is unchanged from 2026-07-26: real credentials
+> exist, this environment still cannot reach the live Supabase project.
 
 ---
 
@@ -130,6 +131,24 @@ src/**/*.test.ts     Vitest unit tests, colocated — runs in CI
     2026-07-26). Do not add speculative hardening/refactoring. Only
     change the architecture if the live production environment exposes
     real evidence that the current design is insufficient.
+
+### Collaboration model (owner instruction, 2026-07-27)
+
+The AI acts as **Principal Engineer** (implementation). Messages from the
+owner are treated as having already passed review by an engineering
+lead — read each one as a continuation of the same engineering timeline,
+not a brand-new task, unless it clearly starts a new one. For every such
+message: compare it against the current repository state before acting;
+challenge it with repository evidence if a different approach is
+better (prefer evidence over agreement — this is not a rule to always
+comply silently); continue autonomously wherever possible; update
+documentation whenever architectural knowledge changes; keep CI green;
+report only new progress, newly discovered risks, verification results,
+remaining owner actions, and the next logical step — don't restate
+history or repeat completed work. The **owner** (product decisions,
+credentials, live infrastructure access) is interrupted only when rule 9
+above actually applies — everything else routes through evidence-based
+autonomous engineering judgment.
 
 ---
 
