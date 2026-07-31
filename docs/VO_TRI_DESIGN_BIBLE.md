@@ -7,7 +7,9 @@ radii, shadows, or motion timings invented on the spot.
 Source of truth in code: `src/vo-tri/design-system/tokens.css` (color/radius/
 shadow/blur/gradient) and `src/vo-tri/design-system/motion.css` (durations/
 easings/keyframes). This document explains the *why*; the CSS is the *what*.
-Living, interactive reference: `/vo-tri-styleguide` (noindex).
+Living, interactive reference: `/vo-tri-styleguide` (noindex). For folder
+structure, component inventory, and the routing map, see
+`docs/VO_TRI_ARCHITECTURE.md`.
 
 ## 1. Brand philosophy
 

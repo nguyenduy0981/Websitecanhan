@@ -68,6 +68,27 @@ const config: Config = {
         "vt-gradient-brand": "var(--vt-gradient-brand)",
         "vt-gradient-vip": "var(--vt-gradient-vip)",
       },
+      // Motion-audit fix (Prompt 10): several components previously used
+      // Tailwind's built-in duration-150/200/500/700 + ease-out utilities
+      // for one-off transitions — the durations were close-but-not-equal
+      // to the real tokens, and Tailwind's default `ease-out` bezier is a
+      // *different* curve than our branded --vt-ease-out. These utilities
+      // make the real tokens reachable as plain classes (duration-vt-fast
+      // ease-vt-out) so every transition, not just keyframe animations,
+      // shares one motion language.
+      transitionDuration: {
+        "vt-instant": "var(--vt-duration-instant)",
+        "vt-fast": "var(--vt-duration-fast)",
+        "vt-base": "var(--vt-duration-base)",
+        "vt-slow": "var(--vt-duration-slow)",
+        "vt-lazy": "var(--vt-duration-lazy)",
+      },
+      transitionTimingFunction: {
+        "vt-out": "var(--vt-ease-out)",
+        "vt-in-out": "var(--vt-ease-in-out)",
+        "vt-spring": "var(--vt-ease-spring)",
+        "vt-mischief": "var(--vt-ease-mischief)",
+      },
     },
   },
   plugins: [],

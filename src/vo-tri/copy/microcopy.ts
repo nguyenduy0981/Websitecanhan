@@ -61,6 +61,94 @@ export const errorCopy = {
   },
 };
 
+export const offlineCopy = {
+  title: "Bạn đang offline",
+  description: "Không thấy mạng đâu cả. Kết nối lại rồi VÔ TRI sẽ ở đây chờ bạn.",
+};
+
+export const retryCopy = {
+  title: "Chưa xong được...",
+  description: "Thử lại một lần nữa xem, đôi khi chỉ cần vậy thôi.",
+};
+
+export const permissionCopy = {
+  title: "Chỗ này chưa mở cho bạn",
+  description: "Có thể bạn cần đăng nhập, hoặc đây không phải khu vực dành cho bạn.",
+};
+
+export const maintenanceCopy = {
+  title: "VÔ TRI đang được tân trang",
+  description: "Bọn mình đang chỉnh sửa vài thứ phía sau hậu trường. Quay lại sau nhé.",
+};
+
+// Shared "this doesn't exist yet, and here's an honest reason" toast copy —
+// used anywhere a real feature (auth, a not-yet-built activity, ...) is
+// tapped before its backend exists, so the wording stays consistent
+// instead of each call site inventing its own.
+export const notReadyCopy = {
+  comingSoon: { title: "Đang được xây dựng...", description: "Ghé lại sau nhé, sắp có rồi." },
+  auth: {
+    title: "Đăng nhập chưa có ở đây",
+    description: "Bọn mình đang xây hệ thống tài khoản thật. Quay lại sau nhé.",
+  },
+};
+
+/**
+ * One entry per error code a Postgres `security definer` RPC can raise
+ * (see docs/BACKEND_ARCHITECTURE.md §6.2/§9.3) — the server layer
+ * (`src/vo-tri/server/errors.ts`) maps the raw exception message to a key
+ * here instead of ever showing raw SQL error text in a toast/dialog.
+ * Unknown codes fall back to `errorCopy.generic`.
+ */
+export const serverErrorCopy = {
+  NOT_AUTHENTICATED: {
+    title: "Bạn chưa đăng nhập",
+    description: "Đăng nhập rồi quay lại làm tiếp nhé.",
+  },
+  DAILY_LIMIT_EXCEEDED: {
+    title: "Hôm nay chơi đủ rồi đó",
+    description: "Trò này có giới hạn mỗi ngày — mai quay lại chơi tiếp nhé.",
+  },
+  COOLDOWN_ACTIVE: {
+    title: "Chưa đến lượt đâu",
+    description: "Trò này cần nghỉ một chút giữa các lần chơi. Thử lại sau nhé.",
+  },
+  QUEST_NOT_COMPLETE: {
+    title: "Chưa xong nhiệm vụ này đâu",
+    description: "Hoàn thành đủ điều kiện rồi quay lại nhận thưởng nhé.",
+  },
+  QUEST_ALREADY_CLAIMED: {
+    title: "Nhận rồi mà!",
+    description: "Nhiệm vụ này bạn đã nhận thưởng trước đó rồi.",
+  },
+  MILESTONE_NOT_REACHED: {
+    title: "Chưa tới cột mốc này đâu",
+    description: "Cố thêm chút nữa, sắp chạm tới rồi.",
+  },
+  MILESTONE_ALREADY_CLAIMED: {
+    title: "Nhận rồi mà!",
+    description: "Cột mốc này bạn đã nhận thưởng trước đó rồi.",
+  },
+  CANNOT_FOLLOW_SELF: {
+    title: "Tự theo dõi chính mình á?",
+    description: "Vô tri tới mức này thì thôi, chọn người khác đi.",
+  },
+  UNKNOWN_ACTIVITY: {
+    title: "Không tìm thấy trò này",
+    description: "Có thể nó vừa bị gỡ hoặc chưa từng tồn tại.",
+  },
+  UNKNOWN_QUEST: {
+    title: "Không tìm thấy nhiệm vụ này",
+    description: "Thử tải lại trang xem sao.",
+  },
+  UNKNOWN_MILESTONE: {
+    title: "Không tìm thấy cột mốc này",
+    description: "Thử tải lại trang xem sao.",
+  },
+} satisfies Record<string, { title: string; description: string }>;
+
+export type ServerErrorCode = keyof typeof serverErrorCopy;
+
 export const successCopy = {
   generic: {
     title: "Xong xuôi!",
@@ -69,6 +157,30 @@ export const successCopy = {
   saved: { title: "Đã lưu, khỏi lo!" },
   copied: { title: "Đã sao chép!" },
   published: { title: "Lên sóng rồi đó!" },
+};
+
+export const authCopy = {
+  signedIn: { title: "Chào mừng trở lại!" },
+  signedUp: { title: "Tạo tài khoản thành công!" },
+  // Shown instead of `signedUp` when the Supabase project requires email
+  // confirmation (its own default) — `data.session` comes back empty in
+  // that case, so the user is NOT actually logged in yet even though the
+  // account now exists. Telling them anything else would be a silent lie.
+  confirmEmailSent: {
+    title: "Kiểm tra email để xác nhận nhé",
+    description: "Bọn mình vừa gửi một đường link xác nhận. Bấm vào đó rồi quay lại đăng nhập nha.",
+  },
+};
+
+// The Gameplay Engine's Result Pipeline — one entry per ResultKind so
+// every Activity's win/lose/complete/timeout/abandoned screen pulls
+// from the same five lines instead of each game inventing its own.
+export const resultCopy = {
+  win: { title: "Chiến thắng!", description: "Bạn vừa chơi một ván xuất sắc." },
+  complete: { title: "Xong xuôi!", description: "Bạn vừa hoàn thành" },
+  lose: { title: "Chưa thắng lần này", description: "Không sao, thử lại xem sao." },
+  timeout: { title: "Hết giờ!", description: "Nhanh tay hơn ở lần sau nhé." },
+  abandoned: { title: "Đã thoát", description: "Bạn đã rời khỏi giữa chừng." },
 };
 
 // Default titles a <Toast variant="..."/> falls back to when the caller

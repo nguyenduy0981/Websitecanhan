@@ -5,9 +5,11 @@ import { CommunityPulse } from "@/vo-tri/home/CommunityPulse";
 import { HeroScene } from "@/vo-tri/home/HeroScene";
 import { QuickAccess } from "@/vo-tri/home/QuickAccess";
 import { TodayCard, type TodayStats } from "@/vo-tri/home/TodayCard";
+import { DailyQuestPreview } from "@/vo-tri/retention";
 import { Container } from "@/vo-tri/shell";
 import type { VoTriUser } from "@/vo-tri/shell/types";
-import { Badge, Button, Mascot } from "@/vo-tri/ui";
+import { ActivityFeed } from "@/vo-tri/social";
+import { Badge, Button, Mascot, SmoothAnchorLink } from "@/vo-tri/ui";
 
 // No session yet — Home always renders the logged-out path (no TodayCard).
 // Swap this for a real session lookup once auth exists; nothing else here
@@ -38,7 +40,7 @@ export default function HomePage() {
 
             <div className="vt-fade-up flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "160ms" }}>
               <Button asChild size="lg" variant="primary">
-                <a href="#quick-access">Bắt đầu vô tri</a>
+                <SmoothAnchorLink href="#quick-access">Bắt đầu vô tri</SmoothAnchorLink>
               </Button>
               <Button asChild size="lg" variant="outline">
                 <Link href="/explore">Xem có gì đang hot</Link>
@@ -54,6 +56,16 @@ export default function HomePage() {
         {currentUser && <TodayCard stats={currentUser.stats} />}
 
         <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">
+              Nhiệm vụ hôm nay
+            </h2>
+            <p className="mt-0.5 text-sm text-vt-text-secondary">Ghé làm vài nhiệm vụ, kiếm điểm dễ như ăn kẹo.</p>
+          </div>
+          <DailyQuestPreview />
+        </section>
+
+        <section className="flex flex-col gap-3">
           <h2 className="px-1 font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">
             Đang diễn ra
           </h2>
@@ -61,6 +73,13 @@ export default function HomePage() {
         </section>
 
         <CommunityPulse />
+
+        <section className="flex flex-col gap-3">
+          <h2 className="px-1 font-vt-display text-sm font-semibold uppercase tracking-wide text-vt-text-secondary">
+            Cộng đồng đang làm gì
+          </h2>
+          <ActivityFeed items={[]} />
+        </section>
       </Container>
     </>
   );

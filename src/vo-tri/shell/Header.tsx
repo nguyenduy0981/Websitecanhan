@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/vo-tri/ui/Badge";
-import { Button } from "@/vo-tri/ui/Button";
 import { Mascot } from "@/vo-tri/ui/Mascot";
 import { cn } from "@/vo-tri/lib/cn";
 import type { VoTriUser } from "./types";
+import { LoginButton } from "./LoginButton";
 import { NotificationBell } from "./NotificationBell";
+import { UserMenu } from "./UserMenu";
 
 const SCROLL_THRESHOLD = 24;
 
@@ -39,7 +40,7 @@ export function Header({ user }: { user?: VoTriUser }) {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-40 transition-[padding,box-shadow,background-color,backdrop-filter] duration-200 ease-out",
+        "fixed inset-x-0 top-0 z-40 transition-[padding,box-shadow,background-color,backdrop-filter] duration-vt-fast ease-vt-out",
         scrolled ? "border-b border-vt-glass-border bg-vt-glass py-2 shadow-vt-2 backdrop-blur-vt-md" : "border-b border-transparent bg-transparent py-4",
       )}
     >
@@ -55,23 +56,12 @@ export function Header({ user }: { user?: VoTriUser }) {
               {user.points.toLocaleString("vi-VN")} điểm
             </Badge>
             <NotificationBell />
-            <div className="h-9 w-9 overflow-hidden rounded-vt-full border border-vt-border bg-vt-surface">
-              {user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-vt-text-secondary">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
+            <UserMenu user={user} />
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <Button size="sm" variant="primary">
-              Đăng nhập
-            </Button>
+            <LoginButton size="sm" />
           </div>
         )}
       </div>

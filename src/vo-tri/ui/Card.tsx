@@ -15,7 +15,7 @@ import { cn } from "@/vo-tri/lib/cn";
  * busy content (a floating nav, a sheet header), not as a general content
  * card, or every screen turns into a blur soup.
  */
-const cardVariants = cva("rounded-vt-lg border transition-shadow", {
+const cardVariants = cva("rounded-vt-lg border transition-shadow duration-vt-fast ease-vt-out", {
   variants: {
     variant: {
       default: "border-vt-border bg-vt-card shadow-vt-1",
