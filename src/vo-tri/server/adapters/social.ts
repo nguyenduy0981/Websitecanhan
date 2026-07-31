@@ -33,6 +33,7 @@ export function toNotificationItem(row: NotificationRow): NotificationItem {
 
 export function toUserPreview(row: ProfileRow): UserPreview {
   return {
+    id: row.id,
     name: row.display_name,
     username: row.username,
     avatarUrl: row.avatar_url ?? undefined,

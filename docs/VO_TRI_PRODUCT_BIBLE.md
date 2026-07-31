@@ -11,9 +11,15 @@
 > relationship `CLAUDE.md` has to `AI_ENGINEERING_CONTEXT.md` on the
 > engineering side.
 >
-> No code changes accompany this document. Nothing here is authorized
-> for implementation yet — Part 3 (MVP) and Part 4 (Release Plan) are
-> the recommended next steps, not a green light.
+> No code changes accompanied this document when it was written. The
+> owner has since authorized implementation ("hãy làm theo hướng tốt
+> nhất") — Part 3's MVP is partially shipped: **Vô Tri Đồng Thuận and
+> Toà Án Vô Tri (async) are real, built, and live** (`src/vo-tri/court/`,
+> `/court` route, Home's ConsensusCard — see CLAUDE.md's "MVP feature: Vô
+> Tri Đồng Thuận + Toà Án Vô Tri" decision-log entry for the full
+> implementation record). Everything else in Part 2/Part 4 (Ambush,
+> Mirror, Vô Tri Hour, Weekly Recap, every later milestone) is still
+> planning only, not a green light.
 
 ---
 

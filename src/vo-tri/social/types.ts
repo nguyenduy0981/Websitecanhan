@@ -26,6 +26,8 @@ export interface CommentData {
 }
 
 export interface UserPreview {
+  /** Optional: absent on fixture data (styleguide demos), present whenever built from a real profile row — e.g. Court's friend picker needs it to target `start_court_trial`. */
+  id?: string;
   name: string;
   username: string;
   avatarUrl?: string;

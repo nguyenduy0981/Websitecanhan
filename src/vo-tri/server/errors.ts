@@ -57,6 +57,15 @@ const ERROR_CATEGORY: Record<ServerErrorCode, ServiceErrorCategory> = {
   UNKNOWN_ACTIVITY: "not_found",
   UNKNOWN_QUEST: "not_found",
   UNKNOWN_MILESTONE: "not_found",
+  ALREADY_VOTED_TODAY: "rate_limit",
+  UNKNOWN_DILEMMA: "not_found",
+  CANNOT_CHALLENGE_SELF: "business_rule_violation",
+  UNKNOWN_TARGET: "not_found",
+  UNKNOWN_TRIAL: "not_found",
+  NOT_A_PARTY_TO_TRIAL: "authorization",
+  TRIAL_ALREADY_RESOLVED: "conflict",
+  TRIAL_EXPIRED: "business_rule_violation",
+  ALREADY_ANSWERED: "conflict",
 };
 
 /** What every service function returns instead of throwing for an expected business-rule failure (quest not complete, daily limit hit, ...) — see docs/BACKEND_ARCHITECTURE.md §9.3. */

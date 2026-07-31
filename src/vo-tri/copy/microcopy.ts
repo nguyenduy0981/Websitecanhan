@@ -145,6 +145,42 @@ export const serverErrorCopy = {
     title: "Không tìm thấy cột mốc này",
     description: "Thử tải lại trang xem sao.",
   },
+  ALREADY_VOTED_TODAY: {
+    title: "Hôm nay bạn chọn rồi mà",
+    description: "Vô Tri Đồng Thuận chỉ cho chọn một lần mỗi ngày — mai quay lại nhé.",
+  },
+  UNKNOWN_DILEMMA: {
+    title: "Không tìm thấy câu hỏi này",
+    description: "Thử tải lại trang xem sao.",
+  },
+  CANNOT_CHALLENGE_SELF: {
+    title: "Tự đưa mình ra Toà á?",
+    description: "Vô tri tới mức này thì thôi, chọn người khác đi.",
+  },
+  UNKNOWN_TARGET: {
+    title: "Không tìm thấy người này",
+    description: "Có thể tài khoản này không còn tồn tại.",
+  },
+  UNKNOWN_TRIAL: {
+    title: "Không tìm thấy phiên xử này",
+    description: "Có thể nó đã bị gỡ hoặc chưa từng tồn tại.",
+  },
+  NOT_A_PARTY_TO_TRIAL: {
+    title: "Phiên xử này không liên quan đến bạn",
+    description: "Bạn không phải một trong hai bên của phiên xử này.",
+  },
+  TRIAL_ALREADY_RESOLVED: {
+    title: "Toà đã tuyên án rồi",
+    description: "Phiên xử này đã có kết quả, không thể trả lời lại.",
+  },
+  TRIAL_EXPIRED: {
+    title: "Phiên xử đã hết hạn",
+    description: "Không ai trả lời kịp trong thời gian cho phép.",
+  },
+  ALREADY_ANSWERED: {
+    title: "Bạn trả lời rồi mà",
+    description: "Chờ bên còn lại trả lời để Toà tuyên án nhé.",
+  },
 } satisfies Record<string, { title: string; description: string }>;
 
 export type ServerErrorCode = keyof typeof serverErrorCopy;

@@ -8,14 +8,18 @@ import { cn } from "@/vo-tri/lib/cn";
 import { navItems } from "./nav-items";
 
 /**
- * A raised center action splits the 4 nav items into two pairs — reads as
- * "designed", not a stock Android/iOS/shadcn tab bar. Floats above the
- * edge (rounded-full, inset margin) rather than a flush full-width bar,
- * for the same reason. Mobile only — Sidebar takes over at md+.
+ * A raised center action splits the nav items into two roughly-even
+ * groups — reads as "designed", not a stock Android/iOS/shadcn tab bar.
+ * Floats above the edge (rounded-full, inset margin) rather than a flush
+ * full-width bar, for the same reason. Mobile only — Sidebar takes over
+ * at md+. The split point is computed from `navItems.length` (not
+ * hardcoded to 2/2) so adding a nav item (e.g. Toà Án) rebalances
+ * automatically instead of silently lopsiding one side.
  */
 export function BottomNav() {
   const pathname = usePathname();
-  const [left, right] = [navItems.slice(0, 2), navItems.slice(2)];
+  const splitAt = Math.ceil(navItems.length / 2);
+  const [left, right] = [navItems.slice(0, splitAt), navItems.slice(splitAt)];
 
   return (
     <nav

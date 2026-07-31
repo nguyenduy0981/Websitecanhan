@@ -2,6 +2,7 @@
 
 import { Crown, Medal, Palette, Shirt, Sparkles as SparklesIcon, Star, Target, Trophy } from "lucide-react";
 import { useState } from "react";
+import { ConsensusCard, CourtTrialCard, type ConsensusResult, type CourtTrial, type Dilemma } from "@/vo-tri/court";
 import { activities } from "@/vo-tri/explore/activities";
 import { voTriFontVariables } from "@/vo-tri/fonts";
 import { TodayCard } from "@/vo-tri/home/TodayCard";
@@ -202,6 +203,53 @@ const DEMO_NOTIFICATIONS: NotificationItem[] = [
   { id: "n2", type: "reward", title: "Nhận thưởng", description: "+30 điểm từ Vòng Quay Vô Tri", createdAt: new Date(Date.now() - 90 * 60_000), read: false },
   { id: "n3", type: "friend", title: "Người theo dõi mới", description: "Chị Đại vừa theo dõi bạn", createdAt: new Date(Date.now() - 5 * 3_600_000), read: true },
   { id: "n4", type: "system", title: "Cập nhật hệ thống", description: "VÔ TRI vừa có vài trò chơi mới", createdAt: new Date(Date.now() - 24 * 3_600_000), read: true },
+];
+
+// Fixture data for the Toà Án Vô Tri & Vô Tri Đồng Thuận section — same
+// fixture convention as everywhere else on this page. The real components
+// call the real Server Actions internally (they're self-contained, unlike
+// e.g. QuestCard's onClaim prop), so interacting with them here hits the
+// real backend and shows its honest error/empty state when unconfigured —
+// same as AuthDialog already does in production, not a broken demo.
+const DEMO_DILEMMA: Dilemma = {
+  id: "an-com-nguoi-vs-mi-nong",
+  prompt: "Cơm nguội ngon hơn hay mì gói lúc nửa đêm ngon hơn?",
+  optionA: "Cơm nguội",
+  optionB: "Mì gói nửa đêm",
+};
+const DEMO_CONSENSUS_VOTED: ConsensusResult = { dilemmaId: DEMO_DILEMMA.id, choiceACount: 42, choiceBCount: 58, myChoice: "b" };
+const DEMO_TRIALS: CourtTrial[] = [
+  {
+    id: "t1",
+    dilemma: DEMO_DILEMMA,
+    initiator: { id: "u1", name: "Ông Kẹ" },
+    target: { id: "me", name: "Bạn" },
+    status: "pending",
+    createdAt: new Date(Date.now() - 60 * 60_000),
+    expiresAt: new Date(Date.now() + 23 * 3_600_000),
+  },
+  {
+    id: "t2",
+    dilemma: DEMO_DILEMMA,
+    initiator: { id: "me", name: "Bạn" },
+    target: { id: "u2", name: "Chị Đại" },
+    status: "pending",
+    myChoice: "a",
+    createdAt: new Date(Date.now() - 2 * 3_600_000),
+    expiresAt: new Date(Date.now() + 22 * 3_600_000),
+  },
+  {
+    id: "t3",
+    dilemma: DEMO_DILEMMA,
+    initiator: { id: "me", name: "Bạn" },
+    target: { id: "u3", name: "Bé Vô Tri" },
+    status: "resolved",
+    verdict: "target",
+    myChoice: "a",
+    otherChoice: "b",
+    createdAt: new Date(Date.now() - 26 * 3_600_000),
+    expiresAt: new Date(Date.now() - 2 * 3_600_000),
+  },
 ];
 
 const COLOR_SWATCHES: { name: string; className: string }[] = [
@@ -782,6 +830,29 @@ export default function VoTriStyleGuidePage() {
                 <Card padding="sm">
                   <NotificationCenter items={[]} />
                 </Card>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Toà Án Vô Tri & Vô Tri Đồng Thuận (fixture data — components call the real Server Actions)">
+          <div className="flex flex-col gap-6">
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">Vô Tri Đồng Thuận — logged out / voted</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ConsensusCard dilemma={DEMO_DILEMMA} consensus={null} />
+                <ConsensusCard dilemma={DEMO_DILEMMA} consensus={DEMO_CONSENSUS_VOTED} />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-vt-text-secondary">
+                Court Trial — needs my answer / waiting on the other side / resolved
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {DEMO_TRIALS.map((trial) => (
+                  <CourtTrialCard key={trial.id} trial={trial} currentUserId="me" />
+                ))}
               </div>
             </div>
           </div>

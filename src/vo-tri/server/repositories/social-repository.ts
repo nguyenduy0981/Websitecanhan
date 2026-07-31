@@ -13,6 +13,15 @@ export function isFollowing(client: Client, followerId: string, followeeId: stri
   return client.from("follows").select("follower_id").eq("follower_id", followerId).eq("followee_id", followeeId).maybeSingle();
 }
 
+/** Court's "pick a friend to challenge" source list — the only real consumer of a following list today. */
+export function listFollowing(client: Client, followerId: string) {
+  return client
+    .from("follows")
+    .select("followee:profiles!follows_followee_id_fkey(*)")
+    .eq("follower_id", followerId)
+    .order("created_at", { ascending: false });
+}
+
 export function upsertReaction(
   client: Client,
   row: Database["public"]["Tables"]["reactions"]["Insert"],

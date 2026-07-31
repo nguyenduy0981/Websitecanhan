@@ -8,6 +8,7 @@ import {
   insertComment,
   isFollowing,
   listComments as listCommentsRows,
+  listFollowing as listFollowingRows,
   listRecentFeedItems,
   removeReaction,
   toggleFollow as toggleFollowRpc,
@@ -29,6 +30,12 @@ export async function getFollowStatus(client: Client, followerId: string, follow
   const { data, error } = await isFollowing(client, followerId, followeeId);
   if (error) return mapSupabaseError(error);
   return ok(data !== null);
+}
+
+export async function listFollowing(client: Client, userId: string): Promise<ServiceResult<UserPreview[]>> {
+  const { data, error } = await listFollowingRows(client, userId);
+  if (error) return mapSupabaseError(error);
+  return ok((data ?? []).map((row) => toUserPreview(row.followee)));
 }
 
 /** "Pick one" reaction UX (ReactionBar): re-tapping the active reaction removes it, tapping a different one switches. */

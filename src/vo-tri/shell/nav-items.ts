@@ -1,4 +1,4 @@
-import { Compass, Home, Trophy, User } from "lucide-react";
+import { Compass, Gavel, Home, Trophy, User } from "lucide-react";
 
 /**
  * Single source of truth for primary navigation — BottomNav (mobile) and
@@ -12,6 +12,7 @@ import { Compass, Home, Trophy, User } from "lucide-react";
 export const navItems = [
   { href: "/", label: "Trang chủ", icon: Home },
   { href: "/explore", label: "Khám phá", icon: Compass },
+  { href: "/court", label: "Toà Án", icon: Gavel },
   { href: "/leaderboard", label: "Xếp hạng", icon: Trophy },
   { href: "/profile", label: "Hồ sơ", icon: User },
 ] as const;

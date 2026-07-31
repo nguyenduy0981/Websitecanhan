@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { getDailyMessage } from "@/vo-tri/copy/daily-messages";
+import { ConsensusCard } from "@/vo-tri/court/ConsensusCard";
+import { getDailyDilemma } from "@/vo-tri/court/dilemmas";
 import { ActivitySpotlight } from "@/vo-tri/home/ActivitySpotlight";
 import { CommunityPulse } from "@/vo-tri/home/CommunityPulse";
 import { HeroScene } from "@/vo-tri/home/HeroScene";
 import { QuickAccess } from "@/vo-tri/home/QuickAccess";
 import { TodayCard, type TodayStats } from "@/vo-tri/home/TodayCard";
 import { DailyQuestPreview } from "@/vo-tri/retention";
+import { getOptionalSession } from "@/vo-tri/server/session";
+import * as courtService from "@/vo-tri/server/services/court-service";
 import { Container } from "@/vo-tri/shell";
 import type { VoTriUser } from "@/vo-tri/shell/types";
 import { ActivityFeed } from "@/vo-tri/social";
@@ -17,8 +21,18 @@ import { Badge, Button, Mascot, SmoothAnchorLink } from "@/vo-tri/ui";
 // accept real data as an optional prop.
 const currentUser: { user: VoTriUser; stats: TodayStats } | undefined = undefined;
 
-export default function HomePage() {
+export default async function HomePage() {
   const dailyMessage = getDailyMessage();
+
+  // Real Vô Tri Đồng Thuận read — session-optional (the aggregate is
+  // public), unlike `currentUser` above which is still a deliberate
+  // placeholder for the rest of Home (see comment above). getOptionalSession()
+  // degrades to `null` both when logged out AND when Supabase isn't
+  // configured at all, so `consensusResult` naturally goes unfetched in
+  // either case and ConsensusCard renders its honest "log in" branch.
+  const session = await getOptionalSession();
+  const dilemma = getDailyDilemma();
+  const consensusResult = session ? await courtService.getTodayConsensus(session.client, dilemma.id, session.userId) : null;
 
   return (
     <>
@@ -54,6 +68,10 @@ export default function HomePage() {
         <QuickAccess />
 
         {currentUser && <TodayCard stats={currentUser.stats} />}
+
+        <section className="flex flex-col gap-3">
+          <ConsensusCard dilemma={dilemma} consensus={consensusResult?.ok ? consensusResult.data : null} />
+        </section>
 
         <section className="flex flex-col gap-3">
           <div>

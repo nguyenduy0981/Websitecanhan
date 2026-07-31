@@ -216,7 +216,26 @@ export interface Database {
         Row: { follower_id: string; followee_id: string; created_at: string };
         Insert: Omit<Database["public"]["Tables"]["follows"]["Row"], "created_at">;
         Update: Partial<Database["public"]["Tables"]["follows"]["Row"]>;
-        Relationships: [];
+        // Needed for `select("followee:profiles!follows_followee_id_fkey(*)")`
+        // (Court's friend-picker query, social-repository.ts's
+        // listFollowing) to type-check as a real joined row — same fix
+        // class as comments/feed_items above.
+        Relationships: [
+          {
+            foreignKeyName: "follows_follower_id_fkey";
+            columns: ["follower_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "follows_followee_id_fkey";
+            columns: ["followee_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       reactions: {
         Row: {
@@ -340,6 +359,67 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["audit_log"]["Row"]>;
         Relationships: [];
       };
+      dilemmas: {
+        Row: { id: string; prompt: string; option_a: string; option_b: string; created_at: string };
+        Insert: Database["public"]["Tables"]["dilemmas"]["Row"];
+        Update: Partial<Database["public"]["Tables"]["dilemmas"]["Row"]>;
+        Relationships: [];
+      };
+      // Real writes only happen via vote_dilemma() — RLS has no INSERT
+      // policy for `authenticated` (private, select-own-row-only; see
+      // 20260724000014_court.sql), same "real shape, not `never`" reasoning
+      // as activity_sessions above.
+      dilemma_votes: {
+        Row: { user_id: string; period_key: string; dilemma_id: string; choice: "a" | "b"; created_at: string };
+        Insert: Omit<Database["public"]["Tables"]["dilemma_votes"]["Row"], "created_at">;
+        Update: Partial<Database["public"]["Tables"]["dilemma_votes"]["Row"]>;
+        Relationships: [];
+      };
+      // Real writes only happen via start_court_trial()/submit_court_answer()
+      // — no client INSERT/UPDATE policy at all on either table.
+      court_trials: {
+        Row: {
+          id: string;
+          initiator_id: string;
+          target_id: string;
+          dilemma_id: string;
+          status: "pending" | "resolved";
+          verdict: "initiator" | "target" | "tie" | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["court_trials"]["Row"], "id" | "status" | "verdict" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["court_trials"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "court_trials_initiator_id_fkey";
+            columns: ["initiator_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "court_trials_target_id_fkey";
+            columns: ["target_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "court_trials_dilemma_id_fkey";
+            columns: ["dilemma_id"];
+            isOneToOne: false;
+            referencedRelation: "dilemmas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      court_answers: {
+        Row: { trial_id: string; user_id: string; choice: "a" | "b"; answered_at: string };
+        Insert: Omit<Database["public"]["Tables"]["court_answers"]["Row"], "answered_at">;
+        Update: Partial<Database["public"]["Tables"]["court_answers"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -365,6 +445,22 @@ export interface Database {
       toggle_follow: {
         Args: { p_target_id: string };
         Returns: boolean;
+      };
+      get_dilemma_consensus: {
+        Args: { p_dilemma_id: string; p_period_key: string };
+        Returns: { choice: "a" | "b"; vote_count: number }[];
+      };
+      vote_dilemma: {
+        Args: { p_dilemma_id: string; p_choice: "a" | "b" };
+        Returns: { awarded_points: number; awarded_xp: number; leveled_up: boolean; new_level: number }[];
+      };
+      start_court_trial: {
+        Args: { p_target_id: string; p_dilemma_id: string };
+        Returns: string;
+      };
+      submit_court_answer: {
+        Args: { p_trial_id: string; p_choice: "a" | "b" };
+        Returns: { status: "pending" | "resolved"; verdict: "initiator" | "target" | "tie" | null; my_choice: "a" | "b"; other_choice: "a" | "b" | null }[];
       };
     };
   };

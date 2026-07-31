@@ -1018,3 +1018,83 @@ sessions don't re-litigate it from scratch.
   easy to miss. Verified: `tsc`, lint, `vitest run` (104/104, unchanged
   — pure documentation addition). No live Supabase integration
   performed; stop condition unchanged from the prior round.
+- **MVP feature: Vô Tri Đồng Thuận + Toà Án Vô Tri, shipped async.** After
+  merging `main` up to date (PR #5) and finding the owner's live-site
+  concern legitimate — no Signature Moment existed as real code yet, only
+  planning docs — the owner authorized proceeding with best judgment
+  ("hãy làm theo hướng tốt nhất"). Implemented the two mechanics
+  `docs/VO_TRI_PRODUCT_BIBLE.md` Part 3 names as the actual MVP scope,
+  following the same migration → local-Postgres-validation → repository →
+  service → action → UI → test pipeline every prior backend feature used.
+  New migration `20260724000014_court.sql`: a shared `dilemmas` catalog
+  (Part 1.3's documented merge — one content pool feeds both surfaces),
+  `dilemma_votes` keyed `(user_id, period_key)` — not `(user_id,
+  dilemma_id)` — specifically so a client can't farm the reward by voting
+  on multiple dilemma_ids in one day, `court_trials`/`court_answers` for
+  the Court, and 4 new functions: `vote_dilemma()` (flat reward, mirrors
+  `record_activity_session`'s economy-touching shape but deliberately
+  skips streak/quest advancement — a lighter, separate daily habit, not a
+  second path into that machinery), `get_dilemma_consensus()` (the one
+  function in this codebase that's `security definer` for a *read*, not a
+  write — `dilemma_votes`' own RLS is select-own-row-only, so this is the
+  only path to the real aggregate; deliberately public/anon-callable since
+  it returns grouped counts only, never individual choices),
+  `start_court_trial()`, and `submit_court_answer()`. Async by design per
+  the Product Bible's own named MVP simplification (no realtime
+  infrastructure): a 24h answer window, order-independent reveal,
+  `court_answers`' SELECT policy is what actually makes answering "blind"
+  a server-enforced property (a party can always read their own answer,
+  only reads the other party's once `status = 'resolved'`) rather than a
+  UI convention — verified live via the impersonation technique from the
+  production-readiness round, including that even a trial's own party
+  cannot rewrite the verdict via a raw client UPDATE (no UPDATE policy
+  exists on `court_trials` at all). Verdict logic is a deliberate
+  simplification, named in a comment: same answer → tie; different
+  answers → random pick of who's "more vô tri" this trial — not a fair
+  analysis, a lighthearted decree, with the real upgrade path (side with
+  whoever bucks that day's Đồng Thuận majority) documented for once real
+  vote-distribution data exists. Toà Án carries no reward — deliberately
+  reward-free to avoid a second anti-cheat surface for a mechanic that's
+  pure social/identity, not economy. Both `claim_quest`-class double-claim
+  race and a `toggle_follow`-class double-answer/double-vote race were
+  proven closed live via real concurrent `psql` sessions against a rebuilt
+  local Postgres 16 stub (exactly one winner, clean `ALREADY_VOTED_TODAY`/
+  `ALREADY_ANSWERED` for the loser, zero double-award), plus expiry
+  rejection and non-party access rejection. Real gap found and filled
+  along the way: no repository/service existed for "who does this user
+  follow" (Court's friend-picker needs it) — added `listFollowing()` to
+  the existing `social-repository.ts`/`social-service.ts` rather than a
+  parallel path, plus a `follows` Relationships fix in
+  `database.types.ts` (the embedded-join fix class established in Phase
+  2) and an additive, optional `UserPreview.id` field (existing fixture
+  call sites unaffected — `toEqual` ignores `undefined` keys). New
+  `src/vo-tri/court/` domain (`types.ts`, `dilemmas.ts` — 14 real authored
+  dilemmas, day-seeded via the same `dayOfYear` pattern as
+  `getFeaturedActivity`/`getDailyQuests` — `ConsensusCard`,
+  `CourtTrialCard`/`CourtTrialList`/`CourtInteractive`,
+  `StartTrialSheet`/`AnswerTrialDialog`, `trial-helpers.ts` for the
+  pure/unit-tested opponent-lookup and personalized verdict-line logic).
+  New real route `/court` (session-branching like `/profile`: honest
+  logged-out state vs. real trial list) plus a real `ConsensusCard`
+  section wired into Home — both call their Server Actions directly
+  (self-contained, unlike `QuestCard`'s `onClaim`-prop pattern), so `Home`
+  became a real `async` Server Component calling `getOptionalSession()`
+  for the first time (the pre-existing `currentUser` placeholder governing
+  `TodayCard` was deliberately left untouched — out of this round's
+  scope). `BottomNav`'s hardcoded 2/2 split around the center FAB was
+  generalized to `Math.ceil(navItems.length / 2)` before adding the new
+  "Toà Án" nav item, so a 5th item rebalances (3/2) instead of silently
+  lopsiding one side — a small real fix, not a hack, found by reasoning
+  about the existing symmetric-pairs design before changing its input.
+  9 new unit tests (day-seed stability for `dilemmas.ts`, the personalized
+  verdict-line/opponent-lookup helpers, the two new adapters) plus a new
+  styleguide section (fixture data, but the components call the real
+  Server Actions internally — same honest-interaction status as
+  `AuthDialog`'s existing styleguide-adjacent behavior). Verified: `tsc`,
+  lint, `vitest run` (121/121, +17), `next build` ×2 (with/without
+  credentials — `/` and `/court` join `/profile` in flipping dynamic only
+  when credentials are present, zero regression without them), full
+  Playwright suite (18/18 with `--workers=1`; one `retention.spec.ts` case
+  flaked under 2-worker sandbox load, reproduced identically against the
+  pre-change commit — confirmed pre-existing sandbox flakiness, not a
+  regression, same class already documented from an earlier round).
